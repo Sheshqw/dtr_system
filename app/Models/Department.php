@@ -1,0 +1,25 @@
+<?php
+
+namespace App\Models;
+
+use Illuminate\Database\Eloquent\Model;
+
+class Department extends Model
+{
+    protected $fillable = ['name', 'code', 'head_id', 'campus_id'];
+
+    public function campus()
+    {
+        return $this->belongsTo(Campus::class);
+    }
+
+    public function head()
+    {
+        return $this->belongsTo(User::class, 'head_id');
+    }
+
+    public function employees()
+    {
+        return $this->hasMany(User::class, 'department_id');
+    }
+}
