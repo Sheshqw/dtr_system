@@ -10,9 +10,14 @@
         }
       })();
     </script>
+    @php
+        $__settings = \App\Models\SystemSetting::current();
+        $__favicon  = $__settings->logo_url ?? '/nemsu.png';
+    @endphp
     <meta charset="utf-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1" />
-    <title>UDTRMS — University Daily Time Record Monitoring System</title>
+    <title>{{ $__settings->short_name }} — {{ $__settings->tagline }}</title>
+    <link rel="icon" href="{{ $__favicon }}?v={{ $__settings->updated_at?->timestamp }}" />
     <link rel="preconnect" href="https://fonts.googleapis.com" />
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
     <link href="https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@400&family=IBM+Plex+Sans:wght@400;500;600&display=swap" rel="stylesheet" />

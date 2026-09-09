@@ -1,5 +1,6 @@
 import { createRouter, createWebHistory } from 'vue-router';
 import { useAuthStore } from '@/stores/auth';
+import { useSettingsStore } from '@/stores/settings';
 
 const routes = [
     {
@@ -26,6 +27,8 @@ const routes = [
             { path: 'corrections',   name: 'corrections',   component: () => import('@/views/DtrCorrectionView.vue'), meta: { title: 'DTR Corrections' } },
             { path: 'backup',        name: 'backup',        component: () => import('@/views/BackupView.vue'),        meta: { title: 'Backup' } },
             { path: 'audit',         name: 'audit',         component: () => import('@/views/AuditView.vue'),         meta: { title: 'Audit Trail' } },
+            { path: 'system-health', name: 'system-health', component: () => import('@/views/SystemHealthView.vue'), meta: { title: 'System Health' } },
+            { path: 'settings',      name: 'settings',      component: () => import('@/views/SystemSettingsView.vue'), meta: { title: 'System Settings' } },
             { path: 'biometric',     name: 'biometric',     component: () => import('@/views/BiometricView.vue'),     meta: { title: 'Biometric' } },
             { path: ':pathMatch(.*)*', name: 'not-found', redirect: { name: 'dashboard' } },
         ],
@@ -51,7 +54,9 @@ router.beforeEach((to) => {
 
 router.afterEach((to) => {
     const title = to.meta?.title;
-    document.title = title ? `${title} — NEMSU UDTRMS` : 'NEMSU UDTRMS';
+    const settings = useSettingsStore();
+    const brand = `${settings.systemName} ${settings.shortName}`;
+    document.title = title ? `${title} — ${brand}` : brand;
 });
 
 export default router;

@@ -69,15 +69,15 @@
         <div class="relative mb-3">
           <div class="absolute inset-0 rounded-full logo-glow"></div>
           <img
-            :src="logo"
-            alt="NEMSU"
+            :src="settings.logoUrl"
+            :alt="settings.systemName"
             class="relative w-[80px] h-[80px] rounded-full object-cover"
             style="box-shadow: 0 0 0 2.5px rgba(201,162,39,0.70), 0 0 0 7px rgba(201,162,39,0.12), 0 12px 44px rgba(0,0,0,0.55);"
           />
           <span class="absolute -bottom-0.5 -right-0.5 w-3.5 h-3.5 rounded-full border-2 border-[#081A68] bg-emerald-400 pulse-dot"></span>
         </div>
 
-        <h1 class="text-white text-[22px] font-extrabold tracking-[0.20em] uppercase leading-tight">NEMSU</h1>
+        <h1 class="text-white text-[22px] font-extrabold tracking-[0.20em] uppercase leading-tight">{{ settings.systemName }}</h1>
         <p class="text-[11px] font-bold tracking-[0.24em] uppercase mt-0.5 leading-tight" style="color: #C9A227;">
           Cantilan Campus
         </p>
@@ -227,7 +227,7 @@
           <div class="mt-6 pt-5" style="border-top: 1px solid rgba(255,255,255,0.07);">
             <p class="text-center text-[10.5px]" style="color: rgba(168,184,232,0.28);">
               Authorized personnel only &nbsp;&middot;&nbsp;
-              <span style="color: rgba(201,162,39,0.52);">© {{ currentYear }} NEMSU Cantilan Campus</span>
+              <span style="color: rgba(201,162,39,0.52);">© {{ currentYear }} {{ settings.systemName }} Cantilan Campus</span>
             </p>
           </div>
         </div>
@@ -249,6 +249,7 @@
 import { ref, reactive, computed } from 'vue';
 import { useRouter, useRoute } from 'vue-router';
 import { useAuthStore } from '@/stores/auth';
+import { useSettingsStore } from '@/stores/settings';
 import {
   Mail          as MailIcon,
   Lock          as LockIcon,
@@ -259,10 +260,10 @@ import {
   Check         as CheckIcon,
 } from 'lucide-vue-next';
 
-const auth   = useAuthStore();
-const router = useRouter();
-const route  = useRoute();
-const logo   = '/nemsu.png';
+const auth     = useAuthStore();
+const router   = useRouter();
+const route    = useRoute();
+const settings = useSettingsStore();
 
 const form       = reactive({ email: '', password: '' });
 const loading    = ref(false);
