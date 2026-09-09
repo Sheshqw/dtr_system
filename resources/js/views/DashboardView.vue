@@ -15,16 +15,16 @@
         <!-- Left: darker identity panel -->
         <div class="tb-identity">
           <div class="campus-seal">
-            <img :src="'/nemsu.png'" alt="NEMSU" class="seal-logo-img" />
+            <img :src="settings.logoUrl" :alt="settings.systemName" class="seal-logo-img" />
             <div class="seal-ring"></div>
           </div>
           <div class="tb-brand">
             <div class="tb-brand-top">
-              <span class="tb-wordmark">NEMSU</span>
+              <span class="tb-wordmark">{{ settings.systemName }}</span>
               <span class="tb-brand-sep">·</span>
               <span class="tb-campus-name">{{ campusName }}</span>
             </div>
-            <p class="tb-system">University Daily Time Record Monitoring System</p>
+            <p class="tb-system">{{ settings.tagline }}</p>
           </div>
         </div>
 
@@ -49,70 +49,11 @@
               <RefreshCwIcon class="w-3.5 h-3.5" :class="store.loading ? 'animate-spin' : ''" />
               <span>Refresh</span>
             </button>
+            <NotificationBell />
           </div>
         </div>
-      </div>
-
-      <!-- ── Stat tiles strip ─────────────────────────────────────── -->
-      <div class="tb-stat-tiles" :style="{ borderTopColor: campus.heroBand + '25' }">
-
-        <div class="tb-tile tb-tile--present">
-          <i class="tb-tile-dot" style="background:#22C55E;"></i>
-          <div class="tb-tile-body">
-            <span class="tb-tile-num" style="color:#86efac;">{{ displayPresent }}</span>
-            <span class="tb-tile-lbl">Present</span>
-          </div>
-        </div>
-
-        <div class="tb-tile-sep"></div>
-
-        <div class="tb-tile tb-tile--late">
-          <i class="tb-tile-dot" style="background:#F59E0B;"></i>
-          <div class="tb-tile-body">
-            <span class="tb-tile-num" style="color:#FDE68A;">{{ displayLate }}</span>
-            <span class="tb-tile-lbl">Late</span>
-          </div>
-        </div>
-
-        <div class="tb-tile-sep"></div>
-
-        <div class="tb-tile tb-tile--absent">
-          <i class="tb-tile-dot" style="background:#F87171;"></i>
-          <div class="tb-tile-body">
-            <span class="tb-tile-num" style="color:#FCA5A5;">{{ displayAbsent }}</span>
-            <span class="tb-tile-lbl">Absent</span>
-          </div>
-        </div>
-
-        <div class="tb-tile-sep"></div>
-
-        <div class="tb-tile tb-tile--total">
-          <i class="tb-tile-dot" style="background:#818CF8;"></i>
-          <div class="tb-tile-body">
-            <span class="tb-tile-num" style="color:#C7D2FE;">{{ displayTotal }}</span>
-            <span class="tb-tile-lbl">Total Tracked</span>
-          </div>
-        </div>
-
-        <div class="tb-tile-sep"></div>
-
-        <div class="tb-tile tb-tile--rate">
-          <i class="tb-tile-dot" :style="{ background: campus.heroBand }"></i>
-          <div class="tb-tile-rate-wrap">
-            <div class="tb-tile-rate-top">
-              <span class="tb-tile-num" :style="{ color: campus.textColor }">{{ attendanceRate }}%</span>
-              <span class="tb-tile-lbl">Attendance Rate</span>
-            </div>
-            <div class="tb-tile-rate-bar">
-              <div class="tb-tile-rate-fill" :style="{ width: attendanceRate + '%', background: campus.heroBand }"></div>
-            </div>
-          </div>
-        </div>
-
-        <span class="tb-tagline">{{ campus.tagline ?? 'NEMSU Campus' }}</span>
       </div>
     </div>
-
 
     <div class="dash-body">
 
@@ -551,11 +492,23 @@
             </div>
             <div class="tk-body">
               <span class="tk-label">{{ trendDays }}-Day Avg Rate</span>
-              <span class="tk-val" :style="{ color: trendAnalytics.avgNum >= 75 ? '#15803D' : trendAnalytics.avgNum >= 50 ? '#B45309' : '#B91C1C' }">
-                {{ trendAnalytics.avg }}
-              </span>
+              <div class="tk-val-row">
+                <span class="tk-val" :style="{ color: rateTierColor(trendAnalytics.avgNum) }">{{ trendAnalytics.avg }}</span>
+                <span
+                  v-if="trendAnalytics.delta !== 0"
+                  class="tk-delta"
+                  :class="trendAnalytics.delta > 0 ? 'tk-delta--up' : 'tk-delta--down'"
+                  :title="`vs the first half of this ${trendDays}-day window`"
+                >
+                  <component :is="trendAnalytics.delta > 0 ? TrendingUpIcon : TrendingDownIcon" class="w-3 h-3" />
+                  {{ Math.abs(trendAnalytics.delta) }}pt
+                </span>
+              </div>
             </div>
-            <span class="tk-chip tk-chip--blue">{{ trendDays }}D</span>
+            <svg v-if="trendAnalytics.sparkline" class="tk-spark" viewBox="0 0 64 22" preserveAspectRatio="none" aria-hidden="true">
+              <path :d="trendAnalytics.sparkline" fill="none" stroke="#CBD5E1" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round" />
+              <circle v-if="trendAnalytics.sparkEnd" :cx="trendAnalytics.sparkEnd.x" :cy="trendAnalytics.sparkEnd.y" r="2.4" :fill="rateTierColor(trendAnalytics.avgNum)" />
+            </svg>
           </div>
 
           <div class="tk-card">
@@ -692,12 +645,14 @@ import { ref, reactive, computed, onMounted, onBeforeUnmount, watch } from 'vue'
 import { useRouter }           from 'vue-router';
 import { useAttendanceStore }  from '@/stores/attendance';
 import { useAuthStore }        from '@/stores/auth';
+import { useSettingsStore }    from '@/stores/settings';
 import { useThemeStore }       from '@/stores/theme';
 import { useDebounce }         from '@/composables/useDebounce';
 import { useCampusIdentity }   from '@/composables/useCampusIdentity';
 import { useCountUp }          from '@/composables/useCountUp';
 import { useAvatarColor }      from '@/composables/useAvatarColor';
 import StatusBadge             from '@/components/StatusBadge.vue';
+import NotificationBell        from '@/components/NotificationBell.vue';
 import axios from 'axios';
 import {
   RefreshCw    as RefreshCwIcon,
@@ -728,6 +683,7 @@ Chart.register(LineController, BarController, CategoryScale, LinearScale, PointE
 const store  = useAttendanceStore();
 const theme  = useThemeStore();
 const auth   = useAuthStore();
+const settings = useSettingsStore();
 const router = useRouter();
 const { campus, campusCode, campusName } = useCampusIdentity();
 const { avatarStyle } = useAvatarColor();
@@ -771,7 +727,6 @@ const formattedDate = computed(() =>
 const totalTracked   = computed(() =>
   (store.summary.present ?? 0) + (store.summary.late ?? 0) + (store.summary.absent ?? 0)
 );
-const displayTotal = useCountUp(totalTracked);
 
 const attendanceRate = computed(() => {
   if (totalTracked.value === 0) return 0;
@@ -783,12 +738,6 @@ const rateColor = computed(() => {
   if (attendanceRate.value >= 50) return '#B45309';
   return '#B91C1C';
 });
-const rateBg = computed(() => {
-  if (attendanceRate.value >= 75) return '#F0FDF4';
-  if (attendanceRate.value >= 50) return '#FFFBEB';
-  return '#FEF2F2';
-});
-
 function pct(v) {
   if (totalTracked.value === 0) return 0;
   return Math.round((v ?? 0) / totalTracked.value * 100);
@@ -873,11 +822,38 @@ const tc = {
   get yTickColor() { return theme.isDark ? '#94A3B8' : '#374151'; },
 };
 
+// Muted sparkline path + an accent-colored endpoint dot — the trend line
+// itself stays in the de-emphasis ink; only the current value carries color.
+function buildSparkline(values) {
+  const w = 64, h = 22, pad = 3;
+  if (values.length < 2) return { path: '', end: null };
+
+  const min   = Math.min(...values), max = Math.max(...values);
+  const range = max - min || 1;
+  const stepX = (w - pad * 2) / (values.length - 1);
+  const toXY  = (v, i) => [pad + i * stepX, pad + (1 - (v - min) / range) * (h - pad * 2)];
+
+  const path = values.map((v, i) => {
+    const [x, y] = toXY(v, i);
+    return `${i === 0 ? 'M' : 'L'}${x.toFixed(1)},${y.toFixed(1)}`;
+  }).join(' ');
+
+  const [ex, ey] = toXY(values[values.length - 1], values.length - 1);
+  return { path, end: { x: ex, y: ey } };
+}
+
+function rateTierColor(rate) {
+  if (rate >= 75) return '#15803D';
+  if (rate >= 50) return '#B45309';
+  return '#B91C1C';
+}
+
 const trendAnalytics = computed(() => {
-  if (!trendData.value.length) return { avg: '0%', avgNum: 0, peak: 'No data', lowest: 'No data', activeDays: 0 };
+  const empty = { avg: '0%', avgNum: 0, peak: 'No data', lowest: 'No data', activeDays: 0, delta: 0, sparkline: '', sparkEnd: null };
+  if (!trendData.value.length) return empty;
 
   const activeDays = trendData.value.filter(d => (d.present + d.absent) > 0);
-  if (!activeDays.length) return { avg: '0%', avgNum: 0, peak: 'No data', lowest: 'No data', activeDays: 0 };
+  if (!activeDays.length) return empty;
 
   const rates  = activeDays.map(d => {
     const t = d.present + d.absent;
@@ -887,12 +863,28 @@ const trendAnalytics = computed(() => {
   const maxIdx = rates.indexOf(Math.max(...rates));
   const minIdx = rates.indexOf(Math.min(...rates));
 
+  // Delta: second half of the window vs the first half — a lightweight
+  // "improving or declining" signal without a second API call.
+  let delta = 0;
+  if (rates.length >= 4) {
+    const mid        = Math.floor(rates.length / 2);
+    const firstHalf   = rates.slice(0, mid);
+    const secondHalf  = rates.slice(mid);
+    const avgOf = arr => arr.reduce((a, b) => a + b, 0) / arr.length;
+    delta = Math.round(avgOf(secondHalf) - avgOf(firstHalf));
+  }
+
+  const spark = buildSparkline(rates);
+
   return {
     avg:        avg + '%',
     avgNum:     avg,
     peak:       activeDays[maxIdx].label + ' (' + rates[maxIdx] + '%)',
     lowest:     activeDays[minIdx].label + ' (' + rates[minIdx] + '%)',
     activeDays: activeDays.length,
+    delta,
+    sparkline:  spark.path,
+    sparkEnd:   spark.end,
   };
 });
 
@@ -926,6 +918,31 @@ async function loadAnalytics() {
   }
 }
 
+// Direct end-value labels on the trend line — the value stays in neutral
+// ink (identity is carried by the colored end-dot beside it, not by the
+// text color), placed past the last point so it never overlaps the line.
+const endLabelPlugin = {
+  id: 'endLabels',
+  afterDatasetsDraw(chart) {
+    const { ctx } = chart;
+    chart.data.datasets.forEach((dataset, i) => {
+      const meta = chart.getDatasetMeta(i);
+      if (meta.hidden) return;
+      const lastPoint = meta.data[meta.data.length - 1];
+      const lastValue = dataset.data[dataset.data.length - 1];
+      if (!lastPoint || lastValue == null) return;
+
+      ctx.save();
+      ctx.font = '700 11px system-ui, -apple-system, sans-serif';
+      ctx.fillStyle = tc.labelColor;
+      ctx.textBaseline = 'middle';
+      ctx.textAlign = 'left';
+      ctx.fillText(String(lastValue), lastPoint.x + 8, lastPoint.y);
+      ctx.restore();
+    });
+  },
+};
+
 function buildTrendChart(data) {
   if (trendChart) { trendChart.destroy(); trendChart = null; }
   if (!trendCanvas.value) return;
@@ -939,6 +956,11 @@ function buildTrendChart(data) {
     return grad;
   };
 
+  // Emphasize only the last point of each line — it's the one carrying the
+  // direct end-label, everything before it stays a thin, quiet marker.
+  const endEmphasis = (base) => (ctx) =>
+    ctx.dataIndex === ctx.dataset.data.length - 1 ? base + 2 : base;
+
   trendChart = new Chart(trendCanvas.value, {
     type: 'line',
     data: {
@@ -950,10 +972,10 @@ function buildTrendChart(data) {
           borderColor: '#1A6E40',
           backgroundColor: ctx => makeGradient(ctx.chart.ctx, ctx.chart.chartArea, 26, 110, 64),
           fill: true, tension: 0.42,
-          pointRadius: 2.5, pointHoverRadius: 5.5,
+          pointRadius: endEmphasis(2.5), pointHoverRadius: 5.5,
           pointBackgroundColor: '#1A6E40',
           pointBorderColor: '#fff', pointBorderWidth: 1.5,
-          borderWidth: 2.5,
+          borderWidth: 2,
         },
         {
           label: 'Absent',
@@ -961,18 +983,20 @@ function buildTrendChart(data) {
           borderColor: '#DC2626',
           backgroundColor: ctx => makeGradient(ctx.chart.ctx, ctx.chart.chartArea, 220, 38, 38),
           fill: true, tension: 0.42,
-          pointRadius: 2, pointHoverRadius: 4.5,
+          pointRadius: endEmphasis(2), pointHoverRadius: 4.5,
           pointBackgroundColor: '#DC2626',
           pointBorderColor: '#fff', pointBorderWidth: 1.5,
-          borderWidth: 1.5,
+          borderWidth: 2,
           borderDash: [5, 3],
         },
       ],
     },
+    plugins: [endLabelPlugin],
     options: {
       responsive: true, maintainAspectRatio: false,
       interaction: { mode: 'index', intersect: false },
       animation: { duration: 700, easing: 'easeOutQuart' },
+      layout: { padding: { right: 30 } },
       plugins: {
         legend: {
           position: 'bottom',
@@ -1011,10 +1035,6 @@ function buildDeptChart(data) {
   if (!deptCanvas.value || !data.length) return;
 
   const labels = data.map(d => d.name || d.code);
-  const presentColors = data.map((_, i) => {
-    const palette = ['#1A5F9E','#1E7A4B','#6D28D9','#B45309','#0E7490','#9D174D','#1A6E40'];
-    return palette[i % palette.length];
-  });
 
   deptChart = new Chart(deptCanvas.value, {
     type: 'bar',
@@ -1024,7 +1044,10 @@ function buildDeptChart(data) {
         {
           label: 'Present',
           data: data.map(d => d.present),
-          backgroundColor: presentColors,
+          // One fixed hue for every bar — department identity is already
+          // carried by the y-axis label, not by color. A different hue per
+          // row would just repaint the same "Present" series arbitrarily.
+          backgroundColor: '#1A6E40',
           borderRadius: { topLeft: 0, topRight: 4, bottomLeft: 0, bottomRight: 4 },
           borderSkipped: 'left',
           barPercentage: 0.62, categoryPercentage: 0.88,
@@ -1310,88 +1333,6 @@ onMounted(async () => {
 }
 .tb-refresh-btn:hover    { background: rgba(255,255,255,0.15); color: #fff; border-color: rgba(255,255,255,0.28); }
 .tb-refresh-btn:disabled { opacity: 0.35; cursor: not-allowed; }
-
-/* ── Stat tiles strip ─────────────────────────────────────────── */
-.tb-stat-tiles {
-  display: flex;
-  align-items: center;
-  border-top: 1px solid rgba(255,255,255,0.08);
-  background: rgba(0,0,0,0.20);
-  position: relative;
-  z-index: 1;
-  flex-wrap: wrap;
-  padding: 0 8px;
-}
-.tb-tile {
-  display: flex;
-  align-items: center;
-  gap: 11px;
-  padding: 12px 16px;
-  transition: background 0.15s;
-}
-.tb-tile:hover { background: rgba(255,255,255,0.04); }
-.tb-tile-dot {
-  display: inline-block;
-  width: 10px; height: 10px;
-  border-radius: 50%;
-  flex-shrink: 0;
-  font-style: normal;
-}
-.tb-tile--present .tb-tile-dot { animation: pulse-green 2.5s ease infinite; }
-.tb-tile-body {
-  display: flex;
-  flex-direction: column;
-  gap: 1px;
-}
-.tb-tile-num {
-  font-size: 22px;
-  font-weight: 800;
-  color: #fff;
-  line-height: 1;
-  font-variant-numeric: tabular-nums;
-}
-.tb-tile-lbl {
-  font-size: 9.5px;
-  font-weight: 700;
-  color: rgba(255,255,255,0.38);
-  text-transform: uppercase;
-  letter-spacing: 0.09em;
-}
-.tb-tile-sep {
-  width: 1px;
-  height: 34px;
-  background: rgba(255,255,255,0.08);
-  flex-shrink: 0;
-}
-
-/* Rate tile with bar */
-.tb-tile--rate { gap: 11px; }
-.tb-tile-rate-wrap { display: flex; flex-direction: column; gap: 5px; }
-.tb-tile-rate-top  { display: flex; align-items: baseline; gap: 8px; }
-.tb-tile-rate-bar {
-  width: 110px; height: 3px;
-  background: rgba(255,255,255,0.12);
-  border-radius: 2px;
-  overflow: hidden;
-}
-.tb-tile-rate-fill {
-  height: 100%;
-  border-radius: 2px;
-  transition: width 0.6s ease, background 0.35s ease;
-}
-
-/* Tagline */
-.tb-tagline {
-  margin-left: auto;
-  font-size: 10px;
-  color: rgba(255,255,255,0.38);
-  letter-spacing: 0.12em;
-  text-transform: uppercase;
-  white-space: nowrap;
-  flex-shrink: 0;
-  padding: 0 20px;
-  font-weight: 500;
-}
 
 /* ── Body ─────────────────────────────────────────────────────── */
 .dash-body {
@@ -1903,8 +1844,17 @@ onMounted(async () => {
   display: flex; flex-direction: column; gap: 3px; flex: 1; min-width: 0;
 }
 .tk-label { font-size: 10px; font-weight: 600; text-transform: uppercase; letter-spacing: 0.09em; color: #94A3B8; }
-.tk-val   { font-size: 28px; font-weight: 800; color: #0F172A; line-height: 1.1; font-variant-numeric: tabular-nums; }
+.tk-val   { font-size: 28px; font-weight: 800; color: #0F172A; line-height: 1.1; }
 .tk-val--sm { font-size: 13px; font-weight: 700; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; line-height: 1.3; }
+.tk-val-row { display: flex; align-items: baseline; gap: 8px; flex-wrap: wrap; }
+.tk-delta {
+  display: inline-flex; align-items: center; gap: 2px;
+  font-size: 10.5px; font-weight: 700; padding: 2px 6px 2px 5px;
+  border-radius: 999px; flex-shrink: 0;
+}
+.tk-delta--up   { background: #F0FDF4; color: #15803D; }
+.tk-delta--down { background: #FEF2F2; color: #B91C1C; }
+.tk-spark { width: 64px; height: 22px; flex-shrink: 0; }
 .tk-chip  { font-size: 9.5px; font-weight: 700; padding: 3px 9px; border-radius: 20px; white-space: nowrap; flex-shrink: 0; align-self: flex-start; }
 .tk-chip--blue  { background: #EEF2FF; color: #3B4FC4; }
 .tk-chip--green { background: #F0FFF4; color: #15803D; }
@@ -2132,10 +2082,6 @@ onMounted(async () => {
   .tb-identity   { min-width: 100%; border-right: none; border-bottom: 1px solid rgba(255,255,255,0.07); }
   .tb-clock-zone { min-width: 100%; }
   .tb-center-clock { font-size: 36px; letter-spacing: 4px; }
-  .tb-stat-tiles { flex-wrap: wrap; gap: 2px; }
-  .tb-tile       { flex: 1; min-width: calc(33% - 8px); }
-  .tb-tile-sep   { display: none; }
-  .tb-tagline    { display: none; }
   .dash-body     { padding: 14px 16px; }
   .top-kpis      { grid-template-columns: repeat(2, 1fr); }
   .panel-head    { flex-wrap: wrap; gap: 8px; }
@@ -2155,14 +2101,6 @@ onMounted(async () => {
   .tb-campus-name { font-size: 11px; }
   .campus-seal   { display: none; }
   .tb-brand-sep  { display: none; }
-
-  /* Stat tiles */
-  .tb-stat-tiles { padding: 0 4px; }
-  .tb-tile       { flex: 1; min-width: calc(50% - 4px); }
-  .tb-tile-num   { font-size: 18px; }
-  .tb-tile-lbl   { font-size: 9px; }
-  .tb-tile--rate { min-width: 100%; }
-  .tb-tile-rate-bar { display: none; }
 
   /* Body */
   .dash-body     { padding: 10px 12px; gap: 10px; }
@@ -2265,9 +2203,7 @@ onMounted(async () => {
 /* ── 5. Donut ring elevation ──────────────────────────────────── */
 .rate-donut-svg { filter: drop-shadow(0 2px 12px rgba(0,0,0,0.13)); }
 
-/* ── 6. Present tile dot pulse (handled inline on .tb-tile--present) ── */
-
-/* ── 7. Chart panel hover shadow ─────────────────────────────── */
+/* ── 6. Chart panel hover shadow ─────────────────────────────── */
 .chart-panel { transition: border-top-color 0.35s ease, box-shadow 0.2s; }
 .chart-panel:hover { box-shadow: 0 4px 20px rgba(8,14,128,0.10); }
 </style>

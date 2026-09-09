@@ -16,11 +16,11 @@
       </button>
 
       <div class="flex items-center gap-2.5 flex-1">
-        <img :src="logo" alt="NEMSU" class="w-7 h-7 rounded-full object-cover flex-shrink-0"
+        <img :src="settings.logoUrl" :alt="settings.systemName" class="w-7 h-7 rounded-full object-cover flex-shrink-0"
           style="box-shadow: 0 0 0 1.5px rgba(201,162,39,0.6);" />
         <div class="leading-tight">
-          <p class="text-white text-xs font-bold tracking-wide">NEMSU</p>
-          <p class="text-[9px] font-semibold tracking-widest uppercase" style="color: #C9A227;">UDTRMS</p>
+          <p class="text-white text-xs font-bold tracking-wide">{{ settings.systemName }}</p>
+          <p class="text-[9px] font-semibold tracking-widest uppercase" style="color: #C9A227;">{{ settings.shortName }}</p>
         </div>
       </div>
 
@@ -66,8 +66,8 @@
         <div class="flex items-center gap-3">
           <div class="relative flex-shrink-0">
             <img
-              :src="logo"
-              alt="NEMSU"
+              :src="settings.logoUrl"
+              :alt="settings.systemName"
               class="w-10 h-10 rounded-full object-cover shadow-lg"
               :style="{ boxShadow: `0 0 0 2px ${campus.heroBand}88, 0 4px 12px rgba(0,0,0,0.4)` }"
             />
@@ -78,12 +78,12 @@
             ></div>
           </div>
           <div class="min-w-0">
-            <p class="text-white text-sm font-bold leading-tight tracking-wide">NEMSU</p>
+            <p class="text-white text-sm font-bold leading-tight tracking-wide">{{ settings.systemName }}</p>
             <p
               class="text-[11px] font-semibold tracking-widest uppercase leading-tight transition-colors duration-300"
               :style="{ color: campus.heroBand }"
             >{{ campusName }}</p>
-            <p class="text-[9px] leading-tight mt-0.5" style="color: rgba(157,173,216,0.6);">UDTRMS v1.0</p>
+            <p class="text-[9px] leading-tight mt-0.5" style="color: rgba(157,173,216,0.6);">{{ settings.shortName }} v1.0</p>
           </div>
         </div>
 
@@ -95,6 +95,15 @@
           aria-label="Close navigation"
         >
           <XIcon class="w-4 h-4" />
+        </button>
+      </div>
+
+      <!-- Quick search trigger -->
+      <div class="relative px-3 pt-3">
+        <button class="quick-search-btn" @click="palette.open()">
+          <SearchIcon class="w-3.5 h-3.5" />
+          <span>Quick search</span>
+          <kbd class="quick-search-kbd">Ctrl K</kbd>
         </button>
       </div>
 
@@ -223,6 +232,9 @@
               {{ roleLabel(auth.employee?.role) }}
             </p>
           </div>
+          <button @click="openSessions" class="changepwd-btn flex-shrink-0 p-1.5 rounded-md transition-colors" title="Active sessions" aria-label="Active sessions">
+            <MonitorSmartphoneIcon class="w-4 h-4" />
+          </button>
           <button @click="pwdModal = true" class="changepwd-btn flex-shrink-0 p-1.5 rounded-md transition-colors" title="Change password" aria-label="Change password">
             <KeyIcon class="w-4 h-4" />
           </button>
@@ -268,8 +280,9 @@
           </div>
           <div>
             <label class="block text-sm font-medium text-[#0F172A] mb-1.5">New Password</label>
-            <input v-model="pwdForm.password" type="password" required minlength="8" placeholder="At least 8 characters"
+            <input v-model="pwdForm.password" type="password" required minlength="8" placeholder="8+ characters, with letters and numbers"
               class="w-full px-3 py-2 text-sm border border-[#E2E8F0] rounded-lg text-[#0F172A] focus:outline-none focus:ring-2 focus:ring-[#0E1EC0] bg-white" />
+            <p class="text-xs mt-1" style="color:#94A3B8;">Must include at least one letter and one number.</p>
           </div>
           <div>
             <label class="block text-sm font-medium text-[#0F172A] mb-1.5">Confirm New Password</label>
@@ -295,7 +308,76 @@
     </div>
   </Teleport>
 
+  <!-- ── Active Sessions Modal ─────────────────────────────────── -->
+  <Teleport to="body">
+    <div v-if="sessionsModal" class="fixed inset-0 z-50 flex items-center justify-center p-4">
+      <div class="absolute inset-0 bg-black/50 backdrop-blur-sm" @click="sessionsModal = false" />
+      <div class="relative bg-white rounded-2xl shadow-2xl w-full max-w-sm">
+        <div class="px-6 py-5 border-b border-[#E2E8F0] flex items-center gap-3">
+          <div class="w-9 h-9 rounded-lg bg-[#EEF1FF] flex items-center justify-center flex-shrink-0">
+            <MonitorSmartphoneIcon class="w-5 h-5 text-[#0E1EC0]" />
+          </div>
+          <div class="flex-1">
+            <h2 class="font-semibold text-[#0F172A]">Active Sessions</h2>
+            <p class="text-xs text-[#64748B]">Devices currently signed in to your account</p>
+          </div>
+          <button @click="sessionsModal = false" class="text-[#94A3B8] hover:text-[#0F172A] transition-colors" aria-label="Close">
+            <XIcon class="w-5 h-5" />
+          </button>
+        </div>
+
+        <div class="px-6 py-4 max-h-80 overflow-y-auto space-y-2">
+          <div v-if="sessionsLoading" class="py-10 text-center">
+            <Loader2Icon class="w-5 h-5 animate-spin mx-auto" style="color:#94A3B8;" />
+          </div>
+          <div
+            v-else
+            v-for="s in sessions"
+            :key="s.id"
+            class="flex items-center gap-3 px-3 py-2.5 rounded-lg"
+            style="border:1px solid #E2E8F0;"
+          >
+            <div class="w-8 h-8 rounded-lg flex items-center justify-center flex-shrink-0" style="background:#F1F5F9;">
+              <MonitorSmartphoneIcon class="w-4 h-4" style="color:#64748B;" />
+            </div>
+            <div class="flex-1 min-w-0">
+              <p class="text-sm font-medium text-[#0F172A] truncate">{{ s.name || 'Unknown device' }}</p>
+              <p class="text-xs" :style="s.is_current ? 'color:#059669;font-weight:600;' : 'color:#94A3B8;'">
+                {{ s.is_current ? 'This device' : `Active ${s.last_used_at ?? 'recently'}` }}
+              </p>
+            </div>
+            <button
+              v-if="!s.is_current"
+              @click="revokeSession(s.id)"
+              :disabled="revokingId === s.id"
+              class="text-xs font-semibold px-2.5 py-1.5 rounded-md transition-colors disabled:opacity-50 flex-shrink-0"
+              style="background:#FEF2F2;color:#DC2626;"
+            >
+              {{ revokingId === s.id ? '…' : 'Revoke' }}
+            </button>
+          </div>
+        </div>
+
+        <div class="px-6 pb-5 pt-1">
+          <button
+            v-if="sessions.filter(s => !s.is_current).length > 0"
+            @click="revokeOtherSessions"
+            class="w-full py-2 rounded-lg text-sm font-semibold transition-colors"
+            style="background:#FEF2F2;color:#DC2626;"
+          >
+            Sign out all other devices
+          </button>
+          <p v-else-if="!sessionsLoading" class="text-xs text-center" style="color:#94A3B8;">
+            No other active sessions — you're only signed in here.
+          </p>
+        </div>
+      </div>
+    </div>
+  </Teleport>
+
   <ToastContainer />
+  <CommandPalette />
+  <ConfirmDialog />
 </template>
 
 <script setup>
@@ -324,15 +406,24 @@ import {
   Moon           as MoonIcon,
   Monitor        as MonitorIcon,
   ClipboardEdit  as ClipboardEditIcon,
+  HeartPulse     as HeartPulseIcon,
+  Search         as SearchIcon,
+  MonitorSmartphone as MonitorSmartphoneIcon,
+  Settings       as SettingsIcon,
 } from 'lucide-vue-next';
 import { useAuthStore } from '@/stores/auth';
 import { useThemeStore } from '@/stores/theme';
+import { useSettingsStore } from '@/stores/settings';
 import { useToast } from '@/composables/useToast';
 import { useCampusIdentity } from '@/composables/useCampusIdentity';
 import ToastContainer from '@/components/ToastContainer.vue';
+import CommandPalette from '@/components/CommandPalette.vue';
+import ConfirmDialog from '@/components/ConfirmDialog.vue';
+import { useCommandPalette } from '@/composables/useCommandPalette';
 
-const auth   = useAuthStore();
-const theme  = useThemeStore();
+const auth    = useAuthStore();
+const theme   = useThemeStore();
+const palette = useCommandPalette();
 
 const themeOptions = [
   { mode: 'light',  label: 'Light',  icon: SunIcon     },
@@ -340,7 +431,7 @@ const themeOptions = [
   { mode: 'dark',   label: 'Dark',   icon: MoonIcon     },
 ];
 const router = useRouter();
-const logo   = '/nemsu.png';
+const settings = useSettingsStore();
 const { toast } = useToast();
 const { campus, campusName } = useCampusIdentity();
 
@@ -379,6 +470,48 @@ async function submitPwd() {
   }
 }
 
+// ── Active Sessions ──────────────────────────────────────────────
+const sessionsModal   = ref(false);
+const sessions        = ref([]);
+const sessionsLoading = ref(false);
+const revokingId      = ref(null);
+
+async function openSessions() {
+  sessionsModal.value = true;
+  sessionsLoading.value = true;
+  try {
+    const res = await axios.get('/api/auth/sessions');
+    sessions.value = res.data;
+  } catch {
+    toast('Failed to load active sessions.', 'error');
+  } finally {
+    sessionsLoading.value = false;
+  }
+}
+
+async function revokeSession(id) {
+  revokingId.value = id;
+  try {
+    await axios.delete(`/api/auth/sessions/${id}`);
+    sessions.value = sessions.value.filter(s => s.id !== id);
+    toast('Session revoked.', 'success');
+  } catch (e) {
+    toast(e.response?.data?.message ?? 'Failed to revoke session.', 'error');
+  } finally {
+    revokingId.value = null;
+  }
+}
+
+async function revokeOtherSessions() {
+  try {
+    const res = await axios.post('/api/auth/sessions/revoke-others');
+    sessions.value = sessions.value.filter(s => s.is_current);
+    toast(res.data.message, 'success');
+  } catch {
+    toast('Failed to revoke other sessions.', 'error');
+  }
+}
+
 // ── Role labels ───────────────────────────────────────────────────
 const ROLE_LABELS = {
   super_admin:     'Super Admin',
@@ -411,12 +544,14 @@ const adminOnlyItems = [
   { name: 'shifts',      label: 'Shifts',      to: { name: 'shifts'      }, icon: TimerIcon     },
   { name: 'departments', label: 'Departments', to: { name: 'departments' }, icon: Building2Icon },
   { name: 'backup',      label: 'Backup',      to: { name: 'backup'      }, icon: DatabaseIcon  },
+  { name: 'settings',    label: 'Settings',    to: { name: 'settings'    }, icon: SettingsIcon  },
 ];
 
 const superAdminItems = [
   { name: 'campuses',       label: 'Campuses',       to: { name: 'campuses'       }, icon: MapPinIcon      },
   { name: 'admin-accounts', label: 'Admin Accounts', to: { name: 'admin-accounts' }, icon: ShieldCheckIcon },
   { name: 'backup',         label: 'Backup',         to: { name: 'backup'         }, icon: DatabaseIcon    },
+  { name: 'system-health',  label: 'System Health',  to: { name: 'system-health'  }, icon: HeartPulseIcon  },
 ];
 
 const isSuperAdmin = computed(() => auth.employee?.role === 'super_admin');
@@ -475,6 +610,34 @@ onBeforeUnmount(() => {
 </script>
 
 <style scoped>
+/* ── Quick search trigger ─────────────────────────── */
+.quick-search-btn {
+  width: 100%;
+  display: flex; align-items: center; gap: 8px;
+  padding: 8px 10px;
+  border-radius: 9px;
+  background: rgba(255,255,255,0.05);
+  border: 1px solid rgba(255,255,255,0.08);
+  color: #7B8FBF;
+  font-size: 12px; font-weight: 500;
+  transition: all 0.15s ease;
+  cursor: pointer;
+}
+.quick-search-btn:hover {
+  background: rgba(255,255,255,0.09);
+  color: #C5D0E8;
+  border-color: rgba(255,255,255,0.14);
+}
+.quick-search-btn span { flex: 1; text-align: left; }
+.quick-search-kbd {
+  font-family: inherit; font-size: 9.5px; font-weight: 700;
+  color: rgba(157,173,216,0.7);
+  background: rgba(0,0,0,0.25);
+  border: 1px solid rgba(255,255,255,0.1);
+  border-radius: 4px; padding: 2px 6px;
+  flex-shrink: 0;
+}
+
 /* ── Section labels ──────────────────────────────── */
 .nav-section-label {
   font-size: 9.5px;

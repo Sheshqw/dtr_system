@@ -9,20 +9,26 @@
           <component :is="icon" class="w-5 h-5" />
         </div>
         <div>
-          <p class="ph-crumb">NEMSU · UDTRMS</p>
+          <p class="ph-crumb">{{ settings.systemName }} · {{ settings.shortName }}</p>
           <h1 class="ph-title">{{ title }}</h1>
           <p v-if="subtitle" class="ph-sub">{{ subtitle }}</p>
         </div>
       </div>
 
-      <div v-if="$slots.default" class="ph-actions">
+      <div class="ph-actions">
         <slot />
+        <NotificationBell />
       </div>
     </div>
   </div>
 </template>
 
 <script setup>
+import NotificationBell from '@/components/NotificationBell.vue';
+import { useSettingsStore } from '@/stores/settings';
+
+const settings = useSettingsStore();
+
 defineProps({
   title:    { type: String, required: true },
   subtitle: { type: String, default: '' },
