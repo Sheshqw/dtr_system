@@ -43,34 +43,27 @@ class AttendanceController extends Controller
         }
 
         $punchTime = Carbon::parse($request->punch_time);
-        $workDate  = $punchTime->toDateString();
-
-        $lastPunch = AttendanceLog::where('employee_id', $employee->id)
-            ->where('punch_time', '>=', $punchTime->copy()->subMinutes(5))
-            ->where('punch_time', '<=', $punchTime->copy()->addMinutes(5))
-            ->first();
-
-        if ($lastPunch) {
-            return response()->json(['message' => 'Duplicate punch ignored.']);
-        }
+        $workDate  = $this->workingHours->resolveWorkDate($employee, $punchTime);
 
         $punchType = $request->punch_type;
         if (! $punchType) {
             $todayPunches = AttendanceLog::where('employee_id', $employee->id)
-                ->whereDate('punch_time', $workDate)
+                ->whereDate('punch_time', $punchTime->toDateString())
                 ->count();
             $punchType = ($todayPunches % 2 === 0) ? 'IN' : 'OUT';
         }
 
-        $log = AttendanceLog::create([
-            'employee_id' => $employee->id,
-            'punch_time'  => $punchTime,
-            'punch_type'  => $punchType,
-            'source'      => $request->source ?? 'biometric',
-            'device_id'   => $request->device_id,
-            'created_by'  => null,
-            'remarks'     => $request->remarks ? strip_tags(trim($request->remarks)) : null,
+        $log = $this->workingHours->recordPunchIfNotDuplicate($employee->id, $punchTime, [
+            'punch_type' => $punchType,
+            'source'     => $request->source ?? 'biometric',
+            'device_id'  => $request->device_id,
+            'created_by' => null,
+            'remarks'    => $request->remarks ? strip_tags(trim($request->remarks)) : null,
         ]);
+
+        if (! $log) {
+            return response()->json(['message' => 'Duplicate punch ignored.']);
+        }
 
         $this->workingHours->computeDailyDtr($employee, $workDate);
 
@@ -298,7 +291,8 @@ class AttendanceController extends Controller
         ]);
 
         $punchTime = Carbon::parse($data['punch_time']);
-        $workDate  = $punchTime->toDateString();
+        $employee  = User::find($data['employee_id']);
+        $workDate  = $this->workingHours->resolveWorkDate($employee, $punchTime);
 
         $log = AttendanceLog::create([
             'employee_id' => $data['employee_id'],
@@ -309,7 +303,6 @@ class AttendanceController extends Controller
             'remarks'     => isset($data['remarks']) ? strip_tags(trim($data['remarks'])) : null,
         ]);
 
-        $employee = User::find($data['employee_id']);
         $this->workingHours->computeDailyDtr($employee, $workDate);
 
         return response()->json(['message' => 'Punch logged.', 'log_id' => $log->id], 201);
@@ -325,7 +318,7 @@ class AttendanceController extends Controller
         }
 
         $employee = $log->employee;
-        $workDate = $log->punch_time->toDateString();
+        $workDate = $this->workingHours->resolveWorkDate($employee, $log->punch_time);
 
         $log->delete();
 

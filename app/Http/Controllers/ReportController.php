@@ -129,10 +129,10 @@ class ReportController extends Controller
             $out = fopen('php://output', 'w');
             fwrite($out, "\xEF\xBB\xBF");
             fputcsv($out, ['NEMSU — Daily Time Record']);
-            fputcsv($out, ['Employee:', $employee->full_name]);
-            fputcsv($out, ['Employee ID:', $employee->employee_id]);
-            fputcsv($out, ['Position:', $employee->position ?? '']);
-            fputcsv($out, ['Department:', $employee->department?->name ?? '']);
+            fputcsv($out, ['Employee:', $this->csvSafe($employee->full_name)]);
+            fputcsv($out, ['Employee ID:', $this->csvSafe($employee->employee_id)]);
+            fputcsv($out, ['Position:', $this->csvSafe($employee->position ?? '')]);
+            fputcsv($out, ['Department:', $this->csvSafe($employee->department?->name ?? '')]);
             fputcsv($out, ['Period:', $monthLabel]);
             fputcsv($out, []);
             fputcsv($out, ['Day', 'Date', 'AM In', 'AM Out', 'PM In', 'PM Out', 'Hours Rendered', 'Status', 'Tardiness (min)', 'Undertime (min)', 'Overtime (min)']);
@@ -260,10 +260,10 @@ class ReportController extends Controller
                     $rec = $recs[$key] ?? null;
                     fputcsv($out, [
                         $rowNum++,
-                        $emp->employee_id ?? '',
-                        $emp->full_name,
-                        $emp->department?->name ?? '',
-                        $emp->position ?? '',
+                        $this->csvSafe($emp->employee_id ?? ''),
+                        $this->csvSafe($emp->full_name),
+                        $this->csvSafe($emp->department?->name ?? ''),
+                        $this->csvSafe($emp->position ?? ''),
                         $date->format('m/d/Y'),
                         $date->format('D'),
                         $rec ? $fmt($rec->morning_in)   : '—',
@@ -322,10 +322,10 @@ class ReportController extends Controller
 
                 fputcsv($out, [
                     $n++,
-                    $emp->employee_id ?? '',
-                    $emp->full_name,
-                    $emp->department?->name ?? '',
-                    $emp->position ?? '',
+                    $this->csvSafe($emp->employee_id ?? ''),
+                    $this->csvSafe($emp->full_name),
+                    $this->csvSafe($emp->department?->name ?? ''),
+                    $this->csvSafe($emp->position ?? ''),
                     $workingDays,
                     $present,
                     $late,
@@ -430,10 +430,10 @@ class ReportController extends Controller
 
                 fputcsv($out, [
                     $n++,
-                    $emp->employee_id ?? '',
-                    $emp->full_name,
-                    $emp->department?->name ?? '',
-                    $emp->position ?? '',
+                    $this->csvSafe($emp->employee_id ?? ''),
+                    $this->csvSafe($emp->full_name),
+                    $this->csvSafe($emp->department?->name ?? ''),
+                    $this->csvSafe($emp->position ?? ''),
                     $tardiness,
                     $undertime,
                     $total,
@@ -463,5 +463,21 @@ class ReportController extends Controller
         }
         if ($viewer->id === $target->id) return;
         abort(403);
+    }
+
+    /**
+     * Neutralizes CSV formula injection: Excel/Sheets treat a cell starting
+     * with =, +, -, @, tab, or CR as a formula to evaluate. Employee name,
+     * position, department, and employee_id are all free-text fields an
+     * admin can set with no format restriction, so a value like
+     * "=CMD(...)" would otherwise execute when the export is opened.
+     */
+    private function csvSafe(mixed $value): string
+    {
+        $value = (string) $value;
+        if ($value !== '' && in_array($value[0], ['=', '+', '-', '@', "\t", "\r"], true)) {
+            return "'" . $value;
+        }
+        return $value;
     }
 }

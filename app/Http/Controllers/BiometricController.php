@@ -22,13 +22,21 @@ class BiometricController extends Controller
      * Return device reachability status.
      * GET /api/biometric/status
      */
-    public function debug(): \Illuminate\Http\JsonResponse
+    public function debug(Request $request): \Illuminate\Http\JsonResponse
     {
+        if (! in_array($request->user()->role, ['admin', 'hr_officer'])) {
+            abort(403, 'Unauthorized.');
+        }
+
         return response()->json($this->zk->debugRawResponse());
     }
 
-    public function status(): \Illuminate\Http\JsonResponse
+    public function status(Request $request): \Illuminate\Http\JsonResponse
     {
+        if (! in_array($request->user()->role, ['admin', 'hr_officer'])) {
+            abort(403, 'Unauthorized.');
+        }
+
         return response()->json([
             'ip'          => $this->zk->getIp(),
             'port'        => $this->zk->getPort(),
@@ -188,7 +196,7 @@ class BiometricController extends Controller
             }
 
             $punchTime = Carbon::parse($timestamp);
-            $workDate  = $punchTime->toDateString();
+            $workDate  = $this->wh->resolveWorkDate($employee, $punchTime);
 
             $punchType = match ($state) {
                 0       => 'IN',
@@ -198,18 +206,16 @@ class BiometricController extends Controller
 
             if (! $punchType) {
                 $count     = AttendanceLog::where('employee_id', $employee->id)
-                    ->whereDate('punch_time', $workDate)->count();
+                    ->whereDate('punch_time', $punchTime->toDateString())->count();
                 $punchType = ($count % 2 === 0) ? 'IN' : 'OUT';
             }
 
-            // 5-minute duplicate guard
-            $duplicate = AttendanceLog::where('employee_id', $employee->id)
-                ->whereBetween('punch_time', [
-                    $punchTime->copy()->subMinutes(5),
-                    $punchTime->copy()->addMinutes(5),
-                ])->exists();
+            $created = $this->wh->recordPunchIfNotDuplicate($employee->id, $punchTime, [
+                'punch_type' => $punchType,
+                'source'     => $source,
+            ]);
 
-            if ($duplicate) {
+            if (! $created) {
                 $skipped++;
                 $details[] = [
                     'fingerprint_id' => $fingerprintId,
@@ -219,13 +225,6 @@ class BiometricController extends Controller
                 ];
                 continue;
             }
-
-            AttendanceLog::create([
-                'employee_id' => $employee->id,
-                'punch_time'  => $punchTime,
-                'punch_type'  => $punchType,
-                'source'      => $source,
-            ]);
 
             if ($punchTime->isToday()) {
                 broadcast(new AttendancePunched(

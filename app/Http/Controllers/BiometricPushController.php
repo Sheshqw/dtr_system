@@ -137,7 +137,7 @@ class BiometricPushController extends Controller
                 continue;
             }
 
-            $workDate  = $punchTime->toDateString();
+            $workDate  = $this->wh->resolveWorkDate($employee, $punchTime);
             $punchType = match ((string) $statusRaw) {
                 '0'     => 'IN',
                 '1'     => 'OUT',
@@ -146,25 +146,16 @@ class BiometricPushController extends Controller
 
             if (! $punchType) {
                 $count     = AttendanceLog::where('employee_id', $employee->id)
-                    ->whereDate('punch_time', $workDate)->count();
+                    ->whereDate('punch_time', $punchTime->toDateString())->count();
                 $punchType = ($count % 2 === 0) ? 'IN' : 'OUT';
             }
 
-            // 5-minute duplicate guard
-            $exists = AttendanceLog::where('employee_id', $employee->id)
-                ->whereBetween('punch_time', [
-                    $punchTime->copy()->subMinutes(5),
-                    $punchTime->copy()->addMinutes(5),
-                ])->exists();
-
-            if ($exists) { $skipped++; continue; }
-
-            AttendanceLog::create([
-                'employee_id' => $employee->id,
-                'punch_time'  => $punchTime,
-                'punch_type'  => $punchType,
-                'source'      => 'biometric',
+            $created = $this->wh->recordPunchIfNotDuplicate($employee->id, $punchTime, [
+                'punch_type' => $punchType,
+                'source'     => 'biometric',
             ]);
+
+            if (! $created) { $skipped++; continue; }
 
             $affected[$employee->id][$workDate] = $employee;
             $imported++;
