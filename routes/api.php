@@ -15,10 +15,16 @@ use App\Http\Controllers\ShiftController;
 use App\Http\Controllers\DepartmentController;
 use App\Http\Controllers\AuditController;
 use App\Http\Controllers\AnalyticsController;
+use App\Http\Controllers\SystemHealthController;
+use App\Http\Controllers\AlertController;
+use App\Http\Controllers\SystemSettingController;
 use Illuminate\Support\Facades\Route;
 
 // Public — rate-limited to 10 attempts per minute to prevent brute-force
 Route::post('/auth/login', [AuthController::class, 'login'])->middleware('throttle:10,1');
+
+// Public — the login page renders the current branding before anyone is authenticated
+Route::get('/system-settings', [SystemSettingController::class, 'show']);
 
 // ── GRANDING/ZKTeco ADMS push receiver (no auth — device hits this directly) ──
 Route::get('/iclock/cdata',      [BiometricPushController::class, 'init']);
@@ -52,7 +58,11 @@ Route::middleware('auth:sanctum')->group(function () {
     // Auth
     Route::get('/auth/me',               [AuthController::class, 'me']);
     Route::post('/auth/logout',          [AuthController::class, 'logout']);
-    Route::post('/auth/change-password', [AuthController::class, 'changePassword']);
+    // Throttled — a leaked/stolen token shouldn't let someone brute-force the current password
+    Route::post('/auth/change-password', [AuthController::class, 'changePassword'])->middleware('throttle:5,1');
+    Route::get('/auth/sessions',                 [AuthController::class, 'sessions']);
+    Route::delete('/auth/sessions/{tokenId}',    [AuthController::class, 'revokeSession']);
+    Route::post('/auth/sessions/revoke-others',  [AuthController::class, 'revokeOtherSessions']);
 
     // Attendance
     Route::get('/attendance/today',              [AttendanceController::class, 'today']);
@@ -113,8 +123,27 @@ Route::middleware('auth:sanctum')->group(function () {
     Route::post('/dtr-corrections/batch-review',      [DtrCorrectionController::class, 'batchReview']);
     Route::patch('/dtr-corrections/{correction}',     [DtrCorrectionController::class, 'review']);
 
+    // Header notification bell — aggregated "needs attention" feed
+    Route::get('/alerts', [AlertController::class, 'index']);
+
     // Audit Trail
     Route::get('/audit-logs', [AuditController::class, 'index']);
+
+    // System Settings (branding) — Super Admin & Admin can update
+    Route::post('/system-settings',            [SystemSettingController::class, 'update']);
+    Route::post('/system-settings/reset-logo', [SystemSettingController::class, 'resetLogo']);
+
+    // System Health — Super Admin only
+    Route::prefix('system-health')->group(function () {
+        Route::get('/',                    [SystemHealthController::class, 'index']);
+        Route::post('/scan',               [SystemHealthController::class, 'scan']);
+        Route::post('/clear-resolved',     [SystemHealthController::class, 'clearResolved']);
+        Route::delete('/',                 [SystemHealthController::class, 'clearAll']);
+        Route::post('/{log}/acknowledge',  [SystemHealthController::class, 'acknowledge']);
+        Route::post('/{log}/resolve',      [SystemHealthController::class, 'resolve']);
+        Route::post('/{log}/reopen',       [SystemHealthController::class, 'reopen']);
+        Route::delete('/{log}',            [SystemHealthController::class, 'destroy']);
+    });
 
     // Database Backups
     Route::get('/backups',                          [BackupController::class, 'index']);

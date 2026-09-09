@@ -25,10 +25,22 @@ class AuditLog extends Model
         return $this->belongsTo(User::class, 'user_id');
     }
 
-    public static function record(string $action, string $table, int $recordId, mixed $old, mixed $new, ?string $reason = null): void
-    {
+    /**
+     * $userId overrides the default "currently authenticated actor" — needed
+     * for auth events (login/lockout), where the subject of the log entry
+     * isn't authenticated yet when the entry is written.
+     */
+    public static function record(
+        string $action,
+        string $table,
+        ?int $recordId,
+        mixed $old,
+        mixed $new,
+        ?string $reason = null,
+        ?int $userId = null,
+    ): void {
         static::create([
-            'user_id'        => auth()->id(),
+            'user_id'        => $userId ?? auth()->id(),
             'action'         => $action,
             'table_affected' => $table,
             'record_id'      => $recordId,

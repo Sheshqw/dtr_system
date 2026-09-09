@@ -11,6 +11,7 @@ use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Hash;
 use Illuminate\Support\Facades\Storage;
 use Illuminate\Validation\Rule;
+use Illuminate\Validation\Rules\Password;
 
 class EmployeeController extends Controller
 {
@@ -82,7 +83,7 @@ class EmployeeController extends Controller
             'gender'            => 'nullable|in:male,female',
             'civil_status'      => 'nullable|in:single,married,widowed,separated',
             'email'             => 'nullable|email|max:120|unique:employees',
-            'password'          => 'nullable|string|min:8',
+            'password'          => ['nullable', 'string', Password::default()],
             'role'              => ['required', Rule::in($allowedRoles)],
             'campus_id'         => 'nullable|exists:campuses,id',
             'department_id'     => 'nullable|exists:departments,id',
@@ -132,7 +133,7 @@ class EmployeeController extends Controller
             'gender'            => 'nullable|in:male,female',
             'civil_status'      => 'nullable|in:single,married,widowed,separated',
             'email'             => ['nullable', 'email', 'max:120', Rule::unique('employees')->ignore($employee->id)],
-            'password'          => 'nullable|string|min:8',
+            'password'          => ['nullable', 'string', Password::default()],
             'role'              => ['sometimes', Rule::in($allowedRoles)],
             'campus_id'         => 'nullable|exists:campuses,id',
             'department_id'     => 'nullable|exists:departments,id',

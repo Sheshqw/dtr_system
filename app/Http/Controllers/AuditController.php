@@ -41,7 +41,7 @@ class AuditController extends Controller
         return response()->json([
             'data' => $paginated->map(fn($log) => [
                 'id'          => $log->id,
-                'user'        => $log->user?->name ?? 'System',
+                'user'        => $log->user?->full_name ?? 'System',
                 'employee_id' => $log->user?->employee_id ?? '—',
                 'action'      => $log->action,
                 'table'       => $log->table_affected,
