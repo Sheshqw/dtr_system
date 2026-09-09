@@ -7,14 +7,14 @@
     <div class="px-6 py-3 border-b border-[#E2E8F0] bg-white flex flex-wrap items-center gap-3">
       <div class="relative">
         <SearchIcon class="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-[#94A3B8]" />
-        <input v-model="search" placeholder="Search name or ID…"
+        <input v-model="filters.search" placeholder="Search name or ID…"
           class="pl-9 pr-3 py-1.5 text-sm border border-[#E2E8F0] rounded-md w-52 focus:outline-none focus:ring-2 focus:ring-[#0E1EC0]" />
       </div>
-      <select v-model="filterCampus" class="select-sm">
+      <select v-model="filters.campus" class="select-sm">
         <option value="">All Campuses</option>
         <option v-for="c in campuses" :key="c.id" :value="c.id">{{ c.name }}</option>
       </select>
-      <select v-model="filterRole" class="select-sm">
+      <select v-model="filters.role" class="select-sm">
         <option value="">All Roles</option>
         <option value="super_admin">Super Admin</option>
         <option value="admin">Admin</option>
@@ -41,15 +41,25 @@
           <thead class="border-b border-[#EEF2FA] bg-[#F7F8FD]">
             <tr>
               <th class="th-cell text-left">#</th>
-              <th class="th-cell text-left">Account</th>
-              <th class="th-cell text-left">Campus</th>
-              <th class="th-cell text-left">Department</th>
-              <th class="th-cell text-center">Role</th>
-              <th class="th-cell text-center">Status</th>
+              <th class="th-cell text-left th-sort" @click="sort('name')">
+                <span class="inline-flex items-center gap-1">Account <SortIcon :state="sortState('name')" /></span>
+              </th>
+              <th class="th-cell text-left th-sort" @click="sort('campus')">
+                <span class="inline-flex items-center gap-1">Campus <SortIcon :state="sortState('campus')" /></span>
+              </th>
+              <th class="th-cell text-left th-sort" @click="sort('department')">
+                <span class="inline-flex items-center gap-1">Department <SortIcon :state="sortState('department')" /></span>
+              </th>
+              <th class="th-cell text-center th-sort" @click="sort('role')">
+                <span class="inline-flex items-center justify-center gap-1">Role <SortIcon :state="sortState('role')" /></span>
+              </th>
+              <th class="th-cell text-center th-sort" @click="sort('status')">
+                <span class="inline-flex items-center justify-center gap-1">Status <SortIcon :state="sortState('status')" /></span>
+              </th>
             </tr>
           </thead>
           <tbody>
-            <tr v-for="(acc, i) in filtered" :key="acc.id"
+            <tr v-for="(acc, i) in sorted" :key="acc.id"
                 class="border-b border-[#E2E8F0] last:border-0 hover:bg-[#F8FAFC] transition-colors"
                 :class="{ 'opacity-50': !acc.is_active }">
               <td class="td-cell text-center text-xs text-[#94A3B8] font-mono">{{ i + 1 }}</td>
@@ -85,35 +95,52 @@
 </template>
 
 <script setup>
-import { ref, computed, onMounted } from 'vue';
+import { ref, reactive, computed, onMounted } from 'vue';
 import axios from 'axios';
 import PageHeader from '@/components/PageHeader.vue';
 import RoleBadge from '@/components/RoleBadge.vue';
+import SortIcon from '@/components/SortIcon.vue';
+import { useToast } from '@/composables/useToast';
+import { useSortable } from '@/composables/useSortable';
+import { usePersistedFilters } from '@/composables/usePersistedFilters';
 import {
   ShieldCheck as ShieldCheckIcon,
   Search as SearchIcon,
   Loader2 as Loader2Icon,
 } from 'lucide-vue-next';
 
-const accounts     = ref([]);
-const campuses     = ref([]);
-const loading      = ref(false);
-const search       = ref('');
-const filterCampus = ref('');
-const filterRole   = ref('');
+const { toast } = useToast();
+
+const accounts = ref([]);
+const campuses = ref([]);
+const loading  = ref(false);
+
+const filters = reactive({ search: '', campus: '', role: '' });
+usePersistedFilters('admin-accounts-filters', filters, ['search']);
 
 const PRIVILEGED = ['super_admin', 'admin', 'hr_officer', 'department_head'];
 
 const filtered = computed(() => {
   let list = accounts.value;
-  const s = search.value.toLowerCase();
+  const s = filters.search.toLowerCase();
   if (s) list = list.filter(a =>
     a.name.toLowerCase().includes(s) || a.employee_id.toLowerCase().includes(s)
   );
-  if (filterCampus.value) list = list.filter(a => a.campus_id == filterCampus.value);
-  if (filterRole.value)   list = list.filter(a => a.role === filterRole.value);
+  if (filters.campus) list = list.filter(a => a.campus_id == filters.campus);
+  if (filters.role)   list = list.filter(a => a.role === filters.role);
   return list;
 });
+
+const { sortKey, sortDir, sort, sorted } = useSortable(filtered, {
+  name:       (a) => a.name?.toLowerCase() ?? '',
+  campus:     (a) => a.campus ?? '',
+  department: (a) => a.department ?? '',
+  role:       (a) => a.role ?? '',
+  status:     (a) => (a.is_active ? 0 : 1),
+});
+function sortState(key) {
+  return sortKey.value === key ? sortDir.value : null;
+}
 
 function initials(name) {
   return name.split(' ').map(n => n[0]).slice(0, 2).join('').toUpperCase();
@@ -128,6 +155,8 @@ async function load() {
     ]);
     accounts.value = empRes.data.filter(e => PRIVILEGED.includes(e.role));
     campuses.value = campRes.data;
+  } catch {
+    toast('Could not load admin accounts. Please refresh the page.', 'error');
   } finally {
     loading.value = false;
   }
@@ -154,6 +183,10 @@ onMounted(load);
   color: #5A6899; white-space: nowrap;
 }
 .td-cell { padding: 12px 16px; }
+
+/* ── Sortable column headers ────────────────────────────── */
+.th-sort { cursor: pointer; user-select: none; transition: color 0.12s; }
+.th-sort:hover { color: #0E1EC0; }
 
 tbody tr { border-bottom: 1px solid #F1F5F9; transition: background 0.12s; }
 tbody tr:last-child { border-bottom: none; }

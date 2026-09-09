@@ -277,14 +277,6 @@
       </div>
     </div>
 
-    <!-- Error alert -->
-    <div v-if="errorMsg"
-         class="flex items-start gap-3 bg-red-50 border border-red-200 rounded-xl px-4 py-3 text-sm text-red-700">
-      <AlertCircleIcon class="w-4 h-4 flex-shrink-0 mt-0.5" />
-      <div>{{ errorMsg }}</div>
-      <button @click="errorMsg = ''" class="ml-auto text-red-400 hover:text-red-600"><XIcon class="w-4 h-4" /></button>
-    </div>
-
   </div><!-- /scroll area -->
   </div><!-- /flex wrapper -->
 </template>
@@ -293,11 +285,14 @@
 import { ref, onMounted } from 'vue';
 import axios from 'axios';
 import PageHeader from '@/components/PageHeader.vue';
+import { useToast } from '@/composables/useToast';
 import {
   WifiIcon, RefreshCwIcon, DownloadCloudIcon, UploadCloudIcon,
   FileTextIcon, XIcon, InfoIcon, Loader2Icon,
   CheckCircleIcon, MinusCircleIcon, AlertCircleIcon,
 } from 'lucide-vue-next';
+
+const { toast } = useToast();
 
 // ── state ──────────────────────────────────────────────────────────────────
 const status       = ref({ ip: '…', port: 4370, reachable: false, last_synced: null });
@@ -307,7 +302,6 @@ const importing    = ref(false);
 const dragging     = ref(false);
 const file         = ref(null);
 const result       = ref(null);
-const errorMsg     = ref('');
 const fileInput    = ref(null);
 
 // ── lifecycle ───────────────────────────────────────────────────────────────
@@ -316,12 +310,11 @@ onMounted(checkStatus);
 // ── methods ─────────────────────────────────────────────────────────────────
 async function checkStatus() {
   statusLoading.value = true;
-  errorMsg.value = '';
   try {
     const { data } = await axios.get('/api/biometric/status');
     status.value = data;
   } catch {
-    errorMsg.value = 'Could not reach the server to check device status.';
+    toast('Could not reach the server to check device status.', 'error');
   } finally {
     statusLoading.value = false;
   }
@@ -330,13 +323,13 @@ async function checkStatus() {
 async function syncDevice() {
   syncing.value = true;
   result.value  = null;
-  errorMsg.value = '';
   try {
     const { data } = await axios.post('/api/biometric/sync');
     result.value = data;
+    toast(`Sync complete — ${data.imported} record${data.imported !== 1 ? 's' : ''} imported.`, 'success');
     await checkStatus();
   } catch (err) {
-    errorMsg.value = err.response?.data?.error ?? 'Sync failed. Check the device connection.';
+    toast(err.response?.data?.error ?? 'Sync failed. Check the device connection.', 'error');
   } finally {
     syncing.value = false;
   }
@@ -357,7 +350,6 @@ async function importFile() {
   if (!file.value) return;
   importing.value = true;
   result.value    = null;
-  errorMsg.value  = '';
 
   const form = new FormData();
   form.append('file', file.value);
@@ -368,8 +360,9 @@ async function importFile() {
     });
     result.value = data;
     file.value   = null;
+    toast(`Import complete — ${data.imported} record${data.imported !== 1 ? 's' : ''} imported.`, 'success');
   } catch (err) {
-    errorMsg.value = err.response?.data?.error ?? 'Import failed. Please check the file format.';
+    toast(err.response?.data?.error ?? 'Import failed. Please check the file format.', 'error');
   } finally {
     importing.value = false;
   }

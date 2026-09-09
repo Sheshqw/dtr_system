@@ -18,21 +18,6 @@
     <div class="flex-1 overflow-y-auto">
       <div class="max-w-screen-xl mx-auto px-6 py-6 space-y-5">
 
-        <!-- Flash -->
-        <transition name="fade">
-          <div
-            v-if="flash.message"
-            class="flex items-center gap-3 px-4 py-3 rounded-xl text-sm font-medium"
-            :style="flash.type === 'success'
-              ? 'background:#ECFDF5;border:1px solid #A7F3D0;color:#065F46;'
-              : 'background:#FEF2F2;border:1px solid #FECACA;color:#991B1B;'"
-          >
-            <CheckCircleIcon v-if="flash.type === 'success'" class="w-4 h-4 flex-shrink-0" />
-            <AlertCircleIcon v-else class="w-4 h-4 flex-shrink-0" />
-            {{ flash.message }}
-          </div>
-        </transition>
-
         <!-- Summary cards -->
         <div class="grid grid-cols-1 sm:grid-cols-3 gap-4">
           <div class="bg-white rounded-xl px-5 py-4 cursor-pointer transition-shadow hover:shadow-md"
@@ -621,6 +606,7 @@
 import { ref, computed, reactive, onMounted } from 'vue';
 import axios from 'axios';
 import { useAuthStore } from '@/stores/auth';
+import { useToast } from '@/composables/useToast';
 import PageHeader from '@/components/PageHeader.vue';
 import StatusBadge from '@/components/StatusBadge.vue';
 import {
@@ -640,6 +626,7 @@ import {
 } from 'lucide-vue-next';
 
 const auth = useAuthStore();
+const { toast } = useToast();
 const isPrivileged = computed(() =>
   ['super_admin', 'admin', 'hr_officer'].includes(auth.employee?.role)
 );
@@ -662,8 +649,6 @@ const summary      = ref({ pending: 0, approved: 0, denied: 0 });
 const loading      = ref(false);
 const activeTab    = ref(isPrivileged.value ? 'campus' : 'mine');
 const statusFilter = ref('');
-const flash        = reactive({ message: '', type: 'success' });
-let   flashTimer   = null;
 
 // Submit modal
 const submitModal    = ref(false);
@@ -712,13 +697,6 @@ const somePendingSelected = computed(() =>
 );
 
 // ── Helpers ───────────────────────────────────────────────────────
-function showFlash(msg, type = 'success') {
-  if (flashTimer) clearTimeout(flashTimer);
-  flash.message = msg;
-  flash.type    = type;
-  flashTimer = setTimeout(() => { flash.message = ''; }, 5000);
-}
-
 function initials(name = '') {
   return name.split(' ').map(n => n[0]).slice(0, 2).join('').toUpperCase();
 }
@@ -772,7 +750,7 @@ async function load() {
       corrections.value = all;
     }
   } catch {
-    showFlash('Failed to load correction requests.', 'error');
+    toast('Failed to load correction requests.', 'error');
   } finally {
     loading.value = false;
   }
@@ -804,7 +782,7 @@ async function submitRequest() {
     });
     submitModal.value = false;
     const count = fields.length;
-    showFlash(`${count} correction field${count !== 1 ? 's' : ''} submitted. HR will review your request shortly.`);
+    toast(`${count} correction field${count !== 1 ? 's' : ''} submitted. HR will review your request shortly.`);
     await load();
   } catch (e) {
     submitError.value = Object.values(e.response?.data?.errors ?? {})[0]?.[0]
@@ -830,11 +808,11 @@ async function submitReview() {
       reviewer_remarks: reviewRemarks.value || null,
     });
     const label = reviewAction.value === 'approved' ? 'approved' : 'denied';
-    showFlash(`Correction request ${label} successfully.`);
+    toast(`Correction request ${label} successfully.`);
     reviewTarget.value = null;
     await load();
   } catch (e) {
-    showFlash(e.response?.data?.message ?? 'Review failed.', 'error');
+    toast(e.response?.data?.message ?? 'Review failed.', 'error');
     reviewTarget.value = null;
   } finally {
     reviewing.value = false;
@@ -860,10 +838,10 @@ async function submitBatchReview() {
     const label  = batchAction.value === 'approved' ? 'approved' : 'denied';
     batchModal.value  = false;
     selectedIds.value = new Set();
-    showFlash(`${count} correction request${count !== 1 ? 's' : ''} ${label} successfully.`);
+    toast(`${count} correction request${count !== 1 ? 's' : ''} ${label} successfully.`);
     await load();
   } catch (e) {
-    showFlash(e.response?.data?.message ?? 'Batch review failed.', 'error');
+    toast(e.response?.data?.message ?? 'Batch review failed.', 'error');
     batchModal.value = false;
   } finally {
     batchReviewing.value = false;
@@ -893,9 +871,6 @@ onMounted(load);
   transition: border-color 0.15s;
 }
 .modal-input-sm:focus { outline: none; border-color: #0E1EC0; }
-
-.fade-enter-active, .fade-leave-active { transition: opacity 0.3s ease; }
-.fade-enter-from, .fade-leave-to       { opacity: 0; }
 
 @media (max-width: 640px) {
   .grid.grid-cols-1.sm\\:grid-cols-3 { grid-template-columns: 1fr; }

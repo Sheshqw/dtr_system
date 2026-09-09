@@ -6,6 +6,29 @@
 @source '../**/*.js';
 @source '../**/*.vue';
 
+/* ─── Keyboard focus visibility ───────────────────────────────────────────────
+   Only shows for keyboard navigation (:focus-visible skips mouse clicks), so
+   this never adds a ring on click — just makes tabbing through the app
+   actually show where you are. !important guards against component-scoped
+   styles that happen to also target :focus and win on source order. ────── */
+a:focus-visible,
+button:focus-visible,
+input:focus-visible,
+select:focus-visible,
+textarea:focus-visible,
+[tabindex]:focus-visible {
+  outline: 2px solid #0E1EC0 !important;
+  outline-offset: 2px !important;
+}
+[data-theme="dark"] a:focus-visible,
+[data-theme="dark"] button:focus-visible,
+[data-theme="dark"] input:focus-visible,
+[data-theme="dark"] select:focus-visible,
+[data-theme="dark"] textarea:focus-visible,
+[data-theme="dark"] [tabindex]:focus-visible {
+  outline-color: #93C5FD !important;
+}
+
 /* ─── Scrollbar ─────────────────────────────────────────────────────────────── */
 ::-webkit-scrollbar             { width: 5px; height: 5px; }
 ::-webkit-scrollbar-track       { background: transparent; }

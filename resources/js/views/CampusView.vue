@@ -159,9 +159,11 @@ import { ref, reactive, onMounted } from 'vue';
 import axios from 'axios';
 import { Plus as PlusIcon, Pencil as PencilIcon, Trash2 as Trash2Icon, MapPin as MapPinIcon, X as XIcon, Loader2 as Loader2Icon } from 'lucide-vue-next';
 import { useToast } from '@/composables/useToast';
+import { useConfirm } from '@/composables/useConfirm';
 import PageHeader from '@/components/PageHeader.vue';
 
-const { toast } = useToast();
+const { toast }   = useToast();
+const { confirm } = useConfirm();
 
 const campuses  = ref([]);
 const loading   = ref(false);
@@ -228,7 +230,12 @@ async function submit() {
 }
 
 async function confirmDelete(campus) {
-  if (!confirm(`Delete "${campus.name}"? This cannot be undone.`)) return;
+  const ok = await confirm({
+    title:       `Delete "${campus.name}"?`,
+    message:     'This cannot be undone.',
+    confirmText: 'Delete',
+  });
+  if (!ok) return;
   try {
     await axios.delete(`/api/campuses/${campus.id}`);
     toast('Campus deleted.', 'success');

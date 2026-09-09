@@ -137,12 +137,12 @@
     <!-- Add / Edit Modal -->
     <Teleport to="body">
       <div v-if="modal.open" class="fixed inset-0 z-50 flex items-center justify-center p-4">
-        <div class="absolute inset-0 bg-black/40 backdrop-blur-sm" @click="closeModal"></div>
+        <div class="absolute inset-0 bg-black/40 backdrop-blur-sm" @click="requestClose"></div>
         <div class="relative bg-white rounded-2xl shadow-2xl w-full max-w-md">
           <!-- Modal header -->
           <div class="px-6 py-5 border-b border-[#E2E8F0] flex items-center justify-between">
             <h2 class="text-base font-semibold text-[#0F172A]">{{ modal.editing ? 'Edit Holiday' : 'Add Holiday' }}</h2>
-            <button @click="closeModal" class="text-[#94A3B8] hover:text-[#0F172A] transition-colors">
+            <button @click="requestClose" class="text-[#94A3B8] hover:text-[#0F172A] transition-colors">
               <XIcon class="w-5 h-5" />
             </button>
           </div>
@@ -193,7 +193,7 @@
             </p>
 
             <div class="flex justify-end gap-3 pt-1">
-              <button type="button" @click="closeModal" class="px-4 py-2 text-sm border border-[#E2E8F0] rounded-lg text-[#0F172A] hover:bg-[#F8FAFC] transition-colors">
+              <button type="button" @click="requestClose" class="px-4 py-2 text-sm border border-[#E2E8F0] rounded-lg text-[#0F172A] hover:bg-[#F8FAFC] transition-colors">
                 Cancel
               </button>
               <button
@@ -240,6 +240,7 @@ import { ref, computed, onMounted } from 'vue';
 import axios from 'axios';
 import { useAuthStore } from '@/stores/auth';
 import { useToast } from '@/composables/useToast';
+import { useUnsavedGuard } from '@/composables/useUnsavedGuard';
 import PageHeader from '@/components/PageHeader.vue';
 import {
   Calendar as CalendarIcon,
@@ -253,6 +254,7 @@ import {
 
 const auth    = useAuthStore();
 const { toast } = useToast();
+const unsavedGuard = useUnsavedGuard();
 
 const year     = ref(new Date().getFullYear());
 const holidays = ref([]);
@@ -303,15 +305,24 @@ function nextYear() { year.value++; load(); }
 function openAdd() {
   form.value = { name: '', date: `${year.value}-01-01`, type: 'regular' };
   modal.value = { open: true, editing: null, saving: false, error: '' };
+  unsavedGuard.snapshot(form.value);
 }
 
 function openEdit(holiday) {
   form.value = { name: holiday.name, date: holiday.date, type: holiday.type };
   modal.value = { open: true, editing: holiday, saving: false, error: '' };
+  unsavedGuard.snapshot(form.value);
 }
 
 function closeModal() {
   modal.value.open = false;
+}
+
+// Backdrop click / X / Cancel go through here — warns before discarding a
+// dirty form. The programmatic close after a successful save (below) skips
+// this and calls closeModal() directly.
+async function requestClose() {
+  await unsavedGuard.close(form.value, closeModal);
 }
 
 async function saveHoliday() {

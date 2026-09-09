@@ -20,24 +20,6 @@
     <div class="flex-1 overflow-y-auto">
       <div class="max-w-screen-xl mx-auto px-6 py-6 space-y-5">
 
-        <!-- Flash message -->
-        <transition name="fade">
-          <div
-            v-if="flash.message"
-            class="flex items-start gap-3 px-4 py-3 rounded-xl text-sm font-medium"
-            :style="flash.type === 'success'
-              ? 'background:#ECFDF5;border:1px solid #A7F3D0;color:#065F46;'
-              : flash.type === 'warning'
-              ? 'background:#FFFBEB;border:1px solid #FDE68A;color:#92400E;'
-              : 'background:#FEF2F2;border:1px solid #FECACA;color:#991B1B;'"
-          >
-            <CheckCircleIcon v-if="flash.type === 'success'" class="w-4 h-4 mt-0.5 flex-shrink-0" />
-            <AlertTriangleIcon v-else-if="flash.type === 'warning'" class="w-4 h-4 mt-0.5 flex-shrink-0" />
-            <AlertCircleIcon v-else class="w-4 h-4 mt-0.5 flex-shrink-0" />
-            <span>{{ flash.message }}</span>
-          </div>
-        </transition>
-
         <!-- Summary cards -->
         <div class="grid grid-cols-1 sm:grid-cols-3 gap-4">
           <div class="bg-white rounded-xl px-5 py-4" style="border:1px solid #E5E7EB;">
@@ -312,9 +294,11 @@
 </template>
 
 <script setup>
-import { ref, computed, onMounted, reactive } from 'vue';
+import { ref, computed, onMounted } from 'vue';
 import axios from 'axios';
 import { useAuthStore } from '@/stores/auth';
+import { useToast } from '@/composables/useToast';
+import { useConfirm } from '@/composables/useConfirm';
 import PageHeader from '@/components/PageHeader.vue';
 import {
   Database as DatabaseIcon,
@@ -324,8 +308,6 @@ import {
   RefreshCw as RefreshCwIcon,
   Loader2 as Loader2Icon,
   Info as InfoIcon,
-  CheckCircle as CheckCircleIcon,
-  AlertCircle as AlertCircleIcon,
   AlertTriangle as AlertTriangleIcon,
   Archive as ArchiveIcon,
   HardDrive as HardDriveIcon,
@@ -336,6 +318,8 @@ import {
 
 const auth        = useAuthStore();
 const isSuperAdmin = computed(() => auth.employee?.role === 'super_admin');
+const { toast }    = useToast();
+const { confirm }  = useConfirm();
 
 const backups      = ref([]);
 const summary      = ref({});
@@ -344,15 +328,6 @@ const creating     = ref(false);
 const restoring    = ref(false);
 const expanded     = ref(null);
 const restoreTarget = ref(null);
-const flash        = reactive({ message: '', type: 'success' });
-let   flashTimer   = null;
-
-function showFlash(message, type = 'success') {
-  if (flashTimer) clearTimeout(flashTimer);
-  flash.message = message;
-  flash.type    = type;
-  flashTimer    = setTimeout(() => { flash.message = ''; }, 6000);
-}
 
 function toggleExpand(filename) {
   expanded.value = expanded.value === filename ? null : filename;
@@ -375,7 +350,7 @@ async function load() {
     backups.value = res.data.backups;
     summary.value = res.data.summary;
   } catch {
-    showFlash('Failed to load backups.', 'error');
+    toast('Failed to load backups.', 'error');
   } finally {
     loading.value = false;
   }
@@ -385,12 +360,12 @@ async function createBackup() {
   creating.value = true;
   try {
     const res = await axios.post('/api/backups');
-    showFlash(
+    toast(
       `Backup created: ${res.data.filename} — ${res.data.total_records.toLocaleString()} records (${res.data.size})`
     );
     await load();
   } catch (e) {
-    showFlash(e.response?.data?.message ?? 'Failed to create backup.', 'error');
+    toast(e.response?.data?.message ?? 'Failed to create backup.', 'error');
   } finally {
     creating.value = false;
   }
@@ -411,7 +386,7 @@ async function download(filename) {
     document.body.removeChild(a);
     URL.revokeObjectURL(url);
   } catch {
-    showFlash('Download failed. Please try again.', 'error');
+    toast('Download failed. Please try again.', 'error');
   }
 }
 
@@ -425,25 +400,30 @@ async function doRestore() {
   try {
     const res = await axios.post(`/api/backups/${encodeURIComponent(restoreTarget.value.filename)}/restore`);
     restoreTarget.value = null;
-    showFlash(`Restore complete — ${res.data.statements} statements executed.`);
+    toast(`Restore complete — ${res.data.statements} statements executed.`);
     await load();
   } catch (e) {
     restoreTarget.value = null;
-    showFlash(e.response?.data?.message ?? 'Restore failed.', 'error');
+    toast(e.response?.data?.message ?? 'Restore failed.', 'error');
   } finally {
     restoring.value = false;
   }
 }
 
 async function confirmDelete(filename) {
-  if (! confirm(`Delete backup "${filename}"?\n\nThis cannot be undone.`)) return;
+  const ok = await confirm({
+    title:       `Delete backup "${filename}"?`,
+    message:     'This cannot be undone.',
+    confirmText: 'Delete',
+  });
+  if (!ok) return;
   try {
     await axios.delete(`/api/backups/${encodeURIComponent(filename)}`);
-    showFlash('Backup deleted.');
+    toast('Backup deleted.');
     if (expanded.value === filename) expanded.value = null;
     await load();
   } catch (e) {
-    showFlash(e.response?.data?.message ?? 'Delete failed.', 'error');
+    toast(e.response?.data?.message ?? 'Delete failed.', 'error');
   }
 }
 
@@ -504,10 +484,6 @@ onMounted(load);
   border: none; cursor: pointer; transition: all 0.15s;
 }
 .btn-del:hover { background: #FEE2E2; }
-
-/* ── Fade transition ─────────────────────────────────── */
-.fade-enter-active, .fade-leave-active { transition: opacity 0.3s ease; }
-.fade-enter-from, .fade-leave-to       { opacity: 0; }
 
 /* ── Mobile ──────────────────────────────────────────── */
 @media (max-width: 640px) {

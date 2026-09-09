@@ -59,6 +59,18 @@
       </span>
     </div>
 
+    <!-- Bulk action bar -->
+    <div v-if="canManage && selected.size" class="px-6 py-2.5 bg-[#EEF2FF] border-b border-[#D4DEFF] flex items-center gap-3">
+      <span class="text-xs font-semibold text-[#0E1EC0]">{{ selected.size }} selected</span>
+      <button @click="bulkActivate" class="inline-flex items-center gap-1.5 px-2.5 py-1 text-xs font-medium rounded-md border border-[#C7D2F6] text-[#0E1EC0] bg-white hover:bg-[#F4F6FF] transition-colors">
+        <UserCheckIcon class="w-3.5 h-3.5" /> Activate
+      </button>
+      <button @click="bulkDeactivate" class="inline-flex items-center gap-1.5 px-2.5 py-1 text-xs font-medium rounded-md border border-[#F3C7C7] text-[#DC2626] bg-white hover:bg-[#FEF2F2] transition-colors">
+        <UserXIcon class="w-3.5 h-3.5" /> Deactivate
+      </button>
+      <button @click="selected = new Set()" class="text-xs text-[#64748B] hover:text-[#0F172A] ml-1">Clear</button>
+    </div>
+
     <!-- Table -->
     <div class="flex-1 overflow-auto bg-[#F4F6FB] p-6">
       <div class="bg-white border border-[#E4E9F2] rounded-xl shadow-[0_2px_12px_rgba(8,14,128,0.07),0_1px_3px_rgba(8,14,128,0.04)]">
@@ -66,20 +78,38 @@
         <table class="w-full text-sm emp-table">
           <thead class="sticky top-0 bg-white border-b border-[#E2E8F0] z-10">
             <tr>
+              <th v-if="canManage" class="th-cell w-8">
+                <input type="checkbox" :checked="allSelected" @change="toggleSelectAll" class="rounded border-[#CBD5E1]" />
+              </th>
               <th class="th-cell w-8">#</th>
-              <th class="th-cell text-left">Employee</th>
-              <th class="th-cell text-left">Staff Type</th>
-              <th class="th-cell text-left">Department</th>
-              <th class="th-cell text-left">Position</th>
-              <th class="th-cell">Role</th>
-              <th class="th-cell">Status</th>
-              <th class="th-cell text-right" v-if="auth.isAdmin || auth.isHrOfficer">Actions</th>
+              <th class="th-cell text-left th-sort" @click="sort('name')">
+                <span class="inline-flex items-center gap-1">Employee <SortIcon :state="sortState('name')" /></span>
+              </th>
+              <th class="th-cell text-left th-sort" @click="sort('staff_type')">
+                <span class="inline-flex items-center gap-1">Staff Type <SortIcon :state="sortState('staff_type')" /></span>
+              </th>
+              <th class="th-cell text-left th-sort" @click="sort('department')">
+                <span class="inline-flex items-center gap-1">Department <SortIcon :state="sortState('department')" /></span>
+              </th>
+              <th class="th-cell text-left th-sort" @click="sort('position')">
+                <span class="inline-flex items-center gap-1">Position <SortIcon :state="sortState('position')" /></span>
+              </th>
+              <th class="th-cell th-sort" @click="sort('role')">
+                <span class="inline-flex items-center justify-center gap-1">Role <SortIcon :state="sortState('role')" /></span>
+              </th>
+              <th class="th-cell th-sort" @click="sort('status')">
+                <span class="inline-flex items-center justify-center gap-1">Status <SortIcon :state="sortState('status')" /></span>
+              </th>
+              <th class="th-cell text-right" v-if="canManage">Actions</th>
             </tr>
           </thead>
           <tbody>
             <!-- Skeleton rows -->
             <template v-if="loading">
               <tr v-for="i in 8" :key="'sk'+i" class="border-b border-[#E2E8F0]">
+                <td v-if="canManage" class="td-cell text-center">
+                  <div class="skel skel-text mx-auto" style="width:14px;"></div>
+                </td>
                 <td class="td-cell text-center">
                   <div class="skel skel-text mx-auto" style="width:18px;"></div>
                 </td>
@@ -110,6 +140,9 @@
               class="border-b border-[#E2E8F0] last:border-0 hover:bg-[#F8FAFC] transition-colors"
               :class="{ 'opacity-50': !emp.is_active }"
             >
+              <td v-if="canManage" class="td-cell text-center">
+                <input type="checkbox" :checked="selected.has(emp.id)" @change="toggleSelect(emp.id)" class="rounded border-[#CBD5E1]" />
+              </td>
               <td class="td-cell text-center text-[#94A3B8] font-mono text-xs">{{ (currentPage - 1) * perPage + i + 1 }}</td>
               <td class="td-cell">
                 <div class="flex items-center gap-3">
@@ -173,7 +206,12 @@
               </td>
             </tr>
             <tr v-if="!loading && paginated.length === 0">
-              <td colspan="8" class="td-cell text-center text-[#94A3B8] py-12">No employees found.</td>
+              <td :colspan="canManage ? 9 : 7">
+                <EmptyState
+                  title="No employees found"
+                  description="Try adjusting your search or filters, or add a new employee."
+                />
+              </td>
             </tr>
           </tbody>
         </table>
@@ -197,7 +235,7 @@
   ═══════════════════════════════════════════════════════════════ -->
   <Teleport to="body">
     <div v-if="modal.open" class="fixed inset-0 z-50 flex items-center justify-center p-4">
-      <div class="absolute inset-0 bg-black/50 backdrop-blur-sm" @click="modal.open = false" />
+      <div class="absolute inset-0 bg-black/50 backdrop-blur-sm" @click="requestCloseModal" />
       <div class="relative bg-white rounded-2xl shadow-2xl w-full max-w-4xl max-h-[92vh] flex flex-col overflow-hidden">
 
         <!-- ── Gradient Header ── -->
@@ -223,7 +261,7 @@
               </p>
             </div>
           </div>
-          <button @click="modal.open = false" class="w-8 h-8 rounded-lg bg-white/10 hover:bg-white/20 flex items-center justify-center text-white/70 hover:text-white transition-all">
+          <button @click="requestCloseModal" class="w-8 h-8 rounded-lg bg-white/10 hover:bg-white/20 flex items-center justify-center text-white/70 hover:text-white transition-all">
             <XIcon class="w-4 h-4" />
           </button>
         </div>
@@ -318,7 +356,7 @@
                         :type="showPassword ? 'text' : 'password'"
                         class="form-input pr-10"
                         :required="!modal.editing"
-                        placeholder="Minimum 8 characters"
+                        placeholder="8+ characters, with letters and numbers"
                       />
                       <button type="button" @click="showPassword = !showPassword"
                         class="absolute right-3 top-1/2 -translate-y-1/2 text-[#94A3B8] hover:text-[#0F172A] transition-colors">
@@ -651,7 +689,7 @@
           </p>
           <p v-else class="text-xs text-[#94A3B8]">Fields marked <span class="text-red-500 font-bold">*</span> are required</p>
           <div class="flex gap-3">
-            <button type="button" @click="modal.open = false" class="btn-outline">Cancel</button>
+            <button type="button" @click="requestCloseModal" class="btn-outline">Cancel</button>
             <button type="submit" form="emp-form" :disabled="saving" class="btn-primary">
               <Loader2Icon v-if="saving" class="w-4 h-4 animate-spin" />
               {{ modal.editing ? 'Save Changes' : 'Add Employee' }}
@@ -666,14 +704,20 @@
 
 <script setup>
 import { ref, reactive, computed, watch, onMounted } from 'vue';
-import { useRouter } from 'vue-router';
+import { useRouter, useRoute } from 'vue-router';
 import axios from 'axios';
 import { useAuthStore } from '@/stores/auth';
 import { useToast } from '@/composables/useToast';
+import { useConfirm } from '@/composables/useConfirm';
+import { useUnsavedGuard } from '@/composables/useUnsavedGuard';
+import { useSortable } from '@/composables/useSortable';
+import { usePersistedFilters } from '@/composables/usePersistedFilters';
 import RoleBadge from '@/components/RoleBadge.vue';
 import StaffTypeBadge from '@/components/StaffTypeBadge.vue';
 import PaginationBar from '@/components/PaginationBar.vue';
 import PageHeader from '@/components/PageHeader.vue';
+import EmptyState from '@/components/EmptyState.vue';
+import SortIcon from '@/components/SortIcon.vue';
 import {
   Plus as PlusIcon, Search as SearchIcon, Pencil as PencilIcon, Users as UsersIcon,
   UserX as UserXIcon, UserCheck as UserCheckIcon,
@@ -700,7 +744,12 @@ import {
 
 const auth        = useAuthStore();
 const router      = useRouter();
+const route       = useRoute();
 const { toast }   = useToast();
+const { confirm } = useConfirm();
+const unsavedGuard = useUnsavedGuard();
+
+const canManage = computed(() => auth.isAdmin || auth.isHrOfficer);
 
 const employees   = ref([]);
 const departments = ref([]);
@@ -716,9 +765,11 @@ const editingEmp    = ref(null);
 const formBody      = ref(null);
 const activeSection = ref('account');
 
-const filters     = reactive({ search: '', department_id: '', staff_type: '', role: '', status: '' });
+const filters     = reactive({ search: route.query.q ?? '', department_id: '', staff_type: '', role: '', status: '' });
+usePersistedFilters('employees-filters', filters, ['search']);
 const currentPage = ref(1);
 const perPage     = 20;
+const selected    = ref(new Set());
 
 const staffTypes = [
   { value: 'faculty',        label: 'Faculty / Instructor', icon: GraduationCapIcon  },
@@ -841,11 +892,73 @@ const filtered = computed(() => {
   return list;
 });
 watch(filters, () => { currentPage.value = 1; });
+
+const { sortKey, sortDir, sort, sorted } = useSortable(filtered, {
+  name:       (e) => e.name?.toLowerCase() ?? '',
+  staff_type: (e) => e.staff_type ?? '',
+  department: (e) => e.department ?? '',
+  position:   (e) => e.position ?? '',
+  role:       (e) => e.role ?? '',
+  status:     (e) => (e.is_active ? 0 : 1),
+});
+function sortState(key) {
+  return sortKey.value === key ? sortDir.value : null;
+}
+
 const totalPages = computed(() => Math.max(1, Math.ceil(filtered.value.length / perPage)));
 const paginated  = computed(() => {
   const start = (currentPage.value - 1) * perPage;
-  return filtered.value.slice(start, start + perPage);
+  return sorted.value.slice(start, start + perPage);
 });
+
+// ── Selection & bulk actions ─────────────────────────────────────────
+const allSelected = computed(() =>
+  paginated.value.length > 0 && paginated.value.every(e => selected.value.has(e.id))
+);
+function toggleSelectAll() {
+  const next = new Set(selected.value);
+  if (allSelected.value) paginated.value.forEach(e => next.delete(e.id));
+  else                    paginated.value.forEach(e => next.add(e.id));
+  selected.value = next;
+}
+function toggleSelect(id) {
+  const next = new Set(selected.value);
+  if (next.has(id)) next.delete(id); else next.add(id);
+  selected.value = next;
+}
+
+async function bulkDeactivate() {
+  const targets = employees.value.filter(e => selected.value.has(e.id) && e.is_active);
+  if (!targets.length) {
+    toast('The selected employees are already inactive.', 'warning');
+    return;
+  }
+  const ok = await confirm({
+    title:   'Deactivate selected employees?',
+    message: `This will deactivate ${targets.length} employee${targets.length !== 1 ? 's' : ''}.`,
+  });
+  if (!ok) return;
+  const results = await Promise.allSettled(targets.map(e => axios.delete(`/api/employees/${e.id}`)));
+  let okCount = 0;
+  results.forEach((r, i) => { if (r.status === 'fulfilled') { targets[i].is_active = false; okCount++; } });
+  toast(`${okCount} employee${okCount !== 1 ? 's' : ''} deactivated.`, okCount === targets.length ? 'success' : 'warning');
+  selected.value = new Set();
+}
+
+async function bulkActivate() {
+  const targets = employees.value.filter(e => selected.value.has(e.id) && !e.is_active);
+  if (!targets.length) {
+    toast('The selected employees are already active.', 'warning');
+    return;
+  }
+  const results = await Promise.allSettled(
+    targets.map(e => axios.put(`/api/employees/${e.id}`, { is_active: true }))
+  );
+  let okCount = 0;
+  results.forEach((r, i) => { if (r.status === 'fulfilled') { targets[i].is_active = true; okCount++; } });
+  toast(`${okCount} employee${okCount !== 1 ? 's' : ''} activated.`, okCount === targets.length ? 'success' : 'warning');
+  selected.value = new Set();
+}
 
 // ── Modal nav & header ──────────────────────────────────────────────
 const avatarInitials = computed(() => {
@@ -1000,6 +1113,7 @@ function openAdd() {
   photoFile.value = null; photoPreview.value = null; editingEmp.value = null;
   activeSection.value = 'account';
   modal.open = true;
+  unsavedGuard.snapshot(form);
 }
 
 function openEdit(emp) {
@@ -1020,6 +1134,13 @@ function openEdit(emp) {
   photoFile.value = null; photoPreview.value = null; editingEmp.value = emp;
   activeSection.value = 'account';
   modal.open = true;
+  unsavedGuard.snapshot(form);
+}
+
+// Backdrop click / X / Cancel go through here — warns before discarding a
+// dirty form. The post-save close in submit() skips this deliberately.
+async function requestCloseModal() {
+  await unsavedGuard.close(form, () => { modal.open = false; });
 }
 
 async function submit() {
@@ -1138,6 +1259,10 @@ onMounted(load);
   color: #5A6899; background: #F7F8FD; white-space: nowrap;
 }
 .td-cell { padding: 12px 16px; color: #0F172A; }
+
+/* ── Sortable column headers ────────────────────────────── */
+.th-sort { cursor: pointer; user-select: none; transition: color 0.12s; }
+.th-sort:hover { color: #0E1EC0; }
 
 /* ── Table row hover ───────────────────────────────────── */
 tbody tr { border-bottom: 1px solid #F1F5F9; transition: background 0.12s; }
