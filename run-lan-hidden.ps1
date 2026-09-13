@@ -1,4 +1,4 @@
-# NEMSU UDTRMS — Silent background launcher (Task Scheduler)
+﻿# NEMSU UDTRMS — Silent background launcher (Task Scheduler)
 # No need to edit this file when changing networks — run Setup-Network.ps1 instead.
 
 $root = "c:\Users\markn\Herd\dtr_system"

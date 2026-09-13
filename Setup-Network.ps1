@@ -1,4 +1,4 @@
-# NEMSU UDTRMS — Network Setup
+﻿# NEMSU UDTRMS — Network Setup
 # Run this whenever you move to a different Wi-Fi or LAN.
 # It auto-detects your IP, updates .env, and rebuilds the frontend.
 # Usage: Right-click → "Run with PowerShell"

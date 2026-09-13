@@ -1,4 +1,4 @@
-# NEMSU UDTRMS — LAN Server Launcher
+﻿# NEMSU UDTRMS — LAN Server Launcher
 # Usage: Right-click → "Run with PowerShell"
 # No need to edit this file when changing networks — run Setup-Network.ps1 instead.
 
