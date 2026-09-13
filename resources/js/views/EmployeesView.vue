@@ -756,6 +756,12 @@ const activeSection = ref('account');
 
 const filters     = reactive({ search: route.query.q ?? '', department_id: '', staff_type: '', role: '', status: '' });
 usePersistedFilters('employees-filters', filters, ['search']);
+
+// A department deep-link (e.g. clicking a row in the Dashboard's department
+// ranking) should win over whatever filter was persisted from a previous visit.
+if (route.query.department) {
+  filters.department_id = Number(route.query.department);
+}
 const currentPage = ref(1);
 const perPage     = 20;
 const selected    = ref(new Set());

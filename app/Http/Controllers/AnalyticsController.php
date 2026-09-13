@@ -82,6 +82,7 @@ class AnalyticsController extends Controller
             return $depts->map(function ($dept) use ($statsRaw) {
                 $stats = ($statsRaw->get($dept->id) ?? collect())->pluck('count', 'status')->toArray();
                 return [
+                    'id'      => $dept->id,
                     'name'    => $dept->name,
                     'code'    => $dept->code,
                     'total'   => $dept->employees_count,

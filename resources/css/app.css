@@ -208,6 +208,10 @@ input, select, textarea {
 }
 [data-theme="dark"] .f-btn:hover  { background: #1E2D4A !important; }
 [data-theme="dark"] .f-btn--on    { background: #0F2068 !important; color: #fff !important; border-color: #0F2068 !important; }
+[data-theme="dark"] .f-search-clear { color: #64748B !important; }
+[data-theme="dark"] .f-search-clear:hover { background: rgba(255,255,255,0.08) !important; color: #B7C3DE !important; }
+[data-theme="dark"] .f-clear-all    { color: #94A3B8 !important; }
+[data-theme="dark"] .f-clear-all:hover { background: rgba(239,68,68,0.15) !important; color: #FCA5A5 !important; }
 
 /* ── Buttons ────────────────────────────────────────────────────────────── */
 [data-theme="dark"] .btn-outline {

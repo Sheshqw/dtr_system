@@ -363,6 +363,15 @@
                 placeholder="Search name or ID…"
                 class="f-ctrl f-search"
               />
+              <button
+                v-if="filters.search"
+                @click="filters.search = ''"
+                class="f-search-clear"
+                title="Clear search"
+                aria-label="Clear search"
+              >
+                <XIcon class="w-3 h-3" />
+              </button>
             </div>
             <select v-model="filters.status" class="f-ctrl">
               <option value="">All Status</option>
@@ -371,6 +380,9 @@
               <option value="absent">Absent</option>
               <option value="holiday">Holiday</option>
             </select>
+            <button v-if="filtersActive" @click="clearFilters" class="f-clear-all">
+              <XIcon class="w-3 h-3" /> Clear filters
+            </button>
           </div>
         </div>
 
@@ -611,7 +623,17 @@
                 <span style="text-align:center;">Present</span>
                 <span style="text-align:right;">Rate</span>
               </div>
-              <div v-for="(d, i) in deptRankings" :key="d.name" class="drl-row">
+              <div
+                v-for="(d, i) in deptRankings"
+                :key="d.name"
+                class="drl-row"
+                :class="{ 'drl-row--clickable': d.id }"
+                role="button"
+                :tabindex="d.id ? 0 : -1"
+                :title="d.id ? `View ${d.name} employees` : d.name"
+                @click="goToDepartment(d)"
+                @keyup.enter="goToDepartment(d)"
+              >
                 <span class="drl-rank">{{ i + 1 }}</span>
                 <span class="drl-name" :title="d.name">{{ d.name }}</span>
                 <span class="drl-present">{{ d.present }}<span class="drl-total">/{{ d.total }}</span></span>
@@ -696,6 +718,7 @@ import {
   Users        as UsersIcon,
   UserCheck    as UserCheckIcon,
   UserX          as UserXIcon,
+  X              as XIcon,
   Target         as TargetIcon,
   Clock          as ClockIcon,
   ClipboardEdit  as ClipboardEditIcon,
@@ -747,6 +770,17 @@ function tickClock() {
 const todayStr        = new Date().toISOString().split('T')[0];
 const filters         = reactive({ date: todayStr, search: '', status: '' });
 const debouncedSearch = useDebounce(computed(() => filters.search), 300);
+
+const filtersActive = computed(() =>
+  filters.date !== todayStr || filters.search !== '' || filters.status !== ''
+);
+
+function clearFilters() {
+  filters.date   = todayStr;
+  filters.search = '';
+  filters.status = '';
+  refresh();
+}
 
 const formattedDate = computed(() =>
   new Date(filters.date + 'T00:00:00').toLocaleDateString('en-PH', {
@@ -940,6 +974,7 @@ const trendAnalytics = computed(() => {
 const deptRankings = computed(() =>
   deptData.value
     .map(d => ({
+      id:      d.id,
       name:    d.name || d.code || 'Unknown',
       present: d.present ?? 0,
       absent:  d.absent  ?? 0,
@@ -950,6 +985,11 @@ const deptRankings = computed(() =>
     }))
     .sort((a, b) => b.rate - a.rate)
 );
+
+function goToDepartment(d) {
+  if (!d.id) return;
+  router.push({ name: 'employees', query: { department: String(d.id) } });
+}
 
 async function loadAnalytics() {
   analyticsLoading.value = true;
@@ -1816,7 +1856,29 @@ onMounted(async () => {
   color: #9CA3AF;
   pointer-events: none;
 }
-.f-search { padding-left: 28px; width: 170px; }
+.f-search { padding-left: 28px; padding-right: 24px; width: 170px; }
+.f-search-clear {
+  position: absolute;
+  right: 6px; top: 50%;
+  transform: translateY(-50%);
+  width: 16px; height: 16px;
+  display: flex; align-items: center; justify-content: center;
+  border-radius: 4px;
+  color: #9CA3AF;
+  transition: background 0.12s, color 0.12s;
+}
+.f-search-clear:hover { background: #F1F5F9; color: #475569; }
+
+.f-clear-all {
+  display: inline-flex; align-items: center; gap: 4px;
+  font-size: 12px; font-weight: 500;
+  color: #64748B;
+  padding: 5px 8px;
+  border-radius: 6px;
+  transition: background 0.12s, color 0.12s;
+  white-space: nowrap;
+}
+.f-clear-all:hover { background: #FEF2F2; color: #DC2626; }
 
 /* ── Attendance table ─────────────────────────────────────────── */
 .table-scroll { overflow-x: auto; }
@@ -2170,6 +2232,16 @@ onMounted(async () => {
   border-bottom: 1px solid #F1F5F9;
 }
 .drl-row:last-child { border-bottom: none; }
+.drl-row--clickable {
+  cursor: pointer;
+  border-radius: 6px;
+  margin: 0 -6px;
+  padding-left: 6px;
+  padding-right: 6px;
+  transition: background 0.12s;
+}
+.drl-row--clickable:hover,
+.drl-row--clickable:focus-visible { background: #F4F6FB; }
 .drl-rank    { font-size: 9.5px; font-weight: 700; color: #CBD5E1; width: 14px; flex-shrink: 0; text-align: right; }
 .drl-name    { font-size: 10.5px; font-weight: 500; color: #374151; flex: 1; min-width: 0; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
 .drl-present { font-size: 10.5px; font-weight: 700; color: #0F172A; width: 32px; text-align: center; flex-shrink: 0; }
