@@ -59,4 +59,21 @@ router.afterEach((to) => {
     document.title = title ? `${title} — ${brand}` : brand;
 });
 
+// Every page is lazy-loaded (`() => import(...)`), so its JS file is only
+// fetched the first time a browser tab actually visits it. If the app gets
+// rebuilt/redeployed while someone already has it open — the filenames
+// change every build — that fetch 404s and the navigation silently leaves
+// the page blank. A hard reload picks up the current build's file list, so
+// do that automatically instead of leaving the user staring at nothing.
+// The sessionStorage guard stops a real, unrelated error from reload-looping.
+router.onError((error, to) => {
+    const isStaleChunk = /Failed to fetch dynamically imported module|error loading dynamically imported module|Importing a module script failed/i.test(error.message);
+    if (!isStaleChunk) return;
+
+    const key = `chunk-reload:${to.fullPath}`;
+    if (sessionStorage.getItem(key)) return; // already tried once for this path — a real error, don't loop
+    sessionStorage.setItem(key, '1');
+    window.location.href = to.fullPath;
+});
+
 export default router;
