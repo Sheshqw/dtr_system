@@ -57,6 +57,11 @@ router.afterEach((to) => {
     const settings = useSettingsStore();
     const brand = `${settings.systemName} ${settings.shortName}`;
     document.title = title ? `${title} — ${brand}` : brand;
+
+    // Reaching here means the navigation actually succeeded — the app is
+    // healthy again, so a *future* stale-chunk error (from a later rebuild)
+    // should be free to trigger another auto-reload. See onError below.
+    sessionStorage.removeItem('chunk-reload-pending');
 });
 
 // Every page is lazy-loaded (`() => import(...)`), so its JS file is only
@@ -65,14 +70,19 @@ router.afterEach((to) => {
 // change every build — that fetch 404s and the navigation silently leaves
 // the page blank. A hard reload picks up the current build's file list, so
 // do that automatically instead of leaving the user staring at nothing.
-// The sessionStorage guard stops a real, unrelated error from reload-looping.
+//
+// The guard is a single session-wide flag, not per-route, and afterEach
+// above clears it on every successful navigation. That distinguishes "a
+// fresh rebuild just made this route stale again" (should still auto-heal —
+// this can legitimately happen many times over a long-lived tab) from "we
+// just reloaded and hit the exact same error again with no successful
+// navigation in between" (a real loop, stop retrying).
 router.onError((error, to) => {
     const isStaleChunk = /Failed to fetch dynamically imported module|error loading dynamically imported module|Importing a module script failed/i.test(error.message);
     if (!isStaleChunk) return;
 
-    const key = `chunk-reload:${to.fullPath}`;
-    if (sessionStorage.getItem(key)) return; // already tried once for this path — a real error, don't loop
-    sessionStorage.setItem(key, '1');
+    if (sessionStorage.getItem('chunk-reload-pending')) return; // reloaded and failed again immediately — don't loop
+    sessionStorage.setItem('chunk-reload-pending', '1');
     window.location.href = to.fullPath;
 });
 
