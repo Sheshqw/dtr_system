@@ -84,7 +84,7 @@
             <div
               v-for="holiday in group"
               :key="holiday.id"
-              class="px-5 py-3.5 flex items-center gap-4 hover:bg-[#FAFBFF] transition-colors"
+              class="holiday-row px-5 py-3.5 flex items-center gap-4 hover:bg-[#FAFBFF] transition-colors"
             >
               <!-- Date block -->
               <div class="flex-shrink-0 w-12 text-center">
@@ -393,6 +393,10 @@ onMounted(load);
 }
 
 @media (max-width: 640px) {
-  .px-5.py-3\\.5 { padding: 10px 14px; }
+  /* A dedicated class, not an escaped Tailwind utility selector — the
+     previous ".px-5.py-3\\.5" had a doubled backslash (an invalid CSS
+     escape), so it silently never matched anything and tripped the
+     build's CSS parser. */
+  .holiday-row { padding: 10px 14px; }
 }
 </style>
