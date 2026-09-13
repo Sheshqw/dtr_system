@@ -23,6 +23,8 @@
         <option value="LOGIN_BLOCKED">Login Blocked (Locked)</option>
         <option value="ACCOUNT_LOCKED">Account Locked</option>
         <option value="LOGOUT">Logout</option>
+        <option value="DTR_MONTH_LOCKED">DTR Month Locked</option>
+        <option value="DTR_MONTH_UNLOCKED">DTR Month Unlocked</option>
       </select>
       <select v-model="filters.table" class="audit-filter-input">
         <option value="">All Tables</option>
@@ -139,6 +141,7 @@ import {
   LogOut      as LogOutIcon,
   ShieldAlert as ShieldAlertIcon,
   Lock        as LockIcon,
+  Unlock      as UnlockIcon,
 } from 'lucide-vue-next';
 
 const logs    = ref([]);
@@ -160,11 +163,16 @@ const ACTION_META = {
   LOGIN_FAILED:  { icon: ShieldAlertIcon, color: '#D97706', bg: '#FFFBEB', verb: 'failed to log in' },
   LOGIN_BLOCKED: { icon: LockIcon,     color: '#EA580C', bg: '#FFF7ED', verb: 'tried to log in while locked out' },
   ACCOUNT_LOCKED: { icon: LockIcon,    color: '#DC2626', bg: '#FEF2F2', verb: 'was locked out after 5 failed attempts' },
+  DTR_MONTH_LOCKED:   { icon: LockIcon,   color: '#B45309', bg: '#FFFBEB', verb: 'locked a month\'s DTR records' },
+  DTR_MONTH_UNLOCKED: { icon: UnlockIcon, color: '#2563EB', bg: '#EFF6FF', verb: 'unlocked a month\'s DTR records' },
 };
 
 // These read as a complete sentence on their own ("X logged in") — the
-// generic CRUD "verb + table + #id" tail doesn't apply to them.
-const AUTH_ACTIONS = ['LOGIN', 'LOGOUT', 'LOGIN_FAILED', 'LOGIN_BLOCKED', 'ACCOUNT_LOCKED'];
+// generic CRUD "verb + table + #id" tail doesn't apply to them. The DTR
+// lock actions join this list too: which month/campus is already spelled
+// out in the reason line below, so "#7" (the lock row's own id) would
+// only add noise.
+const AUTH_ACTIONS = ['LOGIN', 'LOGOUT', 'LOGIN_FAILED', 'LOGIN_BLOCKED', 'ACCOUNT_LOCKED', 'DTR_MONTH_LOCKED', 'DTR_MONTH_UNLOCKED'];
 
 function actionMeta(action) {
   return ACTION_META[action] ?? { icon: ActivityIcon, color: '#64748B', bg: '#F1F5F9', verb: action?.toLowerCase() };
@@ -177,6 +185,7 @@ const TABLE_LABELS = {
   holidays:         'a holiday',
   shifts:           'a shift',
   departments:      'a department',
+  dtr_locks:        'a DTR month lock',
 };
 function tableLabel(table) {
   return TABLE_LABELS[table] ?? (table ?? 'a record').replace(/_/g, ' ');

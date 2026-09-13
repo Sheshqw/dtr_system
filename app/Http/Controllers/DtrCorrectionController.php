@@ -2,9 +2,11 @@
 
 namespace App\Http\Controllers;
 
+use App\Exceptions\DtrMonthLockedException;
 use App\Http\Traits\ScopesByCampus;
 use App\Models\DailyDtr;
 use App\Models\DtrCorrection;
+use App\Models\DtrLock;
 use App\Models\User;
 use App\Notifications\CorrectionReviewed;
 use Carbon\Carbon;
@@ -159,6 +161,11 @@ class DtrCorrectionController extends Controller
             return response()->json(['message' => 'This request has already been reviewed.'], 422);
         }
 
+        if (DtrLock::isLocked($correction->employee?->campus_id, $correction->work_date)) {
+            $d = Carbon::parse($correction->work_date);
+            throw new DtrMonthLockedException($d->year, $d->month);
+        }
+
         $validated = $request->validate([
             'status'           => 'required|in:approved,denied',
             'reviewer_remarks' => 'nullable|string|max:500',
@@ -226,7 +233,15 @@ class DtrCorrectionController extends Controller
             ? DtrCorrection::whereIn('group_id', $groupIds)->where('status', 'pending')->get()
             : collect();
 
-        $allToReview = $corrections->merge($groupSiblings)->unique('id');
+        $merged = $corrections->merge($groupSiblings)->unique('id');
+
+        // A batch can span several months — one locked among many shouldn't
+        // abort the rest, so locked items are set aside and reported back
+        // as skipped rather than thrown as an error.
+        $allToReview = $merged->reject(
+            fn($c) => DtrLock::isLocked($c->employee?->campus_id, $c->work_date)
+        );
+        $skippedLocked = $merged->count() - $allToReview->count();
 
         foreach ($allToReview as $c) {
             $this->applyReview($c, $validated, $user);
@@ -244,10 +259,15 @@ class DtrCorrectionController extends Controller
 
         $processed = $allToReview->count();
         $label     = $validated['status'] === 'approved' ? 'approved' : 'denied';
+        $message   = "{$processed} correction " . ($processed === 1 ? 'request' : 'requests') . " {$label}.";
+        if ($skippedLocked > 0) {
+            $message .= " {$skippedLocked} skipped — that month has already been locked.";
+        }
 
         return response()->json([
-            'message'   => "{$processed} correction " . ($processed === 1 ? 'request' : 'requests') . " {$label}.",
-            'processed' => $processed,
+            'message'        => $message,
+            'processed'      => $processed,
+            'skipped_locked' => $skippedLocked,
         ]);
     }
 

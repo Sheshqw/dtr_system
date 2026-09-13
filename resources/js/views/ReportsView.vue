@@ -272,6 +272,97 @@
           </div>
         </div>
 
+        <!-- ── Month Lock card ─────────────────────────────────────────── -->
+        <div v-if="canSelectEmployee" class="rounded-xl shadow-[0_2px_8px_rgba(0,0,0,0.08)] overflow-hidden border border-[#E2E8F0]">
+
+          <!-- Gradient header -->
+          <div class="bg-gradient-to-r from-[#7C2D12] to-[#B45309] px-6 py-4 flex items-center gap-3">
+            <div class="w-10 h-10 rounded-xl bg-white/15 border border-white/20 flex items-center justify-center flex-shrink-0">
+              <LockIcon class="w-5 h-5 text-white" />
+            </div>
+            <div>
+              <h2 class="text-white font-semibold text-sm">DTR Month Lock</h2>
+              <p class="text-white/60 text-xs mt-0.5">Finalize a month so its records can no longer be edited</p>
+            </div>
+          </div>
+
+          <div class="bg-white px-6 py-5 space-y-4">
+
+            <div class="grid gap-3" :class="isSuperAdmin ? 'grid-cols-3' : 'grid-cols-2'">
+              <div>
+                <label class="bulk-label">Month</label>
+                <select v-model="lockMonth" class="form-input">
+                  <option v-for="m in months" :key="m.value" :value="m.value">{{ m.label }}</option>
+                </select>
+              </div>
+              <div>
+                <label class="bulk-label">Year</label>
+                <select v-model="lockYear" class="form-input">
+                  <option v-for="y in years" :key="y" :value="y">{{ y }}</option>
+                </select>
+              </div>
+              <div v-if="isSuperAdmin">
+                <label class="bulk-label">Campus</label>
+                <select v-model="lockCampusId" class="form-input">
+                  <option value="">— Select —</option>
+                  <option v-for="c in campuses" :key="c.id" :value="c.id">{{ c.name }}</option>
+                </select>
+              </div>
+            </div>
+
+            <!-- Status -->
+            <div
+              class="flex items-center gap-3 px-4 py-3 rounded-lg"
+              :style="currentLock
+                ? 'background:#FEF2F2;border:1px solid #FECACA;'
+                : 'background:#F0FDF4;border:1px solid #BBF7D0;'"
+            >
+              <LockIcon v-if="currentLock" class="w-4 h-4 flex-shrink-0" style="color:#DC2626;" />
+              <UnlockIcon v-else class="w-4 h-4 flex-shrink-0" style="color:#15803D;" />
+              <div class="flex-1 min-w-0 text-sm">
+                <template v-if="currentLock">
+                  <span class="font-semibold" style="color:#991B1B;">Locked</span>
+                  <span style="color:#7F1D1D;"> by {{ currentLock.locked_by }} on {{ formatLockDate(currentLock.locked_at) }}</span>
+                </template>
+                <template v-else>
+                  <span class="font-semibold" style="color:#15803D;">Open</span>
+                  <span style="color:#166534;"> — {{ months.find(m => m.value === lockMonth)?.label }} {{ lockYear }} can still be edited.</span>
+                </template>
+              </div>
+            </div>
+
+            <div class="flex items-center gap-3">
+              <button
+                v-if="!currentLock"
+                @click="lockMonthNow"
+                :disabled="lockingBusy || (isSuperAdmin && !lockCampusId)"
+                class="inline-flex items-center gap-2 px-4 py-2 text-sm font-semibold rounded-lg text-white transition-colors disabled:opacity-50"
+                style="background:#B45309;"
+              >
+                <Loader2Icon v-if="lockingBusy" class="w-4 h-4 animate-spin" />
+                <LockIcon v-else class="w-4 h-4" />
+                Lock This Month
+              </button>
+              <button
+                v-else-if="canUnlock"
+                @click="unlockMonthNow"
+                :disabled="lockingBusy"
+                class="inline-flex items-center gap-2 px-4 py-2 text-sm font-semibold rounded-lg border transition-colors disabled:opacity-50"
+                style="border-color:#FECACA;color:#B91C1C;"
+              >
+                <Loader2Icon v-if="lockingBusy" class="w-4 h-4 animate-spin" />
+                <UnlockIcon v-else class="w-4 h-4" />
+                Unlock
+              </button>
+              <p v-else class="text-xs text-[#94A3B8]">Only an Admin or Super Admin can unlock a finalized month.</p>
+            </div>
+
+            <p class="text-xs text-[#94A3B8]">
+              Once locked, manual punch entry, punch deletion, and DTR correction approvals for this campus and month are refused until it's unlocked.
+            </p>
+          </div>
+        </div>
+
         <!-- ── Preview skeleton (while loading) ─────────────────────── -->
         <div v-if="previewing" class="bg-white border border-[#E2E8F0] rounded-xl shadow-[0_1px_4px_rgba(0,0,0,0.08)] overflow-hidden">
 
@@ -501,6 +592,7 @@ import { useRoute } from 'vue-router';
 import axios from 'axios';
 import { useAuthStore } from '@/stores/auth';
 import { useToast } from '@/composables/useToast';
+import { useConfirm } from '@/composables/useConfirm';
 import StatusBadge from '@/components/StatusBadge.vue';
 import PageHeader from '@/components/PageHeader.vue';
 import {
@@ -511,6 +603,7 @@ import {
   Download      as DownloadIcon,
   Loader2       as Loader2Icon,
   Lock          as LockIcon,
+  Unlock        as UnlockIcon,
   Table2        as TableIcon,
   Printer       as PrinterIcon,
   CheckCircle2  as CheckCircle2Icon,
@@ -527,6 +620,10 @@ import {
 const auth = useAuthStore();
 const route = useRoute();
 const { toast } = useToast();
+const { confirm } = useConfirm();
+
+const isSuperAdmin = computed(() => auth.employee?.role === 'super_admin');
+const canUnlock    = computed(() => ['admin', 'super_admin'].includes(auth.employee?.role));
 
 const canSelectEmployee = computed(() =>
   ['admin', 'hr_officer', 'super_admin'].includes(auth.employee?.role)
@@ -559,6 +656,83 @@ const bulkYear       = ref(now.getFullYear());
 const bulkDepartment = ref('');
 const bulkStaffType  = ref('');
 const departments    = ref([]);
+
+// ── Month Lock ──────────────────────────────────────────────────────
+const lockMonth    = ref(now.getMonth() + 1);
+const lockYear     = ref(now.getFullYear());
+const lockCampusId = ref('');
+const campuses     = ref([]);
+const locks        = ref([]);
+const lockingBusy  = ref(false);
+
+const currentLock = computed(() => {
+  const campusId = isSuperAdmin.value ? lockCampusId.value : auth.employee?.campus_id;
+  if (!campusId) return null;
+  return locks.value.find(l =>
+    String(l.campus_id) === String(campusId) && l.year === lockYear.value && l.month === lockMonth.value
+  ) ?? null;
+});
+
+function formatLockDate(dt) {
+  return new Date(dt.replace(' ', 'T')).toLocaleDateString('en-PH', { month: 'short', day: 'numeric', year: 'numeric' });
+}
+
+async function loadLocks() {
+  try {
+    const { data } = await axios.get('/api/dtr-locks');
+    locks.value = data;
+  } catch { /* non-critical widget — fails quietly, Lock button still guards server-side */ }
+}
+
+async function lockMonthNow() {
+  const campusId = isSuperAdmin.value ? lockCampusId.value : auth.employee?.campus_id;
+  if (!campusId) return;
+
+  const label = `${months.find(m => m.value === lockMonth.value)?.label} ${lockYear.value}`;
+  const ok = await confirm({
+    title:       `Lock ${label}?`,
+    message:     `Once locked, no one can add, edit, or delete punches — or approve DTR corrections — for this month until an Admin or Super Admin unlocks it.`,
+    confirmText: 'Lock Month',
+    danger:      false,
+  });
+  if (!ok) return;
+
+  lockingBusy.value = true;
+  try {
+    const { data } = await axios.post('/api/dtr-locks', { campus_id: campusId, year: lockYear.value, month: lockMonth.value });
+    locks.value.push(data);
+    toast(`${label} locked.`, 'success');
+  } catch (e) {
+    toast(e.response?.data?.message ?? 'Failed to lock this month.', 'error');
+  } finally {
+    lockingBusy.value = false;
+  }
+}
+
+async function unlockMonthNow() {
+  const lock = currentLock.value;
+  if (!lock) return;
+
+  const label = `${months.find(m => m.value === lock.month)?.label} ${lock.year}`;
+  const ok = await confirm({
+    title:       `Unlock ${label}?`,
+    message:     `This reopens the month for edits. Only do this if you need to correct something after it was finalized.`,
+    confirmText: 'Unlock',
+    danger:      true,
+  });
+  if (!ok) return;
+
+  lockingBusy.value = true;
+  try {
+    await axios.delete(`/api/dtr-locks/${lock.id}`);
+    locks.value = locks.value.filter(l => l.id !== lock.id);
+    toast(`${label} unlocked.`, 'warning');
+  } catch (e) {
+    toast(e.response?.data?.message ?? 'Failed to unlock this month.', 'error');
+  } finally {
+    lockingBusy.value = false;
+  }
+}
 
 
 const bulkEmployeeCount = computed(() => {
@@ -1117,6 +1291,14 @@ onMounted(async () => {
       }
     } catch { /* ignore */ } finally {
       loadingEmployees.value = false;
+    }
+
+    loadLocks();
+    if (isSuperAdmin.value) {
+      try {
+        const { data } = await axios.get('/api/campuses');
+        campuses.value = data;
+      } catch { /* ignore */ }
     }
   }
 });

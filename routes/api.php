@@ -7,6 +7,7 @@ use App\Http\Controllers\BiometricController;
 use App\Http\Controllers\BiometricPushController;
 use App\Http\Controllers\CampusController;
 use App\Http\Controllers\DtrCorrectionController;
+use App\Http\Controllers\DtrLockController;
 use App\Http\Controllers\EmployeeController;
 use App\Http\Controllers\ReportController;
 use App\Http\Controllers\TrackingController;
@@ -116,12 +117,18 @@ Route::middleware('auth:sanctum')->group(function () {
     // Analytics (dashboard charts)
     Route::get('/analytics/trend',       [AnalyticsController::class, 'trend']);
     Route::get('/analytics/departments', [AnalyticsController::class, 'departments']);
+    Route::get('/analytics/staff-types', [AnalyticsController::class, 'staffTypes']);
 
     // DTR Correction Requests
     Route::get('/dtr-corrections',                    [DtrCorrectionController::class, 'index']);
     Route::post('/dtr-corrections',                   [DtrCorrectionController::class, 'store']);
     Route::post('/dtr-corrections/batch-review',      [DtrCorrectionController::class, 'batchReview']);
     Route::patch('/dtr-corrections/{correction}',     [DtrCorrectionController::class, 'review']);
+
+    // DTR Month Lock — finalize a campus's month so it can no longer be edited
+    Route::get('/dtr-locks',            [DtrLockController::class, 'index']);
+    Route::post('/dtr-locks',           [DtrLockController::class, 'lock']);
+    Route::delete('/dtr-locks/{lock}',  [DtrLockController::class, 'unlock']);
 
     // Header notification bell — aggregated "needs attention" feed
     Route::get('/alerts', [AlertController::class, 'index']);

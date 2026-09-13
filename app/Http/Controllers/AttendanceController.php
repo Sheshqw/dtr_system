@@ -3,9 +3,11 @@
 namespace App\Http\Controllers;
 
 use App\Events\AttendancePunched;
+use App\Exceptions\DtrMonthLockedException;
 use App\Http\Traits\ScopesByCampus;
 use App\Models\AttendanceLog;
 use App\Models\DailyDtr;
+use App\Models\DtrLock;
 use App\Models\Holiday;
 use App\Models\User;
 use App\Services\WorkingHoursService;
@@ -294,6 +296,11 @@ class AttendanceController extends Controller
         $employee  = User::find($data['employee_id']);
         $workDate  = $this->workingHours->resolveWorkDate($employee, $punchTime);
 
+        if (DtrLock::isLocked($employee->campus_id, $workDate)) {
+            $d = Carbon::parse($workDate);
+            throw new DtrMonthLockedException($d->year, $d->month);
+        }
+
         $log = AttendanceLog::create([
             'employee_id' => $data['employee_id'],
             'punch_time'  => $punchTime,
@@ -319,6 +326,11 @@ class AttendanceController extends Controller
 
         $employee = $log->employee;
         $workDate = $this->workingHours->resolveWorkDate($employee, $log->punch_time);
+
+        if (DtrLock::isLocked($employee->campus_id, $workDate)) {
+            $d = Carbon::parse($workDate);
+            throw new DtrMonthLockedException($d->year, $d->month);
+        }
 
         $log->delete();
 
