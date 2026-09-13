@@ -632,6 +632,37 @@
             </div>
           </div>
 
+          <!-- Staff type composition -->
+          <div class="chart-panel chart-panel--wide" style="border-top-color:#0E1EC0;">
+            <div class="cp-header">
+              <div class="cp-title-group">
+                <span class="cp-badge" style="background:#EEF2FF;color:#0E1EC0;">ROLE</span>
+                <div>
+                  <h2 class="cp-title">Staff Type Composition</h2>
+                  <p class="cp-sub">Today's attendance by role — a second lens next to department</p>
+                </div>
+              </div>
+              <div class="dept-legend">
+                <span class="dl-item"><i class="dl-dot" style="background:#0E1EC0;"></i>Present</span>
+                <span class="dl-item"><i class="dl-dot dl-dot--absent"></i>Absent</span>
+              </div>
+            </div>
+
+            <div class="chart-area chart-area--staff">
+              <canvas v-show="!analyticsLoading && !staffTypeEmpty" ref="staffTypeCanvas" role="img" aria-label="Attendance by staff type"></canvas>
+              <div v-if="analyticsLoading" class="chart-skel chart-skel--dept">
+                <div v-for="i in 4" :key="i" class="dept-skel-row">
+                  <div class="an-sk" style="height:10px;width:110px;border-radius:4px;flex-shrink:0;"></div>
+                  <div class="an-sk dept-skel-bar" :style="{ width: (35 + i * 12) + '%' }"></div>
+                </div>
+              </div>
+              <div v-if="!analyticsLoading && staffTypeEmpty" class="chart-empty">
+                <UsersIcon class="w-8 h-8 mb-2 opacity-20" style="color:#94A3B8;" />
+                <p>No staff type data for this date. Set a staff type on employee profiles to see this breakdown.</p>
+              </div>
+            </div>
+          </div>
+
         </div>
 
       </div><!-- /analytics-card -->
@@ -798,18 +829,36 @@ const debounce = (fn, ms = 300) => { let t; return (...a) => { clearTimeout(t); 
 const trendDays        = ref(30);
 const trendCanvas      = ref(null);
 const deptCanvas       = ref(null);
+const staffTypeCanvas  = ref(null);
 const analyticsLoading = ref(false);
 const deptEmpty        = ref(false);
-let trendChart = null;
-let deptChart  = null;
-const trendData  = ref([]);
-const deptData   = ref([]);
+const staffTypeEmpty   = ref(false);
+let trendChart     = null;
+let deptChart       = null;
+let staffTypeChart  = null;
+const trendData     = ref([]);
+const deptData      = ref([]);
+const staffTypeData = ref([]);
+
+// Short display labels for staff_type keys — kept local rather than pulling
+// in EmployeesView's full picker list, since only the label text is needed.
+const STAFF_TYPE_LABELS = {
+  faculty:        'Faculty / Instructor',
+  administrative: 'Administrative',
+  security:       'Security Guard',
+  custodial:      'Custodial / Utility',
+  maintenance:    'Maintenance',
+  laboratory:     'Lab Technician',
+  driver:         'Driver',
+  other:          'Other',
+};
 
 watch(() => filters.date, debounce(refresh));
 watch(trendDays, loadAnalytics);
 watch(() => theme.isDark, () => {
   buildTrendChart(trendData.value);
   buildDeptChart(deptData.value);
+  buildStaffTypeChart(staffTypeData.value);
 });
 
 const font = { family: 'system-ui, -apple-system, Arial, sans-serif', size: 11 };
@@ -905,14 +954,17 @@ const deptRankings = computed(() =>
 async function loadAnalytics() {
   analyticsLoading.value = true;
   try {
-    const [trendRes, deptRes] = await Promise.all([
+    const [trendRes, deptRes, staffTypeRes] = await Promise.all([
       axios.get('/api/analytics/trend', { params: { days: trendDays.value } }),
       axios.get('/api/analytics/departments', { params: { date: filters.date } }),
+      axios.get('/api/analytics/staff-types', { params: { date: filters.date } }),
     ]);
-    trendData.value = trendRes.data;
-    deptData.value  = deptRes.data;
+    trendData.value     = trendRes.data;
+    deptData.value       = deptRes.data;
+    staffTypeData.value  = staffTypeRes.data;
     buildTrendChart(trendData.value);
     buildDeptChart(deptData.value);
+    buildStaffTypeChart(staffTypeData.value);
   } finally {
     analyticsLoading.value = false;
   }
@@ -1100,10 +1152,83 @@ function buildDeptChart(data) {
   });
 }
 
+// Same mark spec as buildDeptChart() — horizontal stacked bar, one fixed hue
+// for "Present" (identity is already carried by the y-axis label), just a
+// different hue than the department panel so the two are visually distinct
+// at a glance while staying a single accent each, not a rainbow.
+function buildStaffTypeChart(data) {
+  if (staffTypeChart) { staffTypeChart.destroy(); staffTypeChart = null; }
+  staffTypeEmpty.value = !data.length;
+  if (!staffTypeCanvas.value || !data.length) return;
+
+  const labels = data.map(d => STAFF_TYPE_LABELS[d.type] ?? d.type);
+
+  staffTypeChart = new Chart(staffTypeCanvas.value, {
+    type: 'bar',
+    data: {
+      labels,
+      datasets: [
+        {
+          label: 'Present',
+          data: data.map(d => d.present),
+          backgroundColor: '#0E1EC0',
+          borderRadius: { topLeft: 0, topRight: 4, bottomLeft: 0, bottomRight: 4 },
+          borderSkipped: 'left',
+          barPercentage: 0.62, categoryPercentage: 0.78,
+        },
+        {
+          label: 'Absent',
+          data: data.map(d => d.absent),
+          backgroundColor: 'rgba(226,232,240,0.85)',
+          borderRadius: { topLeft: 0, topRight: 3, bottomLeft: 0, bottomRight: 3 },
+          borderSkipped: 'left',
+          barPercentage: 0.62, categoryPercentage: 0.78,
+        },
+      ],
+    },
+    options: {
+      indexAxis: 'y',
+      responsive: true, maintainAspectRatio: false,
+      animation: { duration: 600, easing: 'easeOutQuart' },
+      plugins: {
+        legend: { display: false },
+        tooltip: {
+          bodyFont: font, titleFont: { ...font, weight: '600' },
+          padding: 12, cornerRadius: 6,
+          backgroundColor: '#0A1940',
+          borderColor: 'rgba(201,162,39,0.45)', borderWidth: 1,
+          callbacks: {
+            title: items => labels[items[0].dataIndex],
+            label: ctx => {
+              const d = data[ctx.dataIndex];
+              const total = (d.present ?? 0) + (d.absent ?? 0);
+              const pct = total > 0 ? Math.round(ctx.parsed.x / total * 100) : 0;
+              return ` ${ctx.dataset.label}: ${ctx.parsed.x}  (${pct}%)`;
+            },
+          },
+        },
+      },
+      scales: {
+        y: {
+          grid: { display: false }, border: { display: false },
+          ticks: { font: { ...font, size: 10.5 }, color: tc.yTickColor, padding: 6 },
+        },
+        x: {
+          beginAtZero: true,
+          ticks: { font, color: tc.tickColor, precision: 0, stepSize: 1 },
+          grid: { color: tc.gridColor, drawTicks: false },
+          border: { display: false },
+        },
+      },
+    },
+  });
+}
+
 onBeforeUnmount(() => {
   clearInterval(clockTimer);
   trendChart?.destroy();
   deptChart?.destroy();
+  staffTypeChart?.destroy();
 });
 
 onMounted(async () => {
@@ -1863,6 +1988,9 @@ onMounted(async () => {
 
 /* ── Charts ───────────────────────────────────────────────────── */
 .charts-row { display: grid; grid-template-columns: 1fr 1fr; gap: 14px; padding: 16px 20px 20px; }
+/* Staff type panel spans the full row, below the trend + department pair —
+   a 3rd item in a 2-col grid would otherwise strand itself in one column. */
+.chart-panel--wide { grid-column: 1 / -1; }
 
 .chart-panel {
   background: #fff;
@@ -1935,6 +2063,7 @@ onMounted(async () => {
 
 .chart-area       { padding: 6px 18px 18px; position: relative; height: 215px; }
 .chart-area--dept { height: 265px; }
+.chart-area--staff { height: 190px; }
 
 /* Dept legend */
 .dept-legend { display: flex; align-items: center; gap: 12px; }

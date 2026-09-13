@@ -5,6 +5,7 @@ namespace App\Http\Controllers;
 use App\Http\Traits\ScopesByCampus;
 use App\Models\DailyDtr;
 use App\Models\Department;
+use App\Models\User;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Cache;
 use Illuminate\Support\Facades\DB;
@@ -92,5 +93,49 @@ class AnalyticsController extends Controller
 
         return response()->json($result
         );
+    }
+
+    /**
+     * Today's (or a given date's) attendance broken down by staff type —
+     * a second lens on the same headcount data next to the department
+     * breakdown (role composition rather than org placement).
+     */
+    public function staffTypes(Request $request)
+    {
+        $campusId = $this->resolvedCampusId($request);
+        $date     = $request->input('date', now()->format('Y-m-d'));
+        $cacheKey = "analytics_staff_types_{$date}_" . ($campusId ?? 'all');
+
+        $result = Cache::remember($cacheKey, 300, function () use ($campusId, $date) {
+            $totals = User::where('is_active', true)
+                ->whereNotNull('staff_type')
+                ->when($campusId, fn($q) => $q->where('campus_id', $campusId))
+                ->selectRaw('staff_type, COUNT(*) as total')
+                ->groupBy('staff_type')
+                ->pluck('total', 'staff_type');
+
+            if ($totals->isEmpty()) return [];
+
+            $statsRaw = DailyDtr::selectRaw('employees.staff_type, daily_dtr.status, COUNT(*) as count')
+                ->join('employees', 'employees.id', '=', 'daily_dtr.employee_id')
+                ->whereDate('daily_dtr.work_date', $date)
+                ->whereNotNull('employees.staff_type')
+                ->when($campusId, fn($q) => $q->where('employees.campus_id', $campusId))
+                ->groupBy('employees.staff_type', 'daily_dtr.status')
+                ->get()
+                ->groupBy('staff_type');
+
+            return $totals->map(function ($total, $type) use ($statsRaw) {
+                $stats = ($statsRaw->get($type) ?? collect())->pluck('count', 'status')->toArray();
+                return [
+                    'type'    => $type,
+                    'total'   => $total,
+                    'present' => ($stats['present'] ?? 0) + ($stats['late'] ?? 0),
+                    'absent'  => $stats['absent'] ?? 0,
+                ];
+            })->sortByDesc('total')->values()->toArray();
+        });
+
+        return response()->json($result);
     }
 }
