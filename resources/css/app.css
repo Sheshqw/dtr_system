@@ -213,6 +213,18 @@ input, select, textarea {
 [data-theme="dark"] .f-clear-all    { color: #94A3B8 !important; }
 [data-theme="dark"] .f-clear-all:hover { background: rgba(239,68,68,0.15) !important; color: #FCA5A5 !important; }
 
+/* ── Tracking view: tabs + Bradford Factor explainer ─────────────────────── */
+[data-theme="dark"] .tab-btn            { color: #94A3B8 !important; }
+[data-theme="dark"] .tab-btn:hover       { background: rgba(255,255,255,0.06) !important; color: #E4EAF5 !important; }
+[data-theme="dark"] .tab-btn--active,
+[data-theme="dark"] .tab-btn--active:hover { background: #0F2068 !important; color: #fff !important; }
+[data-theme="dark"] .bf-note {
+  background: rgba(99,102,241,0.12) !important;
+  border-color: rgba(99,102,241,0.28) !important;
+  color: #C7D2FE !important;
+}
+[data-theme="dark"] .bf-note strong { color: #A5B4FC !important; }
+
 /* ── Buttons ────────────────────────────────────────────────────────────── */
 [data-theme="dark"] .btn-outline {
   background: #1E3050 !important;

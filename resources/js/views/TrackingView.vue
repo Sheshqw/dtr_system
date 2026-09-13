@@ -1,9 +1,28 @@
 <template>
   <div class="flex flex-col h-full">
 
-    <PageHeader title="Tracking" subtitle="Employee tardiness analytics" :icon="BarChart2Icon" />
+    <PageHeader title="Tracking" subtitle="Employee tardiness & absence analytics" :icon="BarChart2Icon" />
 
     <div class="flex-1 overflow-auto bg-[#F4F6FB] p-6 space-y-4">
+
+      <!-- Tabs -->
+      <div class="flex gap-1 bg-white border border-[#E2E8F0] rounded-xl p-1 w-fit">
+        <button
+          @click="activeTab = 'tardiness'"
+          class="tab-btn" :class="{ 'tab-btn--active': activeTab === 'tardiness' }"
+        >
+          <ClockIcon class="w-4 h-4" /> Tardiness
+        </button>
+        <button
+          @click="activeTab = 'bradford'"
+          class="tab-btn" :class="{ 'tab-btn--active': activeTab === 'bradford' }"
+        >
+          <UserXIcon class="w-4 h-4" /> Habitual Absence
+        </button>
+      </div>
+
+      <!-- ═══════════════════════ TARDINESS TAB ═══════════════════════ -->
+      <template v-if="activeTab === 'tardiness'">
 
       <!-- Filters -->
       <div class="bg-white border border-[#E2E8F0] rounded-xl p-4 flex flex-wrap items-end gap-3">
@@ -37,7 +56,7 @@
         </button>
         <button
           v-if="tardyRecords.length"
-          @click="exportCsv"
+          @click="exportTardyCsv"
           class="inline-flex items-center gap-2 px-4 py-1.5 bg-white border border-[#E2E8F0] text-[#374151] text-sm font-medium rounded-lg hover:bg-[#F8FAFC] transition-colors export-btn"
         >
           <DownloadIcon class="w-4 h-4" />
@@ -147,6 +166,151 @@
         </table>
       </div>
 
+      </template>
+
+      <!-- ═══════════════════════ BRADFORD FACTOR TAB ═══════════════════════ -->
+      <template v-else>
+
+      <!-- Filters -->
+      <div class="bg-white border border-[#E2E8F0] rounded-xl p-4 flex flex-wrap items-end gap-3">
+        <div>
+          <label class="filter-label">Period</label>
+          <select v-model.number="bfFilters.days" class="filter-input">
+            <option :value="30">Last 30 Days</option>
+            <option :value="90">Last 90 Days</option>
+            <option :value="180">Last 6 Months</option>
+            <option :value="365">Last 12 Months</option>
+          </select>
+        </div>
+        <div v-if="auth.isAdmin || auth.isHrOfficer">
+          <label class="filter-label">Department</label>
+          <select v-model="bfFilters.department_id" class="filter-input w-44">
+            <option value="">All Departments</option>
+            <option v-for="d in departments" :key="d.id" :value="d.id">{{ d.name }}</option>
+          </select>
+        </div>
+        <div>
+          <label class="filter-label">Search</label>
+          <input v-model="bfFilters.search" type="text" placeholder="Name or ID…" class="filter-input w-44" />
+        </div>
+        <button @click="loadBradford" :disabled="bfLoading" class="refresh-btn ml-auto">
+          <Loader2Icon v-if="bfLoading" class="w-4 h-4 animate-spin" />
+          <RefreshCwIcon v-else class="w-4 h-4" />
+          Refresh
+        </button>
+        <button
+          v-if="bfRecords.length"
+          @click="exportBradfordCsv"
+          class="inline-flex items-center gap-2 px-4 py-1.5 bg-white border border-[#E2E8F0] text-[#374151] text-sm font-medium rounded-lg hover:bg-[#F8FAFC] transition-colors export-btn"
+        >
+          <DownloadIcon class="w-4 h-4" />
+          Export CSV
+        </button>
+      </div>
+
+      <!-- Explainer -->
+      <div class="bf-note">
+        <InfoIcon class="w-4 h-4 flex-shrink-0" />
+        <span>
+          <strong>Bradford Factor</strong> = (absence instances)&sup2; &times; total absence days. Frequent,
+          scattered short absences score higher than one long continuous absence covering the same days —
+          this surfaces a disruptive pattern that a plain absence count would miss. Informational only;
+          it does not trigger any automatic action.
+        </span>
+      </div>
+
+      <!-- Summary cards -->
+      <div v-if="bfRecords.length" class="grid grid-cols-3 gap-4">
+        <div v-for="s in bfSummary" :key="s.label"
+             class="bg-white border border-[#E2E8F0] rounded-xl px-5 py-4 flex items-center gap-3">
+          <div class="w-10 h-10 rounded-lg flex items-center justify-center flex-shrink-0" :class="s.iconBg">
+            <component :is="s.icon" class="w-5 h-5" :class="s.iconColor" />
+          </div>
+          <div>
+            <p class="text-2xl font-semibold text-[#0F172A] leading-none">{{ s.value }}</p>
+            <p class="text-xs text-[#64748B] mt-0.5">{{ s.label }}</p>
+          </div>
+        </div>
+      </div>
+
+      <!-- Skeleton -->
+      <div v-if="bfLoading" class="bg-white border border-[#E2E8F0] rounded-xl overflow-hidden">
+        <div v-for="i in 5" :key="i" class="flex items-center gap-4 px-4 py-4 border-b border-[#E2E8F0] last:border-0">
+          <div class="w-8 h-8 rounded-full bg-slate-200 animate-pulse"></div>
+          <div class="flex-1 space-y-1.5">
+            <div class="h-3 w-36 rounded bg-slate-200 animate-pulse"></div>
+            <div class="h-2.5 w-24 rounded bg-slate-200 animate-pulse"></div>
+          </div>
+          <div class="h-6 w-16 rounded-md bg-slate-200 animate-pulse"></div>
+          <div class="h-6 w-20 rounded-md bg-slate-200 animate-pulse"></div>
+        </div>
+      </div>
+
+      <!-- Empty -->
+      <div v-else-if="!bfRecords.length" class="bg-white border border-[#E2E8F0] rounded-xl flex flex-col items-center justify-center h-48 text-[#94A3B8]">
+        <CheckCircleIcon class="w-10 h-10 mb-2 opacity-30 text-emerald-500" />
+        <p class="text-sm font-medium text-[#64748B]">No flagged absence patterns</p>
+        <p class="text-xs mt-1">No one has more than one absence instance this period.</p>
+      </div>
+
+      <!-- Table -->
+      <div v-else class="bg-white border border-[#E2E8F0] rounded-xl shadow-[0_1px_3px_rgba(0,0,0,0.06)] overflow-hidden">
+        <table class="w-full text-sm">
+          <thead class="border-b border-[#E2E8F0]">
+            <tr>
+              <th class="th-cell text-left w-10">#</th>
+              <th class="th-cell text-left">Employee</th>
+              <th class="th-cell text-center">Severity</th>
+              <th class="th-cell text-center font-mono">Instances</th>
+              <th class="th-cell text-center font-mono">Total Days</th>
+              <th class="th-cell text-center font-mono">Bradford Score</th>
+              <th class="th-cell text-left">Recent Absences</th>
+            </tr>
+          </thead>
+          <tbody>
+            <tr
+              v-for="(rec, idx) in bfRecords" :key="rec.employee_id"
+              class="border-b border-[#E2E8F0] last:border-0 hover:bg-[#FAFBFF] transition-colors"
+            >
+              <td class="td-cell text-[#94A3B8] font-mono text-xs">{{ idx + 1 }}</td>
+              <td class="td-cell">
+                <div class="flex items-center gap-2">
+                  <div
+                    class="w-8 h-8 rounded-full flex items-center justify-center flex-shrink-0 text-white text-xs font-semibold"
+                    :style="bfAvatarGradient(rec.bradford_score)"
+                  >{{ initials(rec.name) }}</div>
+                  <div>
+                    <p class="font-medium text-[#0F172A]">{{ rec.name }}</p>
+                    <p class="text-xs text-[#94A3B8]">{{ rec.department }}</p>
+                  </div>
+                </div>
+              </td>
+              <td class="td-cell text-center">
+                <span class="inline-flex px-2 py-0.5 text-xs font-semibold rounded-md"
+                      :class="bfSeverityClass(rec.bradford_score)">
+                  {{ bfSeverityLabel(rec.bradford_score) }}
+                </span>
+              </td>
+              <td class="td-cell text-center font-mono">{{ rec.instances }}</td>
+              <td class="td-cell text-center font-mono">{{ rec.total_days }}</td>
+              <td class="td-cell text-center font-mono font-semibold" :class="bfColor(rec.bradford_score)">
+                {{ rec.bradford_score }}
+              </td>
+              <td class="td-cell">
+                <div class="flex flex-wrap gap-1">
+                  <span
+                    v-for="d in rec.absence_dates" :key="d"
+                    class="inline-flex px-1.5 py-0.5 text-[10px] font-mono rounded bg-red-50 text-red-700 border border-red-200"
+                  >{{ shortDate(d) }}</span>
+                </div>
+              </td>
+            </tr>
+          </tbody>
+        </table>
+      </div>
+
+      </template>
+
     </div>
   </div>
 </template>
@@ -166,10 +330,14 @@ import {
   BarChart2   as BarChart2Icon,
   Download    as DownloadIcon,
   Printer     as PrinterIcon,
+  UserX       as UserXIcon,
+  Info        as InfoIcon,
+  Repeat      as RepeatIcon,
 } from 'lucide-vue-next';
 
 const auth = useAuthStore();
 
+const activeTab   = ref('tardiness');
 const departments = ref([]);
 
 const now    = new Date();
@@ -221,6 +389,46 @@ async function loadTardiness() {
 
 watch([() => tardyFilters.month, () => tardyFilters.year, () => tardyFilters.department_id], loadTardiness);
 
+// ── Bradford Factor ──────────────────────────────────────────────
+const bfRecords = ref([]);
+const bfLoading = ref(false);
+const bfFilters = reactive({
+  days:          90,
+  department_id: '',
+  search:        '',
+});
+
+const bfSummary = computed(() => {
+  if (!bfRecords.value.length) return [];
+  const totalInstances = bfRecords.value.reduce((s, r) => s + r.instances, 0);
+  const highest         = Math.max(...bfRecords.value.map(r => r.bradford_score));
+  return [
+    { label: 'Employees Flagged',  value: bfRecords.value.length, icon: UserXIcon,  iconBg: 'bg-red-50',    iconColor: 'text-red-500'    },
+    { label: 'Absence Instances',  value: totalInstances,         icon: RepeatIcon, iconBg: 'bg-orange-50', iconColor: 'text-orange-500' },
+    { label: 'Highest Score',      value: highest,                icon: AlertCircleIcon, iconBg: 'bg-amber-50', iconColor: 'text-amber-600' },
+  ];
+});
+
+async function loadBradford() {
+  bfLoading.value = true;
+  try {
+    const params = { days: bfFilters.days };
+    if (bfFilters.department_id) params.department_id = bfFilters.department_id;
+    if (bfFilters.search)        params.search        = bfFilters.search;
+    const res = await axios.get('/api/tracking/bradford-factor', { params });
+    bfRecords.value = res.data;
+  } catch {
+    bfRecords.value = [];
+  } finally {
+    bfLoading.value = false;
+  }
+}
+
+watch([() => bfFilters.days, () => bfFilters.department_id], loadBradford);
+watch(activeTab, (tab) => {
+  if (tab === 'bradford' && !bfRecords.value.length) loadBradford();
+});
+
 function initials(name) {
   return name?.split(' ').map(n => n[0]).slice(0, 2).join('').toUpperCase() ?? '?';
 }
@@ -253,7 +461,65 @@ function avatarGradient(times) {
   return 'background: linear-gradient(135deg, #0E1EC0, #1228CC);';
 }
 
-function exportCsv() {
+// Bradford Factor severity bands are informational labels only — they
+// do not gate or trigger any action in the system.
+function bfColor(score) {
+  if (score >= 450) return 'text-red-600';
+  if (score >= 200) return 'text-orange-600';
+  if (score >= 50)  return 'text-amber-600';
+  return 'text-[#64748B]';
+}
+
+function bfSeverityClass(score) {
+  if (score >= 450) return 'bg-red-100 text-red-700';
+  if (score >= 200) return 'bg-orange-100 text-orange-700';
+  if (score >= 50)  return 'bg-amber-100 text-amber-700';
+  return 'bg-slate-100 text-slate-600';
+}
+
+function bfSeverityLabel(score) {
+  if (score >= 450) return 'High';
+  if (score >= 200) return 'Elevated';
+  if (score >= 50)  return 'Watch';
+  return 'Low';
+}
+
+function bfAvatarGradient(score) {
+  if (score >= 450) return 'background: linear-gradient(135deg, #DC2626, #991B1B);';
+  if (score >= 200) return 'background: linear-gradient(135deg, #EA580C, #C2410C);';
+  if (score >= 50)  return 'background: linear-gradient(135deg, #D97706, #B45309);';
+  return 'background: linear-gradient(135deg, #0E1EC0, #1228CC);';
+}
+
+function exportBradfordCsv() {
+  const periodLabel = { 30: 'Last 30 Days', 90: 'Last 90 Days', 180: 'Last 6 Months', 365: 'Last 12 Months' }[bfFilters.days] ?? `${bfFilters.days} Days`;
+  const rows = [
+    ['NEMSU — Habitual Absence (Bradford Factor) Report'],
+    [`Period: ${periodLabel}`],
+    [],
+    ['#', 'Employee Name', 'Department', 'Instances', 'Total Days', 'Bradford Score', 'Recent Absences'],
+    ...bfRecords.value.map((r, i) => [
+      i + 1,
+      r.name,
+      r.department ?? '',
+      r.instances,
+      r.total_days,
+      r.bradford_score,
+      r.absence_dates?.join(', ') ?? '',
+    ]),
+  ];
+
+  const csv = rows.map(r => r.map(v => `"${String(v).replace(/"/g, '""')}"`).join(',')).join('\r\n');
+  const blob = new Blob(['﻿' + csv], { type: 'text/csv;charset=utf-8;' });
+  const url  = URL.createObjectURL(blob);
+  const a    = document.createElement('a');
+  a.href     = url;
+  a.download = `Habitual_Absence_${periodLabel.replace(/\s+/g, '_')}.csv`;
+  a.click();
+  URL.revokeObjectURL(url);
+}
+
+function exportTardyCsv() {
   const monthName = months.find(m => m.value === tardyFilters.month)?.label ?? tardyFilters.month;
   const rows = [
     ['NEMSU — Tardiness Tracking Report'],
@@ -297,6 +563,25 @@ onMounted(async () => {
 
 <style scoped>
 @reference "../css/app.css";
+
+/* ── Tabs ────────────────────────────────────────────────────── */
+.tab-btn {
+  display: inline-flex; align-items: center; gap: 6px;
+  padding: 7px 16px; font-size: 13px; font-weight: 600;
+  color: #64748B; border-radius: 8px; border: none;
+  background: transparent; cursor: pointer; transition: all 0.15s;
+}
+.tab-btn:hover { background: #F4F6FB; color: #374151; }
+.tab-btn--active { background: #0E1EC0; color: #fff; }
+.tab-btn--active:hover { background: #0E1EC0; color: #fff; }
+
+/* ── Bradford Factor explainer ───────────────────────────────── */
+.bf-note {
+  display: flex; align-items: flex-start; gap: 10px;
+  background: #EFF4FF; border: 1px solid #DCE6FF; border-radius: 10px;
+  padding: 12px 14px; font-size: 12.5px; line-height: 1.5; color: #3B4A78;
+}
+.bf-note strong { color: #0E1EC0; }
 
 /* ── Filter bar ──────────────────────────────────────────────── */
 .filter-label { @apply block text-[10px] font-semibold uppercase tracking-wider mb-1; color: #7B8FBF; }

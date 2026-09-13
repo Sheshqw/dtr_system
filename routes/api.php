@@ -112,7 +112,8 @@ Route::middleware('auth:sanctum')->group(function () {
     Route::get('/reports/deductions',          [ReportController::class, 'exportDeductions']);
 
     // Tracking
-    Route::get('/tracking/tardiness', [TrackingController::class, 'tardiness']);
+    Route::get('/tracking/tardiness',       [TrackingController::class, 'tardiness']);
+    Route::get('/tracking/bradford-factor', [TrackingController::class, 'bradfordFactor']);
 
     // Analytics (dashboard charts)
     Route::get('/analytics/trend',       [AnalyticsController::class, 'trend']);
