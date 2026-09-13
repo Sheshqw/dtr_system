@@ -480,6 +480,13 @@ onMounted(() => load(1));
 .sh-badge--acknowledged { background: #F5F3FF; color: #6D28D9; border-color: #DDD6FE; }
 .sh-badge--resolved     { background: #ECFDF5; color: #065F46; border-color: #A7F3D0; }
 
+:global([data-theme="dark"]) .sh-badge--critical     { background: rgba(220,38,38,0.14)  !important; color: #FCA5A5 !important; border-color: rgba(239,68,68,0.28)  !important; }
+:global([data-theme="dark"]) .sh-badge--warning      { background: rgba(217,119,6,0.14)  !important; color: #FCD34D !important; border-color: rgba(217,119,6,0.28)  !important; }
+:global([data-theme="dark"]) .sh-badge--info,
+:global([data-theme="dark"]) .sh-badge--new          { background: rgba(59,130,246,0.14) !important; color: #93C5FD !important; border-color: rgba(59,130,246,0.28) !important; }
+:global([data-theme="dark"]) .sh-badge--acknowledged { background: rgba(147,51,234,0.14) !important; color: #C4B5FD !important; border-color: rgba(147,51,234,0.28) !important; }
+:global([data-theme="dark"]) .sh-badge--resolved     { background: rgba(16,185,129,0.14) !important; color: #6EE7B7 !important; border-color: rgba(16,185,129,0.28) !important; }
+
 /* ── Row action icon buttons ─────────────────────────── */
 .sh-icon-btn {
   width: 26px; height: 26px; border-radius: 7px; flex-shrink: 0;

@@ -231,7 +231,7 @@ input, select, textarea {
   border-color: rgba(255,255,255,0.12) !important;
   color: #E4EAF5 !important;
 }
-[data-theme="dark"] .btn-outline:hover { background: #1E2D4A !important; }
+[data-theme="dark"] .btn-outline:hover { background: #1E2D4A !important; border-color: rgba(255,255,255,0.2) !important; }
 [data-theme="dark"] .btn-icon      { color: #9AAAC9 !important; }
 [data-theme="dark"] .btn-icon:hover { background: rgba(255,255,255,0.06) !important; color: #E4EAF5 !important; }
 [data-theme="dark"] .modal-input {
@@ -339,6 +339,160 @@ input, select, textarea {
 [data-theme="dark"] .border-indigo-200     { border-color: rgba(99,102,241,0.25)  !important; }
 [data-theme="dark"] .border-purple-100,
 [data-theme="dark"] .border-purple-200     { border-color: rgba(147,51,234,0.25)  !important; }
+
+/* ══════════════════════════════════════════════════════════════════════════════
+   Additional Tailwind arbitrary-color coverage (full audit pass)
+
+   The rules above only caught colors already known to need remapping. This
+   pass cross-checked every `bg-[#…]` / `text-[#…]` / `border-[#…]` (and
+   hover:/group-hover:/focus:/divide- variants) actually used across the Vue
+   views against this file, and added every one that was still missing —
+   this is what was leaving icons/badges/buttons "invisible" or "too bright"
+   in dark mode depending on the element. Solid brand-blue buttons and the
+   colored gradient banners/icon-circles (white text on a fixed dark/gold
+   gradient, unaffected by theme) were deliberately left alone — they read
+   fine in both themes already. ────────────────────────────────────────── */
+
+/* Primary brand blue used as bare text/icon/border — nearly invisible on a
+   dark card since the color itself is dark; the inline-style equivalent of
+   this exact case is already remapped above (line ~605), this is just the
+   Tailwind-class form of the same color. */
+[data-theme="dark"] .text-\[\#0E1EC0\],
+[data-theme="dark"] .hover\:text-\[\#0E1EC0\]:hover,
+[data-theme="dark"] .group:hover .group-hover\:text-\[\#0E1EC0\]  { color: #93C5FD !important; }
+[data-theme="dark"] .border-\[\#0E1EC0\]                          { border-color: #3B82F6 !important; }
+[data-theme="dark"] .focus\:ring-\[\#0E1EC0\]:focus,
+[data-theme="dark"] .ring-\[\#0E1EC0\]                             { --tw-ring-color: #60A5FA !important; }
+
+/* Status colors used as Tailwind text classes (their inline-style form is
+   already covered above) */
+[data-theme="dark"] .text-\[\#DC2626\],
+[data-theme="dark"] .text-\[\#EF4444\],
+[data-theme="dark"] .hover\:text-\[\#EF4444\]:hover  { color: #F87171 !important; }
+[data-theme="dark"] .text-\[\#10B981\]               { color: #34D399 !important; }
+
+/* Secondary/muted text authored for a white card */
+[data-theme="dark"] .text-\[\#5A6899\]  { color: #9AAAC9 !important; }
+[data-theme="dark"] .text-\[\#0550A8\]  { color: #7DD3FC !important; }
+[data-theme="dark"] .border-\[\#0550A8\] { border-color: #7DD3FC !important; }
+
+/* Toast message text — was staying near-black on the now-dark toast card */
+[data-theme="dark"] .text-\[\#0C1445\],
+[data-theme="dark"] .hover\:text-\[\#0C1445\]:hover { color: #E4EAF5 !important; }
+[data-theme="dark"] .text-\[\#8B9EC5\]              { color: #9AAAC9 !important; }
+
+/* A light slate meant to look "quiet" on white (empty-state icons, sort
+   chevrons, dividers) instead glowed too bright against a dark card —
+   toned down to match this theme's own muted-text convention. */
+[data-theme="dark"] .text-\[\#CBD5E1\] { color: #475569 !important; }
+[data-theme="dark"] .bg-\[\#CBD5E1\]   { background-color: #475569 !important; }
+
+/* Neutral borders/dividers as Tailwind classes */
+[data-theme="dark"] .border-\[\#94A3B8\],
+[data-theme="dark"] .hover\:border-\[\#94A3B8\]:hover,
+[data-theme="dark"] .border-\[\#CBD5E1\],
+[data-theme="dark"] .border-\[\#E8EDF5\],
+[data-theme="dark"] .border-\[\#F1F5F9\],
+[data-theme="dark"] .border-\[\#F4F6FB\]   { border-color: rgba(255,255,255,0.10) !important; }
+[data-theme="dark"] .divide-\[\#F1F5F9\] > :not([hidden]) ~ :not([hidden]) { border-color: rgba(255,255,255,0.10) !important; }
+[data-theme="dark"] .border-\[\#C7D2F6\],
+[data-theme="dark"] .hover\:border-\[\#C7D2F6\]:hover { border-color: rgba(99,102,241,0.28) !important; }
+[data-theme="dark"] .border-\[\#F3C7C7\]   { border-color: rgba(239,68,68,0.28) !important; }
+
+/* Tinted hover/drag-active backgrounds as Tailwind classes */
+[data-theme="dark"] .bg-\[\#EEF4FF\]              { background-color: rgba(59,130,246,0.14) !important; }
+[data-theme="dark"] .hover\:bg-\[\#F4F6FF\]:hover  { background-color: rgba(99,102,241,0.14) !important; }
+
+/* ══════════════════════════════════════════════════════════════════════════════
+   Extended semantic-color families — StatusBadge / StaffTypeBadge audit
+
+   StatusBadge.vue (Present/Late/Absent/On Leave/Holiday/Weekend pills, shown
+   throughout Attendance/DTR/Reports) and StaffTypeBadge.vue (Faculty/Admin/
+   Security/Custodial/Maintenance/Laboratory/Driver, shown throughout
+   Employees) between them use emerald, violet, teal, cyan, rose, pink and
+   orange — color families this file had never covered at all, plus a few
+   shades (-100, -500, -800) missing from families it partly covered. Left
+   as light-mode-only, every one of these badges except the plain gray
+   fallback stayed stuck pale-on-white, glowing on a dark card. Small solid
+   accent dots (bg-emerald-500 etc.) and buttons with white text on top are
+   untouched — those already read fine in both themes. ────────────────── */
+
+/* Light background tints (badge fills) */
+[data-theme="dark"] .bg-emerald-50,  [data-theme="dark"] .bg-emerald-100 { background-color: rgba(16,185,129,0.12)  !important; }
+[data-theme="dark"] .bg-violet-50,   [data-theme="dark"] .bg-violet-100  { background-color: rgba(139,92,246,0.14)  !important; }
+[data-theme="dark"] .bg-teal-50,     [data-theme="dark"] .bg-teal-100    { background-color: rgba(20,184,166,0.12)  !important; }
+[data-theme="dark"] .bg-cyan-50                                          { background-color: rgba(6,182,212,0.12)   !important; }
+[data-theme="dark"] .bg-rose-50                                          { background-color: rgba(244,63,94,0.12)   !important; }
+[data-theme="dark"] .bg-pink-50                                          { background-color: rgba(236,72,153,0.12)  !important; }
+[data-theme="dark"] .bg-orange-50,   [data-theme="dark"] .bg-orange-100  { background-color: rgba(234,88,12,0.14)   !important; }
+[data-theme="dark"] .bg-amber-100                                        { background-color: rgba(217,119,6,0.14)   !important; }
+[data-theme="dark"] .bg-blue-100                                         { background-color: rgba(59,130,246,0.14)  !important; }
+[data-theme="dark"] .bg-red-100                                         { background-color: rgba(220,38,38,0.14)   !important; }
+[data-theme="dark"] .bg-indigo-100                                       { background-color: rgba(99,102,241,0.14)  !important; }
+[data-theme="dark"] .bg-slate-100,   [data-theme="dark"] .bg-slate-200   { background-color: rgba(100,116,139,0.14) !important; }
+
+/* Text shades not already covered by the -600/-700 rules above */
+[data-theme="dark"] .text-emerald-500, [data-theme="dark"] .text-emerald-600 { color: #34D399 !important; }
+[data-theme="dark"] .text-emerald-700, [data-theme="dark"] .text-emerald-800 { color: #6EE7B7 !important; }
+[data-theme="dark"] .text-violet-500  { color: #A78BFA !important; }
+[data-theme="dark"] .text-violet-700, [data-theme="dark"] .text-violet-800  { color: #C4B5FD !important; }
+[data-theme="dark"] .text-teal-700    { color: #5EEAD4 !important; }
+[data-theme="dark"] .text-cyan-600    { color: #67E8F9 !important; }
+[data-theme="dark"] .text-rose-700    { color: #FDA4AF !important; }
+[data-theme="dark"] .text-pink-700    { color: #F9A8D4 !important; }
+[data-theme="dark"] .text-orange-500, [data-theme="dark"] .text-orange-600 { color: #FB923C !important; }
+[data-theme="dark"] .text-orange-700  { color: #FDBA74 !important; }
+[data-theme="dark"] .text-amber-500   { color: #FBBF24 !important; }
+[data-theme="dark"] .text-blue-500    { color: #60A5FA !important; }
+[data-theme="dark"] .text-blue-800    { color: #BFDBFE !important; }
+[data-theme="dark"] .text-red-500     { color: #F87171 !important; }
+[data-theme="dark"] .text-slate-500   { color: #9AAAC9 !important; }
+
+/* Badge outline rings (StatusBadge's ring-1 ring-{color}-200) and matching borders */
+[data-theme="dark"] .ring-emerald-200, [data-theme="dark"] .border-emerald-100 { --tw-ring-color: rgba(16,185,129,0.35)  !important; border-color: rgba(16,185,129,0.30)  !important; }
+[data-theme="dark"] .ring-amber-200    { --tw-ring-color: rgba(217,119,6,0.35)   !important; }
+[data-theme="dark"] .ring-red-200      { --tw-ring-color: rgba(220,38,38,0.35)   !important; }
+[data-theme="dark"] .ring-indigo-200   { --tw-ring-color: rgba(99,102,241,0.35)  !important; }
+[data-theme="dark"] .ring-violet-200, [data-theme="dark"] .border-violet-100   { --tw-ring-color: rgba(139,92,246,0.35)  !important; border-color: rgba(139,92,246,0.30)  !important; }
+[data-theme="dark"] .ring-slate-200    { --tw-ring-color: rgba(148,163,184,0.30) !important; }
+
+/* ── Remaining gaps found in a full inline-style / scoped-class sweep ────── */
+[data-theme="dark"] [style*="color:#0369A1" i],   [data-theme="dark"] [style*="color: #0369A1" i],
+[data-theme="dark"] [style*="color:#1D4ED8" i],   [data-theme="dark"] [style*="color: #1D4ED8" i],
+[data-theme="dark"] [style*="color:#1E40AF" i],   [data-theme="dark"] [style*="color: #1E40AF" i],
+[data-theme="dark"] [style*="color:#2563EB" i],   [data-theme="dark"] [style*="color: #2563EB" i] { color: #60A5FA !important; }
+[data-theme="dark"] [style*="color:#10B981" i],   [data-theme="dark"] [style*="color: #10B981" i],
+[data-theme="dark"] [style*="color:#16A34A" i],   [data-theme="dark"] [style*="color: #16A34A" i] { color: #34D399 !important; }
+[data-theme="dark"] [style*="background:#CBD5E1" i], [data-theme="dark"] [style*="background: #CBD5E1" i] { background: #475569 !important; }
+[data-theme="dark"] [style*="background:#F5F7FA" i], [data-theme="dark"] [style*="background: #F5F7FA" i] { background: #1E2D45 !important; }
+
+/* AuditView timeline — muted relative-time / IP text had no dark rule at all */
+[data-theme="dark"] .tl-relative, [data-theme="dark"] .tl-ip { color: #9AAAC9 !important; }
+/* DashboardView — metric denominator ("/ 42") */
+[data-theme="dark"] .sc-denom { color: #475569 !important; }
+
+/* Literal `white` keyword backgrounds (not caught by the #fff/#FFFFFF rules above) */
+[data-theme="dark"] [style*="background:white" i], [data-theme="dark"] [style*="background: white" i] { background: #1C2A44 !important; }
+[data-theme="dark"] [style*="border-color:#E5E7EB" i], [data-theme="dark"] [style*="border-color: #E5E7EB" i],
+[data-theme="dark"] [style*="border-color:#F1F5F9" i], [data-theme="dark"] [style*="border-color: #F1F5F9" i] { border-color: rgba(255,255,255,0.10) !important; }
+
+/* DashboardView chart-panel top accent — the gold/purple accents already read
+   fine on a dark card; the brand-blue one is dark-on-dark and needs lifting */
+[data-theme="dark"] [style*="border-top-color:#0E1EC0" i], [data-theme="dark"] [style*="border-top-color: #0E1EC0" i] { border-top-color: #3B82F6 !important; }
+
+/* Per-view input classes whose own :focus { border-color: #0E1EC0 } rule has
+   no !important — the dark-mode base border color (which does) was silently
+   winning, so these lost focus indication entirely in dark mode. */
+[data-theme="dark"] .audit-filter-input:focus,
+[data-theme="dark"] .f-ctrl:focus,
+[data-theme="dark"] .sh-filter-input:focus,
+[data-theme="dark"] .settings-input:focus,
+[data-theme="dark"] .modal-input-sm:focus { border-color: #3B82F6 !important; }
+[data-theme="dark"] .modal-input-sm {
+  background: #1E3050 !important;
+  border-color: rgba(255,255,255,0.12) !important;
+  color: #E2E8F0 !important;
+}
 
 /* ── Hover background overrides ──────────────────────────────────────────── */
 [data-theme="dark"] .hover\:bg-\[\#FAFAFA\]:hover,
