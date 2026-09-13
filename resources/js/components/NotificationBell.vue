@@ -1,7 +1,8 @@
 <template>
   <div v-if="isVisible" ref="root" class="nb-wrap">
     <button
-      @click="open = !open"
+      ref="triggerEl"
+      @click="toggle"
       class="nb-trigger"
       :class="{ 'nb-trigger--active': open, 'nb-trigger--critical': hasCritical }"
       :aria-expanded="open"
@@ -11,39 +12,45 @@
       <span v-if="total > 0" class="nb-badge" :class="{ 'nb-badge--critical': hasCritical }">{{ total > 99 ? '99+' : total }}</span>
     </button>
 
-    <Transition name="nb-pop">
-      <div v-if="open" class="nb-panel" role="menu">
-        <div class="nb-panel-head">
-          <p class="nb-panel-title">Notifications</p>
-          <button @click="load" class="nb-refresh" :disabled="loading" title="Refresh" aria-label="Refresh">
-            <RefreshCwIcon class="w-3.5 h-3.5" :class="loading ? 'animate-spin' : ''" />
-          </button>
-        </div>
+    <!-- Teleported to <body> — a header bar clips its own overflow to keep its
+         decorative background contained, which would silently clip this panel
+         too if it stayed nested inside. Positioned via JS against the trigger
+         instead of CSS relative to a parent that might clip it. -->
+    <Teleport to="body">
+      <Transition name="nb-pop">
+        <div v-if="open" ref="panelEl" class="nb-panel" role="menu" :style="panelStyle">
+          <div class="nb-panel-head">
+            <p class="nb-panel-title">Notifications</p>
+            <button @click="load" class="nb-refresh" :disabled="loading" title="Refresh" aria-label="Refresh">
+              <RefreshCwIcon class="w-3.5 h-3.5" :class="loading ? 'animate-spin' : ''" />
+            </button>
+          </div>
 
-        <div v-if="loading && !loaded" class="nb-state">
-          <Loader2Icon class="w-5 h-5 animate-spin" style="color:#94A3B8;" />
-        </div>
+          <div v-if="loading && !loaded" class="nb-state">
+            <Loader2Icon class="w-5 h-5 animate-spin" style="color:#94A3B8;" />
+          </div>
 
-        <div v-else-if="alerts.length === 0" class="nb-state">
-          <div class="nb-empty-icon"><CircleCheckBigIcon class="w-5 h-5" /></div>
-          <p class="nb-empty-title">All caught up</p>
-          <p class="nb-empty-sub">No pending items need your attention.</p>
-        </div>
+          <div v-else-if="alerts.length === 0" class="nb-state">
+            <div class="nb-empty-icon"><CircleCheckBigIcon class="w-5 h-5" /></div>
+            <p class="nb-empty-title">All caught up</p>
+            <p class="nb-empty-sub">No pending items need your attention.</p>
+          </div>
 
-        <div v-else class="nb-list">
-          <button v-for="a in alerts" :key="a.id" class="nb-item" @click="go(a)">
-            <span class="nb-item-icon" :class="`nb-item-icon--${a.severity}`">
-              <component :is="iconFor(a.icon)" class="w-4 h-4" />
-            </span>
-            <span class="nb-item-body">
-              <span class="nb-item-title">{{ a.title }}</span>
-              <span class="nb-item-msg">{{ a.message }}</span>
-            </span>
-            <span class="nb-item-count" :class="`nb-item-count--${a.severity}`">{{ a.count }}</span>
-          </button>
+          <div v-else class="nb-list">
+            <button v-for="a in alerts" :key="a.id" class="nb-item" @click="go(a)">
+              <span class="nb-item-icon" :class="`nb-item-icon--${a.severity}`">
+                <component :is="iconFor(a.icon)" class="w-4 h-4" />
+              </span>
+              <span class="nb-item-body">
+                <span class="nb-item-title">{{ a.title }}</span>
+                <span class="nb-item-msg">{{ a.message }}</span>
+              </span>
+              <span class="nb-item-count" :class="`nb-item-count--${a.severity}`">{{ a.count }}</span>
+            </button>
+          </div>
         </div>
-      </div>
-    </Transition>
+      </Transition>
+    </Teleport>
   </div>
 </template>
 
@@ -62,17 +69,34 @@ import {
   AlertTriangle  as AlertTriangleIcon,
 } from 'lucide-vue-next';
 
-const router  = useRouter();
-const auth    = useAuthStore();
-const root    = ref(null);
-const open    = ref(false);
-const loading = ref(false);
-const loaded  = ref(false);
-const alerts  = ref([]);
-const total   = ref(0);
+const router    = useRouter();
+const auth      = useAuthStore();
+const root      = ref(null);
+const triggerEl = ref(null);
+const panelEl   = ref(null);
+const open      = ref(false);
+const loading   = ref(false);
+const loaded    = ref(false);
+const alerts    = ref([]);
+const total     = ref(0);
+const panelStyle = ref({});
 
 const hasCritical = computed(() => alerts.value.some(a => a.severity === 'critical'));
 const isVisible   = computed(() => ['super_admin', 'admin', 'hr_officer'].includes(auth.employee?.role));
+
+function positionPanel() {
+  const rect = triggerEl.value?.getBoundingClientRect();
+  if (!rect) return;
+  panelStyle.value = {
+    top:   `${rect.bottom + 10}px`,
+    right: `${Math.max(16, window.innerWidth - rect.right)}px`,
+  };
+}
+
+function toggle() {
+  if (!open.value) positionPanel();
+  open.value = !open.value;
+}
 
 const ICONS = {
   'clipboard-edit': ClipboardEditIcon,
@@ -102,11 +126,26 @@ function go(alert) {
   router.push({ name: alert.route });
 }
 
+// The panel is teleported to <body>, so it's not a DOM descendant of `root`
+// any more — check both the trigger and the (now-detached) panel before
+// treating a click as "outside".
 function onDocClick(e) {
-  if (open.value && root.value && !root.value.contains(e.target)) open.value = false;
+  if (!open.value) return;
+  if (root.value?.contains(e.target)) return;
+  if (panelEl.value?.contains(e.target)) return;
+  open.value = false;
 }
 function onEsc(e) {
   if (e.key === 'Escape') open.value = false;
+}
+// Scrolling anywhere would leave a `position: fixed` panel pinned to a now-
+// stale spot relative to the trigger — closing is simpler and more standard
+// than re-tracking position on every scroll frame.
+function onScroll() {
+  if (open.value) open.value = false;
+}
+function onResize() {
+  if (open.value) positionPanel();
 }
 
 let pollTimer = null;
@@ -116,11 +155,15 @@ onMounted(() => {
   pollTimer = setInterval(load, 60_000);
   document.addEventListener('click', onDocClick);
   document.addEventListener('keydown', onEsc);
+  window.addEventListener('scroll', onScroll, { capture: true, passive: true });
+  window.addEventListener('resize', onResize);
 });
 onBeforeUnmount(() => {
   clearInterval(pollTimer);
   document.removeEventListener('click', onDocClick);
   document.removeEventListener('keydown', onEsc);
+  window.removeEventListener('scroll', onScroll, { capture: true });
+  window.removeEventListener('resize', onResize);
 });
 </script>
 
@@ -158,13 +201,16 @@ onBeforeUnmount(() => {
 .nb-badge--critical { background: #DC2626; }
 
 /* ── Dropdown panel ──────────────────────────────────── */
+/* position: fixed + top/right come from the :style binding, computed
+   against the trigger's bounding rect (see positionPanel()) — this panel
+   is teleported to <body>, clear of any ancestor's `overflow: hidden`. */
 .nb-panel {
-  position: absolute; top: calc(100% + 10px); right: 0;
+  position: fixed;
   width: 340px; max-width: calc(100vw - 32px);
   background: #fff; border-radius: 14px;
   border: 1px solid #E4E9F2;
   box-shadow: 0 16px 40px rgba(8,14,128,0.16), 0 4px 12px rgba(8,14,128,0.08);
-  overflow: hidden; z-index: 60;
+  overflow: hidden; z-index: 200;
 }
 .nb-panel-head {
   display: flex; align-items: center; justify-content: space-between;
@@ -225,6 +271,6 @@ onBeforeUnmount(() => {
 
 /* ── Mobile ──────────────────────────────────────────── */
 @media (max-width: 420px) {
-  .nb-panel { position: fixed; top: 60px; right: 12px; left: 12px; width: auto; }
+  .nb-panel { top: 60px !important; right: 12px !important; left: 12px; width: auto; }
 }
 </style>
