@@ -247,8 +247,16 @@
 
     <!-- ── Main content ───────────────────────────────────────────── -->
     <main class="flex-1 overflow-y-auto relative pt-14 lg:pt-0">
+      <!-- No mode="out-in": that mode makes the incoming page wait for the
+           outgoing one's leave transition to fully finish first — clicking
+           through several sidebar links quickly interrupts that sequence
+           before it completes, and Vue can be left with a component stuck
+           mid-transition (opacity: 0 from .page-leave-to/.page-enter-from
+           never getting cleared) — a blank page with no error, since
+           nothing crashed, it's just invisible. Letting enter/leave run
+           simultaneously has no such handoff to get stuck on. -->
       <RouterView v-slot="{ Component }">
-        <Transition name="page" mode="out-in">
+        <Transition name="page">
           <component :is="Component" :key="$route.name" />
         </Transition>
       </RouterView>
