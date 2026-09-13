@@ -185,20 +185,12 @@
                   <button @click="openEdit(emp)" class="btn-icon" title="Edit">
                     <PencilIcon class="w-4 h-4" />
                   </button>
-                  <template v-if="emp.is_active">
-                    <template v-if="confirmId === emp.id">
-                      <span class="text-xs text-[#64748B] mr-1">Deactivate?</span>
-                      <button @click="deactivate(emp)" class="btn-icon text-[#EF4444]" title="Confirm">
-                        <CheckIcon class="w-4 h-4" />
-                      </button>
-                      <button @click="confirmId = null" class="btn-icon" title="Cancel">
-                        <XIcon class="w-4 h-4" />
-                      </button>
-                    </template>
-                    <button v-else @click="confirmId = emp.id" class="btn-icon text-[#EF4444]" title="Deactivate">
-                      <UserXIcon class="w-4 h-4" />
-                    </button>
-                  </template>
+                  <!-- Deactivating is reversible with one click (the Activate
+                       button right below), so it fires immediately with an
+                       Undo toast instead of an "are you sure?" interruption. -->
+                  <button v-if="emp.is_active" @click="deactivate(emp)" class="btn-icon text-[#EF4444]" title="Deactivate">
+                    <UserXIcon class="w-4 h-4" />
+                  </button>
                   <button v-else @click="activate(emp)" class="btn-icon text-[#10B981]" title="Activate">
                     <UserCheckIcon class="w-4 h-4" />
                   </button>
@@ -708,7 +700,6 @@ import { useRouter, useRoute } from 'vue-router';
 import axios from 'axios';
 import { useAuthStore } from '@/stores/auth';
 import { useToast } from '@/composables/useToast';
-import { useConfirm } from '@/composables/useConfirm';
 import { useUnsavedGuard } from '@/composables/useUnsavedGuard';
 import { useSortable } from '@/composables/useSortable';
 import { usePersistedFilters } from '@/composables/usePersistedFilters';
@@ -746,7 +737,6 @@ const auth        = useAuthStore();
 const router      = useRouter();
 const route       = useRoute();
 const { toast }   = useToast();
-const { confirm } = useConfirm();
 const unsavedGuard = useUnsavedGuard();
 
 const canManage = computed(() => auth.isAdmin || auth.isHrOfficer);
@@ -757,7 +747,6 @@ const shifts      = ref([]);
 const loading     = ref(false);
 const saving      = ref(false);
 const error       = ref('');
-const confirmId   = ref(null);
 const showPassword  = ref(false);
 const photoFile     = ref(null);
 const photoPreview  = ref(null);
@@ -933,16 +922,27 @@ async function bulkDeactivate() {
     toast('The selected employees are already inactive.', 'warning');
     return;
   }
-  const ok = await confirm({
-    title:   'Deactivate selected employees?',
-    message: `This will deactivate ${targets.length} employee${targets.length !== 1 ? 's' : ''}.`,
-  });
-  if (!ok) return;
+  // Reversible in one click (Undo below, or Activate any time after) — fires
+  // immediately instead of an "are you sure?" dialog, same as the row-level
+  // deactivate button.
   const results = await Promise.allSettled(targets.map(e => axios.delete(`/api/employees/${e.id}`)));
-  let okCount = 0;
-  results.forEach((r, i) => { if (r.status === 'fulfilled') { targets[i].is_active = false; okCount++; } });
-  toast(`${okCount} employee${okCount !== 1 ? 's' : ''} deactivated.`, okCount === targets.length ? 'success' : 'warning');
+  const deactivated = [];
+  results.forEach((r, i) => { if (r.status === 'fulfilled') { targets[i].is_active = false; deactivated.push(targets[i]); } });
+  const okCount = deactivated.length;
+  toast(
+    `${okCount} employee${okCount !== 1 ? 's' : ''} deactivated.`,
+    okCount === targets.length ? 'success' : 'warning',
+    6000,
+    okCount ? { actionLabel: 'Undo', onAction: () => reactivateBatch(deactivated) } : {},
+  );
   selected.value = new Set();
+}
+
+async function reactivateBatch(emps) {
+  const results = await Promise.allSettled(emps.map(e => axios.put(`/api/employees/${e.id}`, { is_active: true })));
+  let okCount = 0;
+  results.forEach((r, i) => { if (r.status === 'fulfilled') { emps[i].is_active = true; okCount++; } });
+  toast(`${okCount} employee${okCount !== 1 ? 's' : ''} reactivated.`, 'success');
 }
 
 async function bulkActivate() {
@@ -1198,10 +1198,12 @@ async function deactivate(emp) {
   try {
     await axios.delete(`/api/employees/${emp.id}`);
     emp.is_active = false;
+    toast(`${emp.name} deactivated.`, 'success', 6000, {
+      actionLabel: 'Undo',
+      onAction:    () => activate(emp),
+    });
   } catch (e) {
     toast(e.response?.data?.message ?? 'Failed to deactivate employee.', 'error');
-  } finally {
-    confirmId.value = null;
   }
 }
 

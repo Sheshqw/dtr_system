@@ -4,9 +4,17 @@ const toasts = ref([]);
 let nextId = 0;
 
 export function useToast() {
-  function toast(message, type = 'success', duration = 4000) {
+  // `options.actionLabel` + `options.onAction` render an inline button (e.g.
+  // "Undo") in the toast — for a reversible action, this replaces asking
+  // "are you sure?" up front: do it immediately, offer a few seconds to
+  // change their mind instead of interrupting every time.
+  function toast(message, type = 'success', duration = 4000, options = {}) {
     const id = ++nextId;
-    toasts.value.push({ id, message, type, duration, visible: true });
+    toasts.value.push({
+      id, message, type, duration, visible: true,
+      actionLabel: options.actionLabel ?? null,
+      onAction:    options.onAction ?? null,
+    });
     setTimeout(() => dismiss(id), duration);
     return id;
   }

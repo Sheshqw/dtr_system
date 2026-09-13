@@ -22,6 +22,14 @@
           <!-- Message -->
           <p class="text-sm font-medium leading-snug flex-1 text-[#0C1445]">{{ t.message }}</p>
 
+          <!-- Action (e.g. "Undo") -->
+          <button
+            v-if="t.actionLabel"
+            @click.stop="runAction(t)"
+            class="flex-shrink-0 text-xs font-bold uppercase tracking-wide px-2 py-1 -my-1 rounded-md transition-colors mt-0.5"
+            :class="cfg(t.type).action_class"
+          >{{ t.actionLabel }}</button>
+
           <!-- Close -->
           <button class="flex-shrink-0 text-[#8B9EC5] hover:text-[#0C1445] transition-colors mt-0.5">
             <XIcon class="w-4 h-4" />
@@ -53,28 +61,32 @@ const { toasts, dismiss } = useToast();
 
 const configs = {
   success: {
-    bar:        'bg-emerald-500',
-    icon:       CheckCircle2Icon,
-    icon_color: 'text-emerald-500',
-    shadow:     '0 8px 32px rgba(5,150,105,0.18), 0 2px 8px rgba(0,0,0,0.06)',
+    bar:          'bg-emerald-500',
+    icon:         CheckCircle2Icon,
+    icon_color:   'text-emerald-500',
+    action_class: 'text-emerald-600 hover:bg-emerald-50',
+    shadow:       '0 8px 32px rgba(5,150,105,0.18), 0 2px 8px rgba(0,0,0,0.06)',
   },
   error: {
-    bar:        'bg-red-500',
-    icon:       AlertCircleIcon,
-    icon_color: 'text-red-500',
-    shadow:     '0 8px 32px rgba(220,38,38,0.18), 0 2px 8px rgba(0,0,0,0.06)',
+    bar:          'bg-red-500',
+    icon:         AlertCircleIcon,
+    icon_color:   'text-red-500',
+    action_class: 'text-red-600 hover:bg-red-50',
+    shadow:       '0 8px 32px rgba(220,38,38,0.18), 0 2px 8px rgba(0,0,0,0.06)',
   },
   warning: {
-    bar:        'bg-amber-500',
-    icon:       AlertTriangleIcon,
-    icon_color: 'text-amber-500',
-    shadow:     '0 8px 32px rgba(217,119,6,0.18), 0 2px 8px rgba(0,0,0,0.06)',
+    bar:          'bg-amber-500',
+    icon:         AlertTriangleIcon,
+    icon_color:   'text-amber-500',
+    action_class: 'text-amber-700 hover:bg-amber-50',
+    shadow:       '0 8px 32px rgba(217,119,6,0.18), 0 2px 8px rgba(0,0,0,0.06)',
   },
   info: {
-    bar:        'bg-blue-500',
-    icon:       InfoIcon,
-    icon_color: 'text-blue-500',
-    shadow:     '0 8px 32px rgba(59,130,246,0.18), 0 2px 8px rgba(0,0,0,0.06)',
+    bar:          'bg-blue-500',
+    icon:         InfoIcon,
+    icon_color:   'text-blue-500',
+    action_class: 'text-blue-600 hover:bg-blue-50',
+    shadow:       '0 8px 32px rgba(59,130,246,0.18), 0 2px 8px rgba(0,0,0,0.06)',
   },
 };
 
@@ -82,6 +94,11 @@ function cfg(type) { return configs[type] ?? configs.info; }
 
 function toastStyle(type) {
   return { boxShadow: cfg(type).shadow };
+}
+
+function runAction(t) {
+  t.onAction?.();
+  dismiss(t.id);
 }
 </script>
 
