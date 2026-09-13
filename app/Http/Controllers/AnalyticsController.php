@@ -3,6 +3,7 @@
 namespace App\Http\Controllers;
 
 use App\Http\Traits\ScopesByCampus;
+use App\Models\Campus;
 use App\Models\DailyDtr;
 use App\Models\Department;
 use App\Models\User;
@@ -135,6 +136,54 @@ class AnalyticsController extends Controller
                     'absent'  => $stats['absent'] ?? 0,
                 ];
             })->sortByDesc('total')->values()->toArray();
+        });
+
+        return response()->json($result);
+    }
+
+    /**
+     * Today's (or a given date's) attendance rate per campus, ranked —
+     * Super Admin's own lens, since they're the only role that oversees
+     * more than one campus. Everyone else is scoped to a single campus
+     * already and has nothing to compare.
+     */
+    public function campusComparison(Request $request)
+    {
+        if (! $this->isSuperAdmin($request)) {
+            abort(403, 'Only Super Admin can compare across campuses.');
+        }
+
+        $date     = $request->input('date', now()->format('Y-m-d'));
+        $cacheKey = "analytics_campus_comparison_{$date}";
+
+        $result = Cache::remember($cacheKey, 300, function () use ($date) {
+            $campuses = Campus::where('is_active', true)
+                ->withCount(['employees' => fn($q) => $q->where('is_active', true)])
+                ->orderBy('name')
+                ->get()
+                ->filter(fn($c) => $c->employees_count > 0);
+
+            if ($campuses->isEmpty()) return [];
+
+            $statsRaw = DailyDtr::selectRaw('employees.campus_id, daily_dtr.status, COUNT(*) as count')
+                ->join('employees', 'employees.id', '=', 'daily_dtr.employee_id')
+                ->whereDate('daily_dtr.work_date', $date)
+                ->whereIn('employees.campus_id', $campuses->pluck('id'))
+                ->groupBy('employees.campus_id', 'daily_dtr.status')
+                ->get()
+                ->groupBy('campus_id');
+
+            return $campuses->map(function ($campus) use ($statsRaw) {
+                $stats = ($statsRaw->get($campus->id) ?? collect())->pluck('count', 'status')->toArray();
+                return [
+                    'id'      => $campus->id,
+                    'name'    => $campus->name,
+                    'code'    => $campus->code,
+                    'total'   => $campus->employees_count,
+                    'present' => ($stats['present'] ?? 0) + ($stats['late'] ?? 0),
+                    'absent'  => $stats['absent'] ?? 0,
+                ];
+            })->values()->toArray();
         });
 
         return response()->json($result);

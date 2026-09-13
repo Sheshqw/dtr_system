@@ -685,6 +685,58 @@
             </div>
           </div>
 
+          <!-- Campus comparison — Super Admin only, the one role that
+               oversees more than a single campus and has anything to
+               compare. Ranked list only (no separate chart canvas) — with
+               just a handful of known campuses, a list already reads as
+               clearly as a bar chart would, without a fourth chart on the
+               page repeating the same present/absent shape a third time. -->
+          <div v-if="isSuperAdmin" class="chart-panel chart-panel--wide" style="border-top-color:#7C3AED;">
+            <div class="cp-header">
+              <div class="cp-title-group">
+                <span class="cp-badge" style="background:#F5F3FF;color:#7C3AED;">CAMPUS</span>
+                <div>
+                  <h2 class="cp-title">Campus Comparison</h2>
+                  <p class="cp-sub">Today's attendance rate across every campus</p>
+                </div>
+              </div>
+            </div>
+
+            <div v-if="analyticsLoading" class="chart-skel chart-skel--dept" style="height:auto; padding:14px 8px;">
+              <div v-for="i in 4" :key="i" class="dept-skel-row">
+                <div class="an-sk" style="height:10px;width:110px;border-radius:4px;flex-shrink:0;"></div>
+                <div class="an-sk dept-skel-bar" :style="{ width: (35 + i * 12) + '%' }"></div>
+              </div>
+            </div>
+
+            <div v-else-if="!campusRankings.length" class="campus-empty">
+              <BuildingIcon class="w-8 h-8 mb-2 opacity-20" style="color:#94A3B8;" />
+              <p>No campus data for this date.</p>
+            </div>
+
+            <div v-else class="dept-rank-list">
+              <div class="drl-header">
+                <span>Campus</span>
+                <span style="text-align:center;">Present</span>
+                <span style="text-align:right;">Rate</span>
+              </div>
+              <div v-for="(c, i) in campusRankings" :key="c.name" class="drl-row">
+                <span class="drl-rank">{{ i + 1 }}</span>
+                <span class="drl-name" :title="c.name">{{ c.name }}</span>
+                <span class="drl-present">{{ c.present }}<span class="drl-total">/{{ c.total }}</span></span>
+                <div class="drl-bar-wrap">
+                  <div class="drl-bar"
+                    :style="{ width: c.rate + '%', background: c.rate >= 75 ? '#15803D' : c.rate >= 50 ? '#D97706' : '#DC2626' }">
+                  </div>
+                </div>
+                <span class="drl-rate"
+                  :style="{ color: c.rate >= 75 ? '#15803D' : c.rate >= 50 ? '#D97706' : '#DC2626' }">
+                  {{ c.rate }}%
+                </span>
+              </div>
+            </div>
+          </div>
+
         </div>
 
       </div><!-- /analytics-card -->
@@ -716,6 +768,7 @@ import {
   CalendarDays as CalendarDaysIcon,
   BarChart2    as BarChart2Icon,
   Users        as UsersIcon,
+  Building2    as BuildingIcon,
   UserCheck    as UserCheckIcon,
   UserX          as UserXIcon,
   X              as XIcon,
@@ -750,6 +803,7 @@ const displayAbsent  = useCountUp(computed(() => store.summary.absent  ?? 0));
 const isAdminOrHr = computed(() =>
   ['super_admin', 'admin', 'hr_officer'].includes(auth.employee?.role)
 );
+const isSuperAdmin = computed(() => auth.employee?.role === 'super_admin');
 
 const myTodayRow = computed(() =>
   store.rows.find(r => r.employee_id === auth.employee?.employee_id) ?? null
@@ -873,6 +927,7 @@ let staffTypeChart  = null;
 const trendData     = ref([]);
 const deptData      = ref([]);
 const staffTypeData = ref([]);
+const campusData    = ref([]);
 
 // Short display labels for staff_type keys — kept local rather than pulling
 // in EmployeesView's full picker list, since only the label text is needed.
@@ -991,17 +1046,38 @@ function goToDepartment(d) {
   router.push({ name: 'employees', query: { department: String(d.id) } });
 }
 
+const campusRankings = computed(() =>
+  campusData.value
+    .map(c => ({
+      name:    c.name || c.code || 'Unknown',
+      present: c.present ?? 0,
+      absent:  c.absent  ?? 0,
+      total:   (c.present ?? 0) + (c.absent ?? 0),
+      rate:    (c.present ?? 0) + (c.absent ?? 0) > 0
+        ? Math.round((c.present ?? 0) / ((c.present ?? 0) + (c.absent ?? 0)) * 100)
+        : 0,
+    }))
+    .sort((a, b) => b.rate - a.rate)
+);
+
 async function loadAnalytics() {
   analyticsLoading.value = true;
   try {
-    const [trendRes, deptRes, staffTypeRes] = await Promise.all([
+    const requests = [
       axios.get('/api/analytics/trend', { params: { days: trendDays.value } }),
       axios.get('/api/analytics/departments', { params: { date: filters.date } }),
       axios.get('/api/analytics/staff-types', { params: { date: filters.date } }),
-    ]);
+    ];
+    // Only Super Admin can even call this endpoint (403 for anyone else),
+    // and only Super Admin has more than one campus to compare.
+    if (isSuperAdmin.value) {
+      requests.push(axios.get('/api/analytics/campus-comparison', { params: { date: filters.date } }));
+    }
+    const [trendRes, deptRes, staffTypeRes, campusRes] = await Promise.all(requests);
     trendData.value     = trendRes.data;
     deptData.value       = deptRes.data;
     staffTypeData.value  = staffTypeRes.data;
+    if (campusRes) campusData.value = campusRes.data;
     buildTrendChart(trendData.value);
     buildDeptChart(deptData.value);
     buildStaffTypeChart(staffTypeData.value);
@@ -2148,6 +2224,16 @@ onMounted(async () => {
   position: absolute; inset: 0;
   display: flex; flex-direction: column;
   align-items: center; justify-content: center;
+  font-size: 12px; color: #9CA3AF;
+}
+
+/* Campus comparison empty state — not inside a positioned .chart-area
+   (there's no canvas here), so it's a plain centered block instead of
+   the absolute-inset one above. */
+.campus-empty {
+  display: flex; flex-direction: column;
+  align-items: center; justify-content: center;
+  padding: 34px 20px;
   font-size: 12px; color: #9CA3AF;
 }
 

@@ -118,6 +118,7 @@ Route::middleware('auth:sanctum')->group(function () {
     Route::get('/analytics/trend',       [AnalyticsController::class, 'trend']);
     Route::get('/analytics/departments', [AnalyticsController::class, 'departments']);
     Route::get('/analytics/staff-types', [AnalyticsController::class, 'staffTypes']);
+    Route::get('/analytics/campus-comparison', [AnalyticsController::class, 'campusComparison']);
 
     // DTR Correction Requests
     Route::get('/dtr-corrections',                    [DtrCorrectionController::class, 'index']);
