@@ -322,8 +322,8 @@ onMounted(() => load(1));
   display: flex; align-items: center; gap: 6px;
   font-size: 11px; color: #94A3B8; margin-top: 3px;
 }
-.tl-relative { color: #B0BAD1; }
-.tl-ip { margin-left: auto; font-family: ui-monospace, monospace; color: #C4CCE0; }
+.tl-relative { color: #94A3B8; }
+.tl-ip { margin-left: auto; font-family: ui-monospace, monospace; color: #94A3B8; }
 
 /* ── Mobile ─────────────────────────────────────────── */
 @media (max-width: 768px) {

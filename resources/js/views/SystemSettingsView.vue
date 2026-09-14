@@ -247,7 +247,7 @@ onBeforeUnmount(() => {
 .settings-upload-btn {
   display:inline-flex; align-items:center; gap:6px;
   padding:7px 14px; font-size:12.5px; font-weight:600;
-  background:#EEF2FF; color:#3B4FC4; border-radius:9px;
+  background:#EEF2FF; color:#1D4ED8; border-radius:9px;
   cursor:pointer; transition:background 0.15s;
 }
 .settings-upload-btn:hover { background:#DDE5FF; }

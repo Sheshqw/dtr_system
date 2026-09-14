@@ -155,7 +155,7 @@
                   <div>
                     <p class="font-medium text-[#0F172A]">{{ emp.name }}</p>
                     <p class="text-xs text-[#94A3B8] font-mono">{{ emp.employee_id }}</p>
-                    <p v-if="emp.fingerprint_id" class="text-[10px] text-[#0550A8] font-mono mt-0.5">
+                    <p v-if="emp.fingerprint_id" class="text-[10px] text-[#0284C7] font-mono mt-0.5">
                       <span class="opacity-60">FP:</span> {{ emp.fingerprint_id }}
                     </p>
                   </div>
@@ -1264,7 +1264,7 @@ onMounted(load);
 .th-cell {
   padding: 11px 16px; font-size: 10.5px; font-weight: 700;
   text-transform: uppercase; letter-spacing: 0.08em;
-  color: #5A6899; background: #F7F8FD; white-space: nowrap;
+  color: #64748B; background: #F7F8FD; white-space: nowrap;
 }
 .td-cell { padding: 12px 16px; color: #0F172A; }
 
@@ -1278,7 +1278,7 @@ tbody tr:last-child { border-bottom: none; }
 tbody tr:hover { background: #F8FAFF; }
 
 /* ── Action icons ──────────────────────────────────────── */
-.btn-icon { padding: 6px; border-radius: 7px; color: #7B8FBF; transition: all 0.12s; }
+.btn-icon { padding: 6px; border-radius: 7px; color: #94A3B8; transition: all 0.12s; }
 .btn-icon:hover { background: #EEF2FF; color: #0E1EC0; }
 
 /* ── Status badges ─────────────────────────────────────── */
@@ -1300,7 +1300,7 @@ tbody tr:hover { background: #F8FAFF; }
   background: #fff; transition: border-color 0.15s, box-shadow 0.15s;
 }
 .form-input:focus { outline: none; border-color: #0E1EC0; box-shadow: 0 0 0 3px rgba(14,30,192,0.08); }
-.field-hint  { font-size: 11px; color: #9CABC8; margin-top: 4px; }
+.field-hint  { font-size: 11px; color: #94A3B8; margin-top: 4px; }
 .req         { color: #EF4444; }
 .btn-primary {
   display: inline-flex; align-items: center; gap: 7px;

@@ -180,7 +180,7 @@ onMounted(load);
 .th-cell {
   padding: 11px 16px; font-size: 10.5px; font-weight: 700;
   text-transform: uppercase; letter-spacing: 0.08em;
-  color: #5A6899; white-space: nowrap;
+  color: #64748B; white-space: nowrap;
 }
 .td-cell { padding: 12px 16px; }
 

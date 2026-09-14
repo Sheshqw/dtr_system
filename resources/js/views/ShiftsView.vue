@@ -24,10 +24,10 @@
         <table class="w-full text-sm">
           <thead class="border-b border-[#EEF2FA] bg-[#F7F8FD]">
             <tr>
-              <th class="text-left px-5 py-3 font-bold text-[#5A6899] uppercase text-[10.5px] tracking-widest">Shift Name</th>
-              <th class="text-center px-4 py-3 font-bold text-[#5A6899] uppercase text-[10.5px] tracking-widest">Morning</th>
-              <th class="text-center px-4 py-3 font-bold text-[#5A6899] uppercase text-[10.5px] tracking-widest">Afternoon</th>
-              <th class="text-center px-4 py-3 font-bold text-[#5A6899] uppercase text-[10.5px] tracking-widest">Grace</th>
+              <th class="text-left px-5 py-3 font-bold text-[#64748B] uppercase text-[10.5px] tracking-widest">Shift Name</th>
+              <th class="text-center px-4 py-3 font-bold text-[#64748B] uppercase text-[10.5px] tracking-widest">Morning</th>
+              <th class="text-center px-4 py-3 font-bold text-[#64748B] uppercase text-[10.5px] tracking-widest">Afternoon</th>
+              <th class="text-center px-4 py-3 font-bold text-[#64748B] uppercase text-[10.5px] tracking-widest">Grace</th>
               <th class="text-center px-4 py-3 font-semibold text-[#64748B] uppercase text-xs tracking-wide">Req. Hours</th>
               <th class="text-center px-4 py-3 font-semibold text-[#64748B] uppercase text-xs tracking-wide">Employees</th>
               <th class="text-right px-5 py-3 font-semibold text-[#64748B] uppercase text-xs tracking-wide">Actions</th>

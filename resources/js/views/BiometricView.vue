@@ -8,9 +8,9 @@
     <!-- Method guide banner -->
     <div class="grid grid-cols-1 sm:grid-cols-2 gap-3">
       <div class="flex items-start gap-3 px-4 py-3.5 rounded-xl" style="background:#EFF6FF;border:1px solid #BFDBFE;">
-        <WifiIcon class="w-4 h-4 mt-0.5 flex-shrink-0" style="color:#2563EB;" />
+        <WifiIcon class="w-4 h-4 mt-0.5 flex-shrink-0" style="color:#1D4ED8;" />
         <div>
-          <p class="text-sm font-semibold" style="color:#1E40AF;">Live Sync (TCP)</p>
+          <p class="text-sm font-semibold" style="color:#1D4ED8;">Live Sync (TCP)</p>
           <p class="text-xs mt-0.5" style="color:#3B82F6;">
             Use when the biometric device and this server are on the <strong>same LAN network</strong>.
             Logs are pulled directly over TCP — no USB drive needed.
@@ -156,7 +156,7 @@
         <!-- Drop zone -->
         <div
           class="relative border-2 border-dashed rounded-xl transition-colors cursor-pointer text-center py-10"
-          :class="dragging ? 'border-[#0550A8] bg-[#EEF4FF]' : 'border-[#CBD5E1] hover:border-[#94A3B8]'"
+          :class="dragging ? 'border-[#0284C7] bg-[#EEF4FF]' : 'border-[#CBD5E1] hover:border-[#94A3B8]'"
           role="button"
           tabindex="0"
           title="Click or drag a file here to browse for an attendance export"
@@ -169,7 +169,7 @@
         >
           <UploadCloudIcon class="w-10 h-10 mx-auto mb-3 text-[#94A3B8]" />
           <p class="text-sm font-medium text-[#475569]">
-            <span class="text-[#0550A8] font-semibold">Click to browse</span> or drag &amp; drop
+            <span class="text-[#0284C7] font-semibold">Click to browse</span> or drag &amp; drop
           </p>
           <p class="text-xs text-[#94A3B8] mt-1">Supports <strong>.dat</strong>, <strong>.csv</strong>, <strong>.txt</strong> · Max 10 MB</p>
 
@@ -178,7 +178,7 @@
           <!-- Selected file badge -->
           <div v-if="file" class="absolute inset-x-0 bottom-3 flex justify-center">
             <div class="flex items-center gap-2 bg-white border border-[#E2E8F0] rounded-lg px-3 py-1.5 shadow-sm text-xs">
-              <FileTextIcon class="w-3.5 h-3.5 text-[#0550A8]" />
+              <FileTextIcon class="w-3.5 h-3.5 text-[#0284C7]" />
               <span class="font-medium text-[#0F172A] max-w-[200px] truncate">{{ file.name }}</span>
               <button @click.stop="file = null" class="text-[#94A3B8] hover:text-red-400 transition-colors">
                 <XIcon class="w-3 h-3" />

@@ -626,7 +626,7 @@ onBeforeUnmount(() => {
   border-radius: 9px;
   background: rgba(255,255,255,0.05);
   border: 1px solid rgba(255,255,255,0.08);
-  color: #7B8FBF;
+  color: #94A3B8;
   font-size: 12px; font-weight: 500;
   transition: all 0.15s ease;
   cursor: pointer;
@@ -685,7 +685,7 @@ onBeforeUnmount(() => {
 }
 .nav-icon-idle {
   background: rgba(255,255,255,0.06);
-  color: #7B8FBF;
+  color: #94A3B8;
   border: 1px solid rgba(255,255,255,0.07);
 }
 .nav-icon-active {

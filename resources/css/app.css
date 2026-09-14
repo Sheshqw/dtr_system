@@ -258,7 +258,6 @@ input, select, textarea {
 /* Primary brand blue — nearly invisible on dark; map to a readable light blue */
 [data-theme="dark"] .text-\[\#0E2072\]   { color: #93C5FD !important; }
 [data-theme="dark"] .text-\[\#1628A8\]   { color: #93C5FD !important; }
-[data-theme="dark"] .text-\[\#0369A1\]   { color: #7DD3FC !important; }
 
 /* Tailwind semantic text colors */
 [data-theme="dark"] .text-amber-800 { color: #FDE68A !important; }
@@ -371,15 +370,9 @@ input, select, textarea {
 [data-theme="dark"] .hover\:text-\[\#EF4444\]:hover  { color: #F87171 !important; }
 [data-theme="dark"] .text-\[\#10B981\]               { color: #34D399 !important; }
 
-/* Secondary/muted text authored for a white card */
-[data-theme="dark"] .text-\[\#5A6899\]  { color: #9AAAC9 !important; }
-[data-theme="dark"] .text-\[\#0550A8\]  { color: #7DD3FC !important; }
-[data-theme="dark"] .border-\[\#0550A8\] { border-color: #7DD3FC !important; }
-
 /* Toast message text — was staying near-black on the now-dark toast card */
 [data-theme="dark"] .text-\[\#0C1445\],
 [data-theme="dark"] .hover\:text-\[\#0C1445\]:hover { color: #E4EAF5 !important; }
-[data-theme="dark"] .text-\[\#8B9EC5\]              { color: #9AAAC9 !important; }
 
 /* A light slate meant to look "quiet" on white (empty-state icons, sort
    chevrons, dividers) instead glowed too bright against a dark card —
@@ -457,9 +450,7 @@ input, select, textarea {
 [data-theme="dark"] .ring-slate-200    { --tw-ring-color: rgba(148,163,184,0.30) !important; }
 
 /* ── Remaining gaps found in a full inline-style / scoped-class sweep ────── */
-[data-theme="dark"] [style*="color:#0369A1" i],   [data-theme="dark"] [style*="color: #0369A1" i],
 [data-theme="dark"] [style*="color:#1D4ED8" i],   [data-theme="dark"] [style*="color: #1D4ED8" i],
-[data-theme="dark"] [style*="color:#1E40AF" i],   [data-theme="dark"] [style*="color: #1E40AF" i],
 [data-theme="dark"] [style*="color:#2563EB" i],   [data-theme="dark"] [style*="color: #2563EB" i] { color: #60A5FA !important; }
 [data-theme="dark"] [style*="color:#10B981" i],   [data-theme="dark"] [style*="color: #10B981" i],
 [data-theme="dark"] [style*="color:#16A34A" i],   [data-theme="dark"] [style*="color: #16A34A" i] { color: #34D399 !important; }
@@ -730,8 +721,6 @@ input, select, textarea {
 /* ── Muted / label text ──────────────────────────────────────────────────── */
 [data-theme="dark"] [style*="color:#9CA3AF" i],  [data-theme="dark"] [style*="color: #9CA3AF" i],
 [data-theme="dark"] [style*="color:#94A3B8" i],  [data-theme="dark"] [style*="color: #94A3B8" i],
-[data-theme="dark"] [style*="color:#7B8FBF" i],  [data-theme="dark"] [style*="color: #7B8FBF" i],
-[data-theme="dark"] [style*="color:#5A6899" i],  [data-theme="dark"] [style*="color: #5A6899" i],
 [data-theme="dark"] [style*="color:#D1D5DB" i],  [data-theme="dark"] [style*="color: #D1D5DB" i] { color: #9AAAC9 !important; }
 
 [data-theme="dark"] [style*="color:#64748B" i],  [data-theme="dark"] [style*="color: #64748B" i],
@@ -759,9 +748,10 @@ input, select, textarea {
 [data-theme="dark"] [style*="color:#0E1EC0" i],  [data-theme="dark"] [style*="color: #0E1EC0" i],
 [data-theme="dark"] [style*="color:#1228CC" i],  [data-theme="dark"] [style*="color: #1228CC" i],
 [data-theme="dark"] [style*="color:#0A16A0" i],  [data-theme="dark"] [style*="color: #0A16A0" i],
-[data-theme="dark"] [style*="color:#3B4FC4" i],  [data-theme="dark"] [style*="color: #3B4FC4" i],
 [data-theme="dark"] [style*="color:#3B82F6" i],  [data-theme="dark"] [style*="color: #3B82F6" i] { color: #93C5FD !important; }
-[data-theme="dark"] [style*="color:#0284C7" i],  [data-theme="dark"] [style*="color: #0284C7" i] { color: #7DD3FC !important; }
+[data-theme="dark"] [style*="color:#0284C7" i],  [data-theme="dark"] [style*="color: #0284C7" i],
+[data-theme="dark"] .text-\[\#0284C7\]                                                          { color: #7DD3FC !important; }
+[data-theme="dark"] .border-\[\#0284C7\]                                                        { border-color: #7DD3FC !important; }
 [data-theme="dark"] [style*="color:#4338CA" i],  [data-theme="dark"] [style*="color: #4338CA" i] { color: #A5B4FC !important; }
 [data-theme="dark"] [style*="color:#6D28D9" i],  [data-theme="dark"] [style*="color: #6D28D9" i],
 [data-theme="dark"] [style*="color:#7C3AED" i],  [data-theme="dark"] [style*="color: #7C3AED" i] { color: #C4B5FD !important; }
@@ -835,9 +825,12 @@ input, select, textarea {
     --color-absent:          #DC2626;
     --color-on-leave:        #1628A8;
     --color-holiday:         #7C3AED;
+    /* text-secondary/muted corrected to the shades actually battle-tested
+       across the app (250+ call sites) rather than the original unused
+       draft values — see the color-consolidation pass in git history. */
     --color-text-primary:    #0C1445;
-    --color-text-secondary:  #5A6899;
-    --color-text-muted:      #8B9EC5;
+    --color-text-secondary:  #64748B;
+    --color-text-muted:      #94A3B8;
     --color-border:          #D4DEFF;
 }
 

@@ -1966,7 +1966,7 @@ onMounted(async () => {
   font-weight: 700;
   text-transform: uppercase;
   letter-spacing: 0.08em;
-  color: #5A6899;
+  color: #64748B;
   background: #F7F8FD;
   border-bottom: 1px solid #EEF2FA;
   text-align: center;
@@ -2119,7 +2119,7 @@ onMounted(async () => {
 .tk-delta--down { background: #FEF2F2; color: #B91C1C; }
 .tk-spark { width: 64px; height: 22px; flex-shrink: 0; }
 .tk-chip  { font-size: 9.5px; font-weight: 700; padding: 3px 9px; border-radius: 20px; white-space: nowrap; flex-shrink: 0; align-self: flex-start; }
-.tk-chip--blue  { background: #EEF2FF; color: #3B4FC4; }
+.tk-chip--blue  { background: #EEF2FF; color: #1D4ED8; }
 .tk-chip--green { background: #F0FFF4; color: #15803D; }
 .tk-chip--red   { background: #FEF2F2; color: #B91C1C; }
 .tk-chip--gold  { background: #FFFBEB; color: #B45309; }

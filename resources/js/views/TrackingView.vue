@@ -584,7 +584,7 @@ onMounted(async () => {
 .bf-note strong { color: #0E1EC0; }
 
 /* ── Filter bar ──────────────────────────────────────────────── */
-.filter-label { @apply block text-[10px] font-semibold uppercase tracking-wider mb-1; color: #7B8FBF; }
+.filter-label { @apply block text-[10px] font-semibold uppercase tracking-wider mb-1; color: #94A3B8; }
 .filter-input {
   font-size: 13px; border: 1px solid #E4E9F2; border-radius: 8px;
   padding: 6px 12px; color: #0F172A; background: #fff;
@@ -623,7 +623,7 @@ onMounted(async () => {
   display: flex; align-items: center; justify-content: center; flex-shrink: 0;
 }
 .stat-val   { font-size: 24px; font-weight: 700; color: #0F172A; line-height: 1; }
-.stat-lbl   { font-size: 11px; color: #7B8FBF; margin-top: 3px; }
+.stat-lbl   { font-size: 11px; color: #94A3B8; margin-top: 3px; }
 
 /* ── Data table ──────────────────────────────────────────────── */
 .track-card {
@@ -635,7 +635,7 @@ onMounted(async () => {
 .th-cell {
   padding: 11px 16px; font-size: 10.5px; font-weight: 700;
   text-transform: uppercase; letter-spacing: 0.08em;
-  color: #5A6899; background: #F7F8FD; white-space: nowrap;
+  color: #64748B; background: #F7F8FD; white-space: nowrap;
 }
 .td-cell { padding: 12px 16px; }
 .track-row {

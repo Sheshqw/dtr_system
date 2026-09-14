@@ -137,7 +137,7 @@
                         </div>
                         <div>
                           <p class="text-xs font-mono font-medium" style="color:#0F172A;">{{ backup.filename }}</p>
-                          <span class="inline-flex items-center mt-0.5 px-1.5 py-0.5 rounded text-[10px] font-semibold" style="background:#F0F9FF;color:#0369A1;">
+                          <span class="inline-flex items-center mt-0.5 px-1.5 py-0.5 rounded text-[10px] font-semibold" style="background:#F0F9FF;color:#0284C7;">
                             {{ backup.campus }}
                           </span>
                         </div>
@@ -466,7 +466,7 @@ onMounted(load);
 /* ── Detail expanded area ────────────────────────────── */
 .backup-detail {
   border-top: 1px solid #EEF2FA; background: #F7F8FD; padding: 14px 18px;
-  font-size: 12px; color: #5A6899;
+  font-size: 12px; color: #64748B;
 }
 
 /* ── Action buttons ──────────────────────────────────── */
