@@ -1,15 +1,7 @@
 <!doctype html>
 <html lang="en">
 <head>
-    <script>
-      (function(){
-        var t=localStorage.getItem('dtr_theme');
-        if(t){document.documentElement.setAttribute('data-theme',t);}
-        else if(window.matchMedia&&window.matchMedia('(prefers-color-scheme: dark)').matches){
-          document.documentElement.setAttribute('data-theme','dark');
-        }
-      })();
-    </script>
+    <script src="/theme-init.js"></script>
     @php
         $__settings = \App\Models\SystemSetting::current();
         $__favicon  = $__settings->logo_url ?? '/nemsu.png';
