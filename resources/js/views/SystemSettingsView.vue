@@ -162,8 +162,8 @@ async function load() {
   try {
     const res = await axios.get('/api/system-settings');
     applyResponse(res.data);
-  } catch {
-    toast('Failed to load system settings.', 'error');
+  } catch (e) {
+    toast(e.response?.data?.message ?? 'Failed to load system settings.', 'error');
   } finally {
     loading.value = false;
   }

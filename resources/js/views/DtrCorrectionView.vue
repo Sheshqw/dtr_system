@@ -22,7 +22,13 @@
         <div class="grid grid-cols-1 sm:grid-cols-3 gap-4">
           <div class="bg-white rounded-xl px-5 py-4 cursor-pointer transition-shadow hover:shadow-md"
             :style="activeTab === 'mine' && statusFilter === 'pending' ? 'border:1.5px solid #F59E0B;' : 'border:1px solid #E5E7EB;'"
+            role="button"
+            tabindex="0"
+            :aria-pressed="activeTab === 'mine' && statusFilter === 'pending'"
+            title="Filter to pending corrections"
             @click="setFilter('pending')"
+            @keydown.enter="setFilter('pending')"
+            @keydown.space.prevent="setFilter('pending')"
           >
             <div class="flex items-center gap-3">
               <div class="w-9 h-9 rounded-lg flex items-center justify-center flex-shrink-0" style="background:#FFFBEB;">
@@ -36,7 +42,13 @@
           </div>
           <div class="bg-white rounded-xl px-5 py-4 cursor-pointer transition-shadow hover:shadow-md"
             :style="activeTab === 'mine' && statusFilter === 'approved' ? 'border:1.5px solid #10B981;' : 'border:1px solid #E5E7EB;'"
+            role="button"
+            tabindex="0"
+            :aria-pressed="activeTab === 'mine' && statusFilter === 'approved'"
+            title="Filter to approved corrections"
             @click="setFilter('approved')"
+            @keydown.enter="setFilter('approved')"
+            @keydown.space.prevent="setFilter('approved')"
           >
             <div class="flex items-center gap-3">
               <div class="w-9 h-9 rounded-lg flex items-center justify-center flex-shrink-0" style="background:#ECFDF5;">
@@ -50,7 +62,13 @@
           </div>
           <div class="bg-white rounded-xl px-5 py-4 cursor-pointer transition-shadow hover:shadow-md"
             :style="activeTab === 'mine' && statusFilter === 'denied' ? 'border:1.5px solid #EF4444;' : 'border:1px solid #E5E7EB;'"
+            role="button"
+            tabindex="0"
+            :aria-pressed="activeTab === 'mine' && statusFilter === 'denied'"
+            title="Filter to denied corrections"
             @click="setFilter('denied')"
+            @keydown.enter="setFilter('denied')"
+            @keydown.space.prevent="setFilter('denied')"
           >
             <div class="flex items-center gap-3">
               <div class="w-9 h-9 rounded-lg flex items-center justify-center flex-shrink-0" style="background:#FEF2F2;">
@@ -749,8 +767,8 @@ async function load() {
     } else {
       corrections.value = all;
     }
-  } catch {
-    toast('Failed to load correction requests.', 'error');
+  } catch (e) {
+    toast(e.response?.data?.message ?? 'Failed to load correction requests.', 'error');
   } finally {
     loading.value = false;
   }

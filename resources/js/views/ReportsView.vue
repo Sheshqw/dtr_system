@@ -593,6 +593,7 @@ import axios from 'axios';
 import { useAuthStore } from '@/stores/auth';
 import { useToast } from '@/composables/useToast';
 import { useConfirm } from '@/composables/useConfirm';
+import { extractErrorMessage } from '@/composables/useApiError';
 import StatusBadge from '@/components/StatusBadge.vue';
 import PageHeader from '@/components/PageHeader.vue';
 import {
@@ -863,10 +864,7 @@ async function download() {
     });
     const contentType = res.headers?.['content-type'] ?? '';
     if (!contentType.includes('pdf')) {
-      const text = await res.data.text();
-      let msg = 'Failed to generate PDF.';
-      try { msg = JSON.parse(text).message ?? msg; } catch (_) {}
-      toast(msg, 'error');
+      toast(await extractErrorMessage({ response: { data: res.data } }, 'Failed to generate PDF.'), 'error');
       return;
     }
     const url  = window.URL.createObjectURL(new Blob([res.data], { type: 'application/pdf' }));
@@ -879,11 +877,7 @@ async function download() {
     link.remove();
     window.URL.revokeObjectURL(url);
   } catch (err) {
-    let msg = 'Failed to generate PDF.';
-    if (err.response?.data instanceof Blob) {
-      try { const t = await err.response.data.text(); msg = JSON.parse(t).message ?? msg; } catch (_) {}
-    } else { msg = err.response?.data?.message ?? msg; }
-    toast(msg, 'error');
+    toast(await extractErrorMessage(err, 'Failed to generate PDF.'), 'error');
   } finally {
     downloading.value = false;
   }
@@ -906,8 +900,8 @@ async function exportCsv() {
     link.click();
     link.remove();
     window.URL.revokeObjectURL(url);
-  } catch {
-    toast('Failed to export CSV.', 'error');
+  } catch (err) {
+    toast(await extractErrorMessage(err, 'Failed to export CSV.'), 'error');
   } finally {
     exportingCsv.value = false;
   }
@@ -928,8 +922,8 @@ async function exportBulk() {
     link.click();
     link.remove();
     window.URL.revokeObjectURL(url);
-  } catch {
-    toast('Failed to export bulk CSV.', 'error');
+  } catch (err) {
+    toast(await extractErrorMessage(err, 'Failed to export bulk CSV.'), 'error');
   } finally {
     exportingBulk.value = false;
   }

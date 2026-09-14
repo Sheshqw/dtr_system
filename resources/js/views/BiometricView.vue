@@ -157,10 +157,15 @@
         <div
           class="relative border-2 border-dashed rounded-xl transition-colors cursor-pointer text-center py-10"
           :class="dragging ? 'border-[#0550A8] bg-[#EEF4FF]' : 'border-[#CBD5E1] hover:border-[#94A3B8]'"
+          role="button"
+          tabindex="0"
+          title="Click or drag a file here to browse for an attendance export"
           @dragover.prevent="dragging = true"
           @dragleave="dragging = false"
           @drop.prevent="onDrop"
           @click="$refs.fileInput.click()"
+          @keydown.enter="$refs.fileInput.click()"
+          @keydown.space.prevent="$refs.fileInput.click()"
         >
           <UploadCloudIcon class="w-10 h-10 mx-auto mb-3 text-[#94A3B8]" />
           <p class="text-sm font-medium text-[#475569]">
@@ -313,8 +318,8 @@ async function checkStatus() {
   try {
     const { data } = await axios.get('/api/biometric/status');
     status.value = data;
-  } catch {
-    toast('Could not reach the server to check device status.', 'error');
+  } catch (e) {
+    toast(e.response?.data?.message ?? 'Could not reach the server to check device status.', 'error');
   } finally {
     statusLoading.value = false;
   }

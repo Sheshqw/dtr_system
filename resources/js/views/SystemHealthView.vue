@@ -151,7 +151,16 @@
               </thead>
               <tbody>
                 <template v-for="log in logs" :key="log.id">
-                  <tr class="sh-row" @click="toggleExpand(log.id)">
+                  <tr
+                    class="sh-row"
+                    role="button"
+                    tabindex="0"
+                    :aria-expanded="expanded === log.id"
+                    :title="`${expanded === log.id ? 'Collapse' : 'Expand'} details for log ${log.id}`"
+                    @click="toggleExpand(log.id)"
+                    @keydown.enter="toggleExpand(log.id)"
+                    @keydown.space.prevent="toggleExpand(log.id)"
+                  >
                     <td class="px-4 py-3" @click.stop>
                       <input type="checkbox" :checked="selected.has(log.id)" @change="toggleSelect(log.id)" class="sh-checkbox" :aria-label="`Select log ${log.id}`" />
                     </td>
@@ -316,8 +325,8 @@ async function load(page = 1) {
     types.value = res.data.types ?? [];
     Object.assign(summary, res.data.summary);
     selected.clear();
-  } catch {
-    toast('Failed to load system health logs.', 'error');
+  } catch (e) {
+    toast(e.response?.data?.message ?? 'Failed to load system health logs.', 'error');
   } finally {
     loading.value = false;
   }
@@ -372,8 +381,8 @@ async function bulkAction(action) {
     await Promise.all(ids.map(id => axios.post(`/api/system-health/${id}/${action}`)));
     toast(`${ids.length} log(s) ${action === 'acknowledge' ? 'acknowledged' : 'resolved'}.`);
     await load(meta.value?.current_page ?? 1);
-  } catch {
-    toast('Some items could not be updated.', 'error');
+  } catch (e) {
+    toast(e.response?.data?.message ?? 'Some items could not be updated.', 'error');
   }
 }
 
@@ -389,8 +398,8 @@ async function bulkDelete() {
     await Promise.all(ids.map(id => axios.delete(`/api/system-health/${id}`)));
     toast(`${ids.length} log(s) deleted.`);
     await load(1);
-  } catch {
-    toast('Some items could not be deleted.', 'error');
+  } catch (e) {
+    toast(e.response?.data?.message ?? 'Some items could not be deleted.', 'error');
   }
 }
 

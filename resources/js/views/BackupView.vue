@@ -122,7 +122,13 @@
                   <tr
                     class="transition-colors hover:bg-[#FAFAFA] cursor-pointer"
                     style="border-bottom:1px solid #F9FAFB;"
+                    role="button"
+                    tabindex="0"
+                    :aria-expanded="expanded === backup.filename"
+                    :title="`${expanded === backup.filename ? 'Collapse' : 'Expand'} details for ${backup.filename}`"
                     @click="toggleExpand(backup.filename)"
+                    @keydown.enter="toggleExpand(backup.filename)"
+                    @keydown.space.prevent="toggleExpand(backup.filename)"
                   >
                     <td class="px-5 py-3.5">
                       <div class="flex items-center gap-3">
@@ -299,6 +305,7 @@ import axios from 'axios';
 import { useAuthStore } from '@/stores/auth';
 import { useToast } from '@/composables/useToast';
 import { useConfirm } from '@/composables/useConfirm';
+import { extractErrorMessage } from '@/composables/useApiError';
 import PageHeader from '@/components/PageHeader.vue';
 import {
   Database as DatabaseIcon,
@@ -349,8 +356,8 @@ async function load() {
     const res = await axios.get('/api/backups');
     backups.value = res.data.backups;
     summary.value = res.data.summary;
-  } catch {
-    toast('Failed to load backups.', 'error');
+  } catch (e) {
+    toast(e.response?.data?.message ?? 'Failed to load backups.', 'error');
   } finally {
     loading.value = false;
   }
@@ -385,8 +392,8 @@ async function download(filename) {
     a.click();
     document.body.removeChild(a);
     URL.revokeObjectURL(url);
-  } catch {
-    toast('Download failed. Please try again.', 'error');
+  } catch (err) {
+    toast(await extractErrorMessage(err, 'Download failed. Please try again.'), 'error');
   }
 }
 

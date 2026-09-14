@@ -155,8 +155,8 @@ async function load() {
     ]);
     accounts.value = empRes.data.filter(e => PRIVILEGED.includes(e.role));
     campuses.value = campRes.data;
-  } catch {
-    toast('Could not load admin accounts. Please refresh the page.', 'error');
+  } catch (e) {
+    toast(e.response?.data?.message ?? 'Could not load admin accounts. Please refresh the page.', 'error');
   } finally {
     loading.value = false;
   }
