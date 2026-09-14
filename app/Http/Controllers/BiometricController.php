@@ -102,7 +102,10 @@ class BiometricController extends Controller
             return response()->json(['error' => 'No valid records found in the file. Check the format.'], 422);
         }
 
-        $result = $this->processLogs($logs, 'import');
+        // 'attendance_logs.source' only allows 'biometric' or 'manual' — a
+        // file import is a manual action (a human uploaded it), so it maps
+        // to 'manual', not a separate 'import' value the DB doesn't have.
+        $result = $this->processLogs($logs, 'manual');
 
         return response()->json($result);
     }
