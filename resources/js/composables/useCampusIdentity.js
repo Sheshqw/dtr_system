@@ -11,7 +11,7 @@ import { useAuthStore } from '@/stores/auth';
  * heroGradient — dark gradient for the dashboard topbar
  * tagline    — geographic subtitle shown in the topbar
  */
-const HERO = 'linear-gradient(135deg, #080E88 0%, #0B18A8 40%, #1020BC 70%, #0A18A8 100%)';
+const HERO = 'linear-gradient(135deg, #1B2A5E 0%, #24356F 40%, #2A3C76 70%, #24356F 100%)';
 
 const CAMPUS_THEMES = {
   CAN: {
@@ -69,7 +69,7 @@ const DEFAULT_THEME = {
   heroBand:     '#C9A227',
   colorDim:     '#FEF9E7',
   textColor:    '#FDE68A',
-  heroGradient: 'linear-gradient(135deg, #080E80 0%, #0A16A0 50%, #1020C4 100%)',
+  heroGradient: 'linear-gradient(135deg, #1B2A5E 0%, #24356F 50%, #2A3C76 100%)',
   tagline:      'Northern Eastern Mindanao State University',
 };
 
@@ -81,4 +81,11 @@ export function useCampusIdentity() {
   const campus     = computed(() => CAMPUS_THEMES[campusCode.value] ?? DEFAULT_THEME);
 
   return { campus, campusCode, campusName };
+}
+
+/** Look up any campus's theme by code — for pages that list several
+ *  campuses at once (e.g. super_admin's Campus management table) rather
+ *  than just rendering the logged-in user's own campus. */
+export function themeForCampusCode(code) {
+  return CAMPUS_THEMES[code] ?? DEFAULT_THEME;
 }

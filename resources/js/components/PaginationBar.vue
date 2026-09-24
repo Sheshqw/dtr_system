@@ -21,13 +21,13 @@
 
       <!-- Page numbers -->
       <template v-for="p in visiblePages" :key="p">
-        <span v-if="p === '...'" class="w-8 h-8 flex items-center justify-center text-xs" style="color:#9CA3AF;">…</span>
+        <span v-if="p === '...'" class="w-8 h-8 flex items-center justify-center text-xs" style="color:#6B7A94;">…</span>
         <button
           v-else
           @click="$emit('go', p)"
           class="w-8 h-8 flex items-center justify-center rounded-md text-sm font-medium transition-colors"
           :style="p === currentPage
-            ? 'background:#0E1EC0;color:#fff;'
+            ? 'background:#2E4A8C;color:#fff;'
             : 'border:1px solid #E5E7EB;color:#374151;'"
           @mouseover="e => p !== currentPage && (e.currentTarget.style.background='#F0F4FF')"
           @mouseout="e => p !== currentPage && (e.currentTarget.style.background='')"

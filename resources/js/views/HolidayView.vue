@@ -16,7 +16,7 @@
         <button
           v-if="canManage"
           @click="openAdd"
-          class="flex items-center gap-2 px-4 py-2 text-sm font-medium text-white rounded-lg bg-[#0E1EC0] hover:bg-[#1228CC] transition-colors"
+          class="flex items-center gap-2 px-4 py-2 text-sm font-medium text-white rounded-lg bg-[#2E4A8C] hover:bg-[#3D5CA3] transition-colors"
         >
           <PlusIcon class="w-4 h-4" />
           Add Holiday
@@ -39,14 +39,14 @@
 
       <!-- Empty state -->
       <div v-else-if="!loading && holidays.length === 0" class="text-center py-16">
-        <CalendarIcon class="w-12 h-12 mx-auto text-[#CBD5E1] mb-3" />
+        <CalendarIcon class="w-12 h-12 mx-auto text-[#94A3B8] mb-3" />
         <p class="text-[#64748B] font-medium">No holidays in {{ year }}</p>
-        <p class="text-sm text-[#94A3B8] mt-1">Add public or special holidays to automatically flag them in DTR records.</p>
+        <p class="text-sm text-[#6B7A94] mt-1">Add public or special holidays to automatically flag them in DTR records.</p>
         <button
           v-if="canManage"
           @click="openAdd"
           class="mt-4 px-4 py-2 text-sm font-medium text-white rounded-lg"
-          style="background: #0E1EC0;"
+          style="background: #2E4A8C;"
         >
           Add First Holiday
         </button>
@@ -74,9 +74,9 @@
         >
           <!-- Month header -->
           <div class="px-5 py-3 flex items-center gap-2 holiday-month-head">
-            <CalendarIcon class="w-4 h-4 text-[#94A3B8]" />
+            <CalendarIcon class="w-4 h-4 text-[#6B7A94]" />
             <h3 class="text-sm font-semibold text-[#0F172A] uppercase tracking-wide">{{ monthKey }}</h3>
-            <span class="ml-auto text-xs text-[#94A3B8]">{{ group.length }} day{{ group.length !== 1 ? 's' : '' }}</span>
+            <span class="ml-auto text-xs text-[#6B7A94]">{{ group.length }} day{{ group.length !== 1 ? 's' : '' }}</span>
           </div>
 
           <!-- Holidays in month -->
@@ -86,19 +86,16 @@
               :key="holiday.id"
               class="holiday-row px-5 py-3.5 flex items-center gap-4 hover:bg-[#FAFBFF] transition-colors"
             >
-              <!-- Date block -->
-              <div class="flex-shrink-0 w-12 text-center">
-                <p class="text-2xl font-bold text-[#0F172A] leading-none">{{ formatDay(holiday.date) }}</p>
-                <p class="text-[10px] text-[#94A3B8] uppercase mt-0.5">{{ formatDayName(holiday.date) }}</p>
+              <!-- Date tile -->
+              <div class="holiday-date-tile" :class="holiday.type === 'regular' ? 'holiday-date-tile--regular' : 'holiday-date-tile--special'">
+                <p class="holiday-date-day">{{ formatDay(holiday.date) }}</p>
+                <p class="holiday-date-dow">{{ formatDayName(holiday.date) }}</p>
               </div>
-
-              <!-- Vertical accent -->
-              <div class="w-0.5 h-8 rounded-full flex-shrink-0" :class="holiday.type === 'regular' ? 'bg-red-500' : 'bg-amber-500'"></div>
 
               <!-- Name -->
               <div class="flex-1 min-w-0">
                 <p class="text-sm font-medium text-[#0F172A]">{{ holiday.name }}</p>
-                <p class="text-xs text-[#94A3B8] mt-0.5">{{ formatFullDate(holiday.date) }}</p>
+                <p class="text-xs text-[#6B7A94] mt-0.5">{{ formatFullDate(holiday.date) }}</p>
               </div>
 
               <!-- Type badge -->
@@ -115,14 +112,14 @@
               <div v-if="canManage" class="flex items-center gap-1 flex-shrink-0">
                 <button
                   @click="openEdit(holiday)"
-                  class="p-1.5 rounded-md text-[#94A3B8] hover:text-[#0E1EC0] hover:bg-[#EEF2FF] transition-colors"
+                  class="p-1.5 rounded-md text-[#6B7A94] hover:text-[#2E4A8C] hover:bg-[#EEF2FF] transition-colors"
                   title="Edit"
                 >
                   <PencilIcon class="w-4 h-4" />
                 </button>
                 <button
                   @click="confirmDelete(holiday)"
-                  class="p-1.5 rounded-md text-[#94A3B8] hover:text-red-600 hover:bg-red-50 transition-colors"
+                  class="p-1.5 rounded-md text-[#6B7A94] hover:text-red-600 hover:bg-red-50 transition-colors"
                   title="Delete"
                 >
                   <Trash2Icon class="w-4 h-4" />
@@ -142,7 +139,7 @@
           <!-- Modal header -->
           <div class="px-6 py-5 border-b border-[#E2E8F0] flex items-center justify-between">
             <h2 class="text-base font-semibold text-[#0F172A]">{{ modal.editing ? 'Edit Holiday' : 'Add Holiday' }}</h2>
-            <button @click="requestClose" class="text-[#94A3B8] hover:text-[#0F172A] transition-colors">
+            <button @click="requestClose" class="text-[#6B7A94] hover:text-[#0F172A] transition-colors">
               <XIcon class="w-5 h-5" />
             </button>
           </div>
@@ -199,7 +196,7 @@
               <button
                 type="submit"
                 :disabled="modal.saving"
-                class="px-4 py-2 text-sm font-medium text-white rounded-lg bg-[#0E1EC0] hover:bg-[#1228CC] disabled:opacity-60 transition-colors"
+                class="px-4 py-2 text-sm font-medium text-white rounded-lg bg-[#2E4A8C] hover:bg-[#3D5CA3] disabled:opacity-60 transition-colors"
               >
                 {{ modal.saving ? 'Saving…' : (modal.editing ? 'Save Changes' : 'Add Holiday') }}
               </button>
@@ -380,17 +377,33 @@ onMounted(load);
   border: 1px solid #E4E9F2; border-radius: 8px; color: #0F172A; background: #fff;
   transition: border-color 0.15s, box-shadow 0.15s;
 }
-.modal-input:focus { outline: none; border-color: #0E1EC0; box-shadow: 0 0 0 3px rgba(14,30,192,0.08); }
+.modal-input:focus { outline: none; border-color: #2E4A8C; box-shadow: 0 0 0 3px rgba(46, 74, 140,0.08); }
 
 /* better month-group cards */
 .holiday-month-card {
   background: #fff; border: 1px solid #E4E9F2; border-radius: 12px;
-  overflow: hidden; box-shadow: 0 2px 8px rgba(8,14,128,0.05);
+  overflow: hidden; box-shadow: 0 2px 8px rgba(27, 42, 94,0.05);
 }
 .holiday-month-head {
   padding: 10px 20px; border-bottom: 1px solid #EEF2FA;
   background: #F7F8FD; display: flex; align-items: center; gap: 8px;
 }
+
+/* ── Date tile — reads like a small calendar cell rather than floating
+     text, and its tint communicates Regular/Special before you even
+     reach the text badge on the right. ─────────────────────────────── */
+.holiday-date-tile {
+  flex-shrink: 0; width: 52px; text-align: center;
+  border-radius: 10px; padding: 6px 4px 7px; border: 1px solid;
+  transition: transform 0.15s ease;
+}
+.holiday-row:hover .holiday-date-tile { transform: translateY(-1px); }
+.holiday-date-tile--regular { background: rgba(239,68,68,0.07); border-color: rgba(239,68,68,0.20); }
+.holiday-date-tile--special { background: rgba(245,158,11,0.08); border-color: rgba(245,158,11,0.22); }
+.holiday-date-day { font-size: 20px; font-weight: 800; line-height: 1; font-variant-numeric: tabular-nums; }
+.holiday-date-tile--regular .holiday-date-day { color: #DC2626; }
+.holiday-date-tile--special .holiday-date-day { color: #D97706; }
+.holiday-date-dow { font-size: 9px; font-weight: 600; text-transform: uppercase; letter-spacing: 0.06em; color: #94A3B8; margin-top: 3px; }
 
 @media (max-width: 640px) {
   /* A dedicated class, not an escaped Tailwind utility selector — the

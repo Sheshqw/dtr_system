@@ -47,7 +47,7 @@ defineProps({
 }
 .es-svg   { width: 34px; height: 34px; }
 .es-title { font-size: 14px; font-weight: 600; color: #0F172A; margin: 0; }
-.es-body  { font-size: 12px; color: #94A3B8; margin: 0; text-align: center; max-width: 280px; line-height: 1.5; }
+.es-body  { font-size: 12px; color: #6B7A94; margin: 0; text-align: center; max-width: 280px; line-height: 1.5; }
 
 @keyframes esFloat {
   0%, 100% { transform: translateY(0px);  }

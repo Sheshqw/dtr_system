@@ -33,7 +33,10 @@
           <div class="tb-clock-center">
             <span class="tb-center-date">{{ formattedDate }}</span>
             <div class="tb-center-clock">{{ liveTime }}</div>
-            <span v-if="lastRefreshed" class="tb-center-updated">Updated {{ lastRefreshed }}</span>
+            <span v-if="lastRefreshed" class="tb-center-updated">
+              Updated {{ lastRefreshed }}
+              <span v-if="liveUpdatesActive" class="tb-live-dot" title="Live — updates automatically when someone punches in/out"></span>
+            </span>
           </div>
           <div class="tb-controls">
             <div
@@ -86,7 +89,14 @@
           <!-- Three stat columns -->
           <div class="sc-group">
             <!-- Present -->
-            <div class="sc-col sc-col--present">
+            <div
+              class="sc-col sc-col--present"
+              :class="{ 'sc-col--active': filters.status === 'present_incl_late' }"
+              role="button" tabindex="0"
+              title="Show only present/late employees in the table below"
+              @click="toggleStatusFilter('present_incl_late')"
+              @keyup.enter="toggleStatusFilter('present_incl_late')"
+            >
               <div class="sc-top-accent" style="background:#16A34A;"></div>
               <div class="sc-inner">
                 <div class="sc-icon-row">
@@ -101,18 +111,29 @@
                 <div class="sc-metric-row">
                   <span class="sc-num" style="color:#15803D;">{{ displayPresent }}</span>
                   <span class="sc-denom">/ {{ totalTracked }}</span>
+                  <span v-if="statusDelta('present') !== 0" class="sc-delta" :class="`sc-delta--${deltaSentiment('present', statusDelta('present'))}`">
+                    <component :is="statusDelta('present') > 0 ? TrendingUpIcon : TrendingDownIcon" class="w-3 h-3" />
+                    {{ Math.abs(statusDelta('present')) }}
+                  </span>
                 </div>
                 <div class="sc-bar-wrap">
                   <div class="sc-bar" style="background:linear-gradient(90deg,#16A34A,#15803D);" :style="{ width: pct(store.summary.present) + '%' }"></div>
                 </div>
-                <span class="sc-pct"><strong>{{ pct(store.summary.present) }}%</strong> attendance</span>
+                <span class="sc-pct"><strong>{{ pct(store.summary.present) }}%</strong> attendance <span class="sc-vs">· vs prev. day</span></span>
               </div>
             </div>
 
             <div class="sc-divider"></div>
 
             <!-- Late -->
-            <div class="sc-col sc-col--late">
+            <div
+              class="sc-col sc-col--late"
+              :class="{ 'sc-col--active': filters.status === 'late' }"
+              role="button" tabindex="0"
+              title="Show only late employees in the table below"
+              @click="toggleStatusFilter('late')"
+              @keyup.enter="toggleStatusFilter('late')"
+            >
               <div class="sc-top-accent" style="background:#D97706;"></div>
               <div class="sc-inner">
                 <div class="sc-icon-row">
@@ -127,18 +148,29 @@
                 <div class="sc-metric-row">
                   <span class="sc-num" style="color:#B45309;">{{ displayLate }}</span>
                   <span class="sc-denom">/ {{ totalTracked }}</span>
+                  <span v-if="statusDelta('late') !== 0" class="sc-delta" :class="`sc-delta--${deltaSentiment('late', statusDelta('late'))}`">
+                    <component :is="statusDelta('late') > 0 ? TrendingUpIcon : TrendingDownIcon" class="w-3 h-3" />
+                    {{ Math.abs(statusDelta('late')) }}
+                  </span>
                 </div>
                 <div class="sc-bar-wrap">
                   <div class="sc-bar" style="background:linear-gradient(90deg,#F59E0B,#D97706);" :style="{ width: pct(store.summary.late) + '%' }"></div>
                 </div>
-                <span class="sc-pct"><strong>{{ pct(store.summary.late) }}%</strong> of total</span>
+                <span class="sc-pct"><strong>{{ pct(store.summary.late) }}%</strong> of total <span class="sc-vs">· vs prev. day</span></span>
               </div>
             </div>
 
             <div class="sc-divider"></div>
 
             <!-- Absent -->
-            <div class="sc-col sc-col--absent">
+            <div
+              class="sc-col sc-col--absent"
+              :class="{ 'sc-col--active': filters.status === 'absent' }"
+              role="button" tabindex="0"
+              title="Show only absent employees in the table below"
+              @click="toggleStatusFilter('absent')"
+              @keyup.enter="toggleStatusFilter('absent')"
+            >
               <div class="sc-top-accent" style="background:#DC2626;"></div>
               <div class="sc-inner">
                 <div class="sc-icon-row">
@@ -153,11 +185,15 @@
                 <div class="sc-metric-row">
                   <span class="sc-num" style="color:#991B1B;">{{ displayAbsent }}</span>
                   <span class="sc-denom">/ {{ totalTracked }}</span>
+                  <span v-if="statusDelta('absent') !== 0" class="sc-delta" :class="`sc-delta--${deltaSentiment('absent', statusDelta('absent'))}`">
+                    <component :is="statusDelta('absent') > 0 ? TrendingUpIcon : TrendingDownIcon" class="w-3 h-3" />
+                    {{ Math.abs(statusDelta('absent')) }}
+                  </span>
                 </div>
                 <div class="sc-bar-wrap">
                   <div class="sc-bar" style="background:linear-gradient(90deg,#EF4444,#DC2626);" :style="{ width: pct(store.summary.absent) + '%' }"></div>
                 </div>
-                <span class="sc-pct"><strong>{{ pct(store.summary.absent) }}%</strong> of total</span>
+                <span class="sc-pct"><strong>{{ pct(store.summary.absent) }}%</strong> of total <span class="sc-vs">· vs prev. day</span></span>
               </div>
             </div>
           </div>
@@ -177,7 +213,7 @@
             </div>
 
             <div class="rate-main">
-              <div class="rate-donut-wrap">
+              <div class="rate-donut-wrap" :style="{ '--rate-glow': rateGlowColor }">
                 <svg viewBox="0 0 100 100" class="rate-donut-svg" aria-hidden="true">
                   <!-- Track -->
                   <circle cx="50" cy="50" r="40" fill="none"
@@ -200,7 +236,7 @@
                   <!-- Center label -->
                   <text x="50" y="61" text-anchor="middle"
                     font-size="8.5" font-weight="600"
-                    fill="#94A3B8"
+                    fill="#6B7A94"
                     font-family="system-ui,-apple-system,sans-serif"
                     letter-spacing="1"
                   >{{ attendanceRate >= 75 ? 'GOOD' : attendanceRate >= 50 ? 'FAIR' : 'LOW' }}</text>
@@ -246,7 +282,7 @@
       <!-- ══ My Personal DTR Status (regular employees only) ══════════ -->
       <div v-if="!isAdminOrHr" class="bg-white rounded-xl overflow-hidden" style="border:1px solid #E5E7EB;">
         <!-- Card header -->
-        <div class="px-5 py-3.5 flex items-center gap-3" style="background:linear-gradient(135deg,#0E1EC0,#1228CC);border-radius:0.75rem 0.75rem 0 0;">
+        <div class="px-5 py-3.5 flex items-center gap-3" style="background:linear-gradient(135deg,#2E4A8C,#3D5CA3);border-radius:0.75rem 0.75rem 0 0;">
           <div class="w-8 h-8 rounded-lg flex items-center justify-center flex-shrink-0" style="background:rgba(255,255,255,0.15);">
             <UserCheckIcon class="w-4 h-4 text-white" />
           </div>
@@ -264,21 +300,21 @@
           <!-- Time In / Time Out -->
           <div class="flex items-center gap-6">
             <div class="text-center">
-              <p class="text-[10px] font-semibold uppercase tracking-wider mb-1" style="color:#9CA3AF;">Time In</p>
-              <p class="text-base font-bold font-mono" :style="myTodayRow?.time_in ? 'color:#0F172A;' : 'color:#D1D5DB;'">
+              <p class="text-[10px] font-semibold uppercase tracking-wider mb-1" style="color:#6B7A94;">Time In</p>
+              <p class="text-base font-bold font-mono" :style="myTodayRow?.time_in ? 'color:#0F172A;' : 'color:#94A3B8;'">
                 {{ myTodayRow?.time_in ?? '—' }}
               </p>
             </div>
             <div style="width:1px;height:32px;background:#F1F5F9;"></div>
             <div class="text-center">
-              <p class="text-[10px] font-semibold uppercase tracking-wider mb-1" style="color:#9CA3AF;">Time Out</p>
-              <p class="text-base font-bold font-mono" :style="myTodayRow?.time_out ? 'color:#0F172A;' : 'color:#D1D5DB;'">
+              <p class="text-[10px] font-semibold uppercase tracking-wider mb-1" style="color:#6B7A94;">Time Out</p>
+              <p class="text-base font-bold font-mono" :style="myTodayRow?.time_out ? 'color:#0F172A;' : 'color:#94A3B8;'">
                 {{ myTodayRow?.time_out ?? '—' }}
               </p>
             </div>
             <div style="width:1px;height:32px;background:#F1F5F9;"></div>
             <div class="text-center">
-              <p class="text-[10px] font-semibold uppercase tracking-wider mb-1" style="color:#9CA3AF;">Hours</p>
+              <p class="text-[10px] font-semibold uppercase tracking-wider mb-1" style="color:#6B7A94;">Hours</p>
               <p class="text-base font-bold" style="color:#0F172A;">
                 {{ myTodayRow?.hours_rendered ? Number(myTodayRow.hours_rendered).toFixed(1) + 'h' : '—' }}
               </p>
@@ -355,6 +391,11 @@
               class="f-btn"
               :class="{ 'f-btn--on': filters.date === todayStr }"
             >Today</button>
+            <button
+              @click="filters.date = yesterdayStr; refresh()"
+              class="f-btn"
+              :class="{ 'f-btn--on': filters.date === yesterdayStr }"
+            >Yesterday</button>
             <div class="f-search-wrap">
               <SearchIcon class="f-search-icon" />
               <input
@@ -375,7 +416,8 @@
             </div>
             <select v-model="filters.status" class="f-ctrl">
               <option value="">All Status</option>
-              <option value="present">Present</option>
+              <option value="present_incl_late">Present (incl. Late)</option>
+              <option value="present">Present (on-time only)</option>
               <option value="late">Late</option>
               <option value="absent">Absent</option>
               <option value="holiday">Holiday</option>
@@ -408,17 +450,29 @@
             <thead>
               <tr>
                 <th class="th th-no">#</th>
-                <th class="th th-l">Employee</th>
-                <th class="th th-l">Department</th>
-                <th class="th">Time In</th>
-                <th class="th">Time Out</th>
-                <th class="th">Status</th>
-                <th class="th th-r">Hours</th>
+                <th class="th th-l th-sort" @click="sort('name')">
+                  <span class="th-sort-inner">Employee <SortIcon :state="sortState('name')" /></span>
+                </th>
+                <th class="th th-l th-sort" @click="sort('department')">
+                  <span class="th-sort-inner">Department <SortIcon :state="sortState('department')" /></span>
+                </th>
+                <th class="th th-sort" @click="sort('time_in')">
+                  <span class="th-sort-inner">Time In <SortIcon :state="sortState('time_in')" /></span>
+                </th>
+                <th class="th th-sort" @click="sort('time_out')">
+                  <span class="th-sort-inner">Time Out <SortIcon :state="sortState('time_out')" /></span>
+                </th>
+                <th class="th th-sort" @click="sort('status')">
+                  <span class="th-sort-inner">Status <SortIcon :state="sortState('status')" /></span>
+                </th>
+                <th class="th th-r th-sort" @click="sort('hours')">
+                  <span class="th-sort-inner th-sort-inner--r">Hours <SortIcon :state="sortState('hours')" /></span>
+                </th>
               </tr>
             </thead>
             <tbody>
               <tr
-                v-for="(row, i) in filteredRows"
+                v-for="(row, i) in sortedRows"
                 :key="row.id"
                 class="log-row row-enter"
                 :class="[i % 2 === 1 ? 'log-row--alt' : '', `row-status--${row.status}`]"
@@ -505,7 +559,7 @@
             <div class="tk-body">
               <span class="tk-label">{{ trendDays }}-Day Avg Rate</span>
               <div class="tk-val-row">
-                <span class="tk-val" :style="{ color: rateTierColor(trendAnalytics.avgNum) }">{{ trendAnalytics.avg }}</span>
+                <span class="tk-val" :style="{ color: rateTierColor(trendAnalytics.avgNum) }">{{ displayAvgRate }}%</span>
                 <span
                   v-if="trendAnalytics.delta !== 0"
                   class="tk-delta"
@@ -518,7 +572,7 @@
               </div>
             </div>
             <svg v-if="trendAnalytics.sparkline" class="tk-spark" viewBox="0 0 64 22" preserveAspectRatio="none" aria-hidden="true">
-              <path :d="trendAnalytics.sparkline" fill="none" stroke="#CBD5E1" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round" />
+              <path :d="trendAnalytics.sparkline" fill="none" stroke="#94A3B8" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round" />
               <circle v-if="trendAnalytics.sparkEnd" :cx="trendAnalytics.sparkEnd.x" :cy="trendAnalytics.sparkEnd.y" r="2.4" :fill="rateTierColor(trendAnalytics.avgNum)" />
             </svg>
           </div>
@@ -551,9 +605,25 @@
             </div>
             <div class="tk-body">
               <span class="tk-label">Active Days</span>
-              <span class="tk-val">{{ trendAnalytics.activeDays }}</span>
+              <span class="tk-val">{{ displayActiveDays }}</span>
             </div>
             <span class="tk-chip tk-chip--gold">of {{ trendDays }}</span>
+          </div>
+
+          <div class="tk-card tk-card--ring">
+            <div class="tk-ring" :style="{ background: todayMixGradient }">
+              <div class="tk-ring-hole">
+                <span class="tk-ring-total">{{ displayPresent + displayLate + displayAbsent }}</span>
+              </div>
+            </div>
+            <div class="tk-body">
+              <span class="tk-label">Today's Mix</span>
+              <div class="tk-ring-legend">
+                <span><i style="background:#15803D;"></i>{{ pct(store.summary.present) }}%</span>
+                <span><i style="background:#D97706;"></i>{{ pct(store.summary.late) }}%</span>
+                <span><i style="background:#DC2626;"></i>{{ pct(store.summary.absent) }}%</span>
+              </div>
+            </div>
           </div>
 
         </div>
@@ -611,7 +681,7 @@
                 </div>
               </div>
               <div v-if="!analyticsLoading && deptEmpty" class="chart-empty">
-                <BarChart2Icon class="w-8 h-8 mb-2 opacity-20" style="color:#94A3B8;" />
+                <BarChart2Icon class="w-8 h-8 mb-2 opacity-20" style="color:#6B7A94;" />
                 <p>No department data for this date.</p>
               </div>
             </div>
@@ -639,7 +709,7 @@
                 <span class="drl-present">{{ d.present }}<span class="drl-total">/{{ d.total }}</span></span>
                 <div class="drl-bar-wrap">
                   <div class="drl-bar"
-                    :style="{ width: d.rate + '%', background: d.rate >= 75 ? '#15803D' : d.rate >= 50 ? '#D97706' : '#DC2626' }">
+                    :style="{ width: d.rate + '%', background: d.rate >= 75 ? 'linear-gradient(90deg, #4ADE80, #15803D)' : d.rate >= 50 ? 'linear-gradient(90deg, #FBBF24, #D97706)' : 'linear-gradient(90deg, #F87171, #DC2626)' }">
                   </div>
                 </div>
                 <span class="drl-rate"
@@ -655,17 +725,17 @@
           </div>
 
           <!-- Staff type composition -->
-          <div class="chart-panel chart-panel--wide" style="border-top-color:#0E1EC0;">
+          <div class="chart-panel chart-panel--wide" style="border-top-color:#2E4A8C;">
             <div class="cp-header">
               <div class="cp-title-group">
-                <span class="cp-badge" style="background:#EEF2FF;color:#0E1EC0;">ROLE</span>
+                <span class="cp-badge" style="background:#EEF2FF;color:#2E4A8C;">ROLE</span>
                 <div>
                   <h2 class="cp-title">Staff Type Composition</h2>
                   <p class="cp-sub">Today's attendance by role — a second lens next to department</p>
                 </div>
               </div>
               <div class="dept-legend">
-                <span class="dl-item"><i class="dl-dot" style="background:#0E1EC0;"></i>Present</span>
+                <span class="dl-item"><i class="dl-dot" style="background:#2E4A8C;"></i>Present</span>
                 <span class="dl-item"><i class="dl-dot dl-dot--absent"></i>Absent</span>
               </div>
             </div>
@@ -679,7 +749,7 @@
                 </div>
               </div>
               <div v-if="!analyticsLoading && staffTypeEmpty" class="chart-empty">
-                <UsersIcon class="w-8 h-8 mb-2 opacity-20" style="color:#94A3B8;" />
+                <UsersIcon class="w-8 h-8 mb-2 opacity-20" style="color:#6B7A94;" />
                 <p>No staff type data for this date. Set a staff type on employee profiles to see this breakdown.</p>
               </div>
             </div>
@@ -710,7 +780,7 @@
             </div>
 
             <div v-else-if="!campusRankings.length" class="campus-empty">
-              <BuildingIcon class="w-8 h-8 mb-2 opacity-20" style="color:#94A3B8;" />
+              <BuildingIcon class="w-8 h-8 mb-2 opacity-20" style="color:#6B7A94;" />
               <p>No campus data for this date.</p>
             </div>
 
@@ -726,7 +796,7 @@
                 <span class="drl-present">{{ c.present }}<span class="drl-total">/{{ c.total }}</span></span>
                 <div class="drl-bar-wrap">
                   <div class="drl-bar"
-                    :style="{ width: c.rate + '%', background: c.rate >= 75 ? '#15803D' : c.rate >= 50 ? '#D97706' : '#DC2626' }">
+                    :style="{ width: c.rate + '%', background: c.rate >= 75 ? 'linear-gradient(90deg, #4ADE80, #15803D)' : c.rate >= 50 ? 'linear-gradient(90deg, #FBBF24, #D97706)' : 'linear-gradient(90deg, #F87171, #DC2626)' }">
                   </div>
                 </div>
                 <span class="drl-rate"
@@ -756,6 +826,8 @@ import { useDebounce }         from '@/composables/useDebounce';
 import { useCampusIdentity }   from '@/composables/useCampusIdentity';
 import { useCountUp }          from '@/composables/useCountUp';
 import { useAvatarColor }      from '@/composables/useAvatarColor';
+import { useSortable }         from '@/composables/useSortable';
+import SortIcon                from '@/components/SortIcon.vue';
 import StatusBadge             from '@/components/StatusBadge.vue';
 import NotificationBell        from '@/components/NotificationBell.vue';
 import axios from 'axios';
@@ -800,6 +872,16 @@ const displayPresent = useCountUp(computed(() => store.summary.present ?? 0));
 const displayLate    = useCountUp(computed(() => store.summary.late    ?? 0));
 const displayAbsent  = useCountUp(computed(() => store.summary.absent  ?? 0));
 
+// ── "Today's Mix" ring — present/late/absent as a lightweight CSS
+// conic-gradient (no Chart.js canvas needed for a single static ring).
+const todayMixGradient = computed(() => {
+  const p = pct(store.summary.present ?? 0);
+  const l = pct(store.summary.late ?? 0);
+  const pEnd = p;
+  const lEnd = p + l;
+  return `conic-gradient(#15803D 0% ${pEnd}%, #D97706 ${pEnd}% ${lEnd}%, #DC2626 ${lEnd}% 100%)`;
+});
+
 const isAdminOrHr = computed(() =>
   ['super_admin', 'admin', 'hr_officer'].includes(auth.employee?.role)
 );
@@ -821,13 +903,36 @@ function tickClock() {
 }
 
 // ── Filters ─────────────────────────────────────────────────────
-const todayStr        = new Date().toISOString().split('T')[0];
+// Local-calendar-day arithmetic, never routed through toISOString() — that
+// converts to UTC, which silently shifts the date by a day for any local
+// timezone ahead of UTC (e.g. PHT, UTC+8) during the hours before UTC has
+// rolled over to the same calendar day yet.
+function toLocalDateStr(d) {
+  const y = d.getFullYear();
+  const m = String(d.getMonth() + 1).padStart(2, '0');
+  const day = String(d.getDate()).padStart(2, '0');
+  return `${y}-${m}-${day}`;
+}
+function addDays(dateStr, days) {
+  const d = new Date(dateStr + 'T00:00:00');
+  d.setDate(d.getDate() + days);
+  return toLocalDateStr(d);
+}
+
+const todayStr        = toLocalDateStr(new Date());
+const yesterdayStr    = addDays(todayStr, -1);
 const filters         = reactive({ date: todayStr, search: '', status: '' });
 const debouncedSearch = useDebounce(computed(() => filters.search), 300);
 
 const filtersActive = computed(() =>
   filters.date !== todayStr || filters.search !== '' || filters.status !== ''
 );
+
+// Clicking a summary card filters the table below to that status — clicking
+// the already-active card clears it back to "All Status".
+function toggleStatusFilter(status) {
+  filters.status = filters.status === status ? '' : status;
+}
 
 function clearFilters() {
   filters.date   = todayStr;
@@ -857,6 +962,15 @@ const rateColor = computed(() => {
   if (attendanceRate.value >= 50) return '#B45309';
   return '#B91C1C';
 });
+// Ambient glow behind the rate donut — same tier color as the ring itself,
+// just softened to a translucent wash rather than a second hardcoded palette.
+const rateGlowColor = computed(() => {
+  const hex = rateColor.value.replace('#', '');
+  const r = parseInt(hex.slice(0, 2), 16);
+  const g = parseInt(hex.slice(2, 4), 16);
+  const b = parseInt(hex.slice(4, 6), 16);
+  return `rgba(${r},${g},${b},0.22)`;
+});
 function pct(v) {
   if (totalTracked.value === 0) return 0;
   return Math.round((v ?? 0) / totalTracked.value * 100);
@@ -869,9 +983,30 @@ const filteredRows = computed(() => {
   if (s) rows = rows.filter(r =>
     r.name.toLowerCase().includes(s) || r.employee_id.toLowerCase().includes(s)
   );
-  if (filters.status) rows = rows.filter(r => r.status === filters.status);
+  // The Present summary card's own count includes Late (matches the backend's
+  // summary calculation), so its drill-down has to match both statuses too —
+  // filtering to literal 'present' only would silently drop late employees
+  // even though they're part of the number the user just clicked.
+  if (filters.status === 'present_incl_late') {
+    rows = rows.filter(r => r.status === 'present' || r.status === 'late');
+  } else if (filters.status) {
+    rows = rows.filter(r => r.status === filters.status);
+  }
   return rows;
 });
+
+const STATUS_SORT_WEIGHT = { present: 0, late: 1, absent: 2, holiday: 3, weekend: 4, on_leave: 5 };
+const { sortKey, sortDir, sort, sorted: sortedRows } = useSortable(filteredRows, {
+  name:       (r) => r.name?.toLowerCase() ?? '',
+  department: (r) => r.department?.toLowerCase() ?? '',
+  time_in:    (r) => r.time_in ?? '',
+  time_out:   (r) => r.time_out ?? '',
+  status:     (r) => STATUS_SORT_WEIGHT[r.status] ?? 9,
+  hours:      (r) => r.hours_rendered ?? 0,
+});
+function sortState(key) {
+  return sortKey.value === key ? sortDir.value : null;
+}
 
 function initials(name) {
   return name?.split(' ').filter(Boolean).map(n => n[0]).slice(0, 2).join('').toUpperCase() ?? '?';
@@ -907,11 +1042,50 @@ async function checkDeviceStatus() {
 // ── Refresh ──────────────────────────────────────────────────────
 async function refresh() {
   store.date = filters.date;
-  await store.fetchToday({ search: filters.search, status: filters.status });
+  // 'present_incl_late' is a client-only sentinel (see filteredRows) — the
+  // backend only knows the literal statuses, so send it unfiltered and let
+  // the computed narrow it down locally.
+  const backendStatus = filters.status === 'present_incl_late' ? '' : filters.status;
+  await Promise.all([
+    store.fetchToday({ search: filters.search, status: backendStatus }),
+    loadPreviousDaySummary(),
+    loadDateAnalytics(),
+  ]);
   lastRefreshed.value = new Date().toLocaleTimeString('en-PH', { hour: '2-digit', minute: '2-digit' });
 }
 
 const debounce = (fn, ms = 300) => { let t; return (...a) => { clearTimeout(t); t = setTimeout(() => fn(...a), ms); }; };
+
+// ── Day-over-day comparison ────────────────────────────────────────
+// A lightweight second call to the same endpoint for the day before the
+// one currently in view — "vs previous day" rather than hardcoded
+// "yesterday" so it still reads correctly while browsing the Yesterday
+// filter or any picked date.
+const previousDaySummary = ref({ present: 0, late: 0, absent: 0 });
+
+async function loadPreviousDaySummary() {
+  const prevDate = addDays(filters.date, -1);
+  try {
+    const res = await axios.get('/api/attendance/today', { params: { date: prevDate } });
+    previousDaySummary.value = res.data.summary;
+  } catch {
+    previousDaySummary.value = { present: 0, late: 0, absent: 0 };
+  }
+}
+
+function statusDelta(metric) {
+  return (store.summary[metric] ?? 0) - (previousDaySummary.value[metric] ?? 0);
+}
+
+// Arrow direction always follows the actual number; color follows whether
+// that direction is good news for this particular metric — more "present"
+// is good, but more "late"/"absent" is not.
+function deltaSentiment(metric, delta) {
+  if (delta === 0) return 'flat';
+  const isIncrease  = delta > 0;
+  const isFavorable = metric === 'present' ? isIncrease : !isIncrease;
+  return isFavorable ? 'up' : 'down';
+}
 
 // ── Charts ───────────────────────────────────────────────────────
 const trendDays        = ref(30);
@@ -943,20 +1117,28 @@ const STAFF_TYPE_LABELS = {
 };
 
 watch(() => filters.date, debounce(refresh));
-watch(trendDays, loadAnalytics);
+watch(trendDays, loadTrendAnalytics);
 watch(() => theme.isDark, () => {
   buildTrendChart(trendData.value);
   buildDeptChart(deptData.value);
   buildStaffTypeChart(staffTypeData.value);
+  // Rebuilding three charts back-to-back in the same tick (right as the whole
+  // page's colors are also transitioning for the theme switch) is exactly the
+  // kind of pile-up that leaves canvases stuck at display:none — see
+  // unstickCanvases() below for the full explanation.
+  unstickCanvases(
+    [trendCanvas, deptCanvas, staffTypeCanvas],
+    [trendChart, deptChart, staffTypeChart],
+  );
 });
 
 const font = { family: 'system-ui, -apple-system, Arial, sans-serif', size: 11 };
 
 const tc = {
   get gridColor()  { return theme.isDark ? 'rgba(255,255,255,0.06)' : 'rgba(226,232,240,0.65)'; },
-  get tickColor()  { return theme.isDark ? '#475569' : '#9CA3AF'; },
+  get tickColor()  { return theme.isDark ? '#475569' : '#6B7A94'; },
   get labelColor() { return theme.isDark ? '#94A3B8' : '#6B7280'; },
-  get tooltipBg()  { return '#0A1940'; },
+  get tooltipBg()  { return '#1A2444'; },
   get yTickColor() { return theme.isDark ? '#94A3B8' : '#374151'; },
 };
 
@@ -1026,6 +1208,9 @@ const trendAnalytics = computed(() => {
   };
 });
 
+const displayAvgRate    = useCountUp(computed(() => trendAnalytics.value.avgNum));
+const displayActiveDays = useCountUp(computed(() => trendAnalytics.value.activeDays));
+
 const deptRankings = computed(() =>
   deptData.value
     .map(d => ({
@@ -1060,30 +1245,53 @@ const campusRankings = computed(() =>
     .sort((a, b) => b.rate - a.rate)
 );
 
-async function loadAnalytics() {
-  analyticsLoading.value = true;
-  try {
-    const requests = [
-      axios.get('/api/analytics/trend', { params: { days: trendDays.value } }),
-      axios.get('/api/analytics/departments', { params: { date: filters.date } }),
-      axios.get('/api/analytics/staff-types', { params: { date: filters.date } }),
-    ];
-    // Only Super Admin can even call this endpoint (403 for anyone else),
-    // and only Super Admin has more than one campus to compare.
-    if (isSuperAdmin.value) {
-      requests.push(axios.get('/api/analytics/campus-comparison', { params: { date: filters.date } }));
-    }
-    const [trendRes, deptRes, staffTypeRes, campusRes] = await Promise.all(requests);
-    trendData.value     = trendRes.data;
-    deptData.value       = deptRes.data;
-    staffTypeData.value  = staffTypeRes.data;
-    if (campusRes) campusData.value = campusRes.data;
-    buildTrendChart(trendData.value);
-    buildDeptChart(deptData.value);
-    buildStaffTypeChart(staffTypeData.value);
-  } finally {
-    analyticsLoading.value = false;
+// Chart.js's own responsive-size detection briefly sets a canvas to
+// display:none while it measures its parent, then restores it — but a chart
+// getting destroyed and rebuilt (as every one of these charts does on each
+// refetch) can leave that restore step stuck, permanently hiding the canvas.
+// chart.resize() alone doesn't clear it; the stuck inline style has to be
+// removed directly first. Centralized here since every rebuild path below
+// needs the same fix-up, not just the theme toggle that originally surfaced it.
+function unstickCanvases(canvasRefs, chartInstances) {
+  requestAnimationFrame(() => {
+    canvasRefs.forEach((c) => {
+      if (c.value && c.value.style.display === 'none') c.value.style.display = '';
+    });
+    chartInstances.forEach((chart) => chart?.resize());
+  });
+}
+
+// The 30/14/7/90-day trend is a fixed trailing window ending today — it only
+// needs to change when the range pill changes, never when the user picks a
+// different single day to inspect in the table above.
+async function loadTrendAnalytics() {
+  const res = await axios.get('/api/analytics/trend', { params: { days: trendDays.value } });
+  trendData.value = res.data;
+  buildTrendChart(trendData.value);
+  unstickCanvases([trendCanvas], [trendChart]);
+}
+
+// Department / staff-type / campus breakdowns are all scoped to a single day
+// (`date: filters.date`), so — unlike the trend above — these have to refetch
+// whenever the viewed date changes, or they'll keep showing whatever date the
+// page first loaded with even after the table above has moved on.
+async function loadDateAnalytics() {
+  const requests = [
+    axios.get('/api/analytics/departments', { params: { date: filters.date } }),
+    axios.get('/api/analytics/staff-types', { params: { date: filters.date } }),
+  ];
+  // Only Super Admin can even call this endpoint (403 for anyone else),
+  // and only Super Admin has more than one campus to compare.
+  if (isSuperAdmin.value) {
+    requests.push(axios.get('/api/analytics/campus-comparison', { params: { date: filters.date } }));
   }
+  const [deptRes, staffTypeRes, campusRes] = await Promise.all(requests);
+  deptData.value      = deptRes.data;
+  staffTypeData.value  = staffTypeRes.data;
+  if (campusRes) campusData.value = campusRes.data;
+  buildDeptChart(deptData.value);
+  buildStaffTypeChart(staffTypeData.value);
+  unstickCanvases([deptCanvas, staffTypeCanvas], [deptChart, staffTypeChart]);
 }
 
 // Direct end-value labels on the trend line — the value stays in neutral
@@ -1173,8 +1381,8 @@ function buildTrendChart(data) {
         tooltip: {
           bodyFont: font, titleFont: { ...font, weight: '600' },
           padding: 12, cornerRadius: 6,
-          backgroundColor: '#0A1940',
-          borderColor: 'rgba(201,162,39,0.45)', borderWidth: 1,
+          backgroundColor: '#1A2444',
+          borderColor: 'rgba(201, 162, 39,0.45)', borderWidth: 1,
           callbacks: {
             title: items => items[0].label,
             label: ctx => ` ${ctx.dataset.label}: ${ctx.parsed.y}`,
@@ -1197,6 +1405,17 @@ function buildTrendChart(data) {
   });
 }
 
+// Left-to-right horizontal gradient for the indexAxis:'y' bar charts below —
+// same scriptable-option shape as makeGradient() above, just oriented along
+// chartArea.left→right instead of top→bottom.
+function makeHGradient(ctx, chartArea, c1, c2) {
+  if (!chartArea) return c2;
+  const grad = ctx.createLinearGradient(chartArea.left, 0, chartArea.right, 0);
+  grad.addColorStop(0, c1);
+  grad.addColorStop(1, c2);
+  return grad;
+}
+
 function buildDeptChart(data) {
   if (deptChart) { deptChart.destroy(); deptChart = null; }
   deptEmpty.value = !data.length;
@@ -1215,7 +1434,7 @@ function buildDeptChart(data) {
           // One fixed hue for every bar — department identity is already
           // carried by the y-axis label, not by color. A different hue per
           // row would just repaint the same "Present" series arbitrarily.
-          backgroundColor: '#1A6E40',
+          backgroundColor: ctx => makeHGradient(ctx.chart.ctx, ctx.chart.chartArea, '#22C55E', '#15803D'),
           borderRadius: { topLeft: 0, topRight: 4, bottomLeft: 0, bottomRight: 4 },
           borderSkipped: 'left',
           barPercentage: 0.62, categoryPercentage: 0.88,
@@ -1239,8 +1458,8 @@ function buildDeptChart(data) {
         tooltip: {
           bodyFont: font, titleFont: { ...font, weight: '600' },
           padding: 12, cornerRadius: 6,
-          backgroundColor: '#0A1940',
-          borderColor: 'rgba(201,162,39,0.45)', borderWidth: 1,
+          backgroundColor: '#1A2444',
+          borderColor: 'rgba(201, 162, 39,0.45)', borderWidth: 1,
           callbacks: {
             title: items => data[items[0].dataIndex]?.name ?? labels[items[0].dataIndex],
             label: ctx => {
@@ -1287,7 +1506,7 @@ function buildStaffTypeChart(data) {
         {
           label: 'Present',
           data: data.map(d => d.present),
-          backgroundColor: '#0E1EC0',
+          backgroundColor: ctx => makeHGradient(ctx.chart.ctx, ctx.chart.chartArea, '#3D5CA3', '#1B2A5E'),
           borderRadius: { topLeft: 0, topRight: 4, bottomLeft: 0, bottomRight: 4 },
           borderSkipped: 'left',
           barPercentage: 0.62, categoryPercentage: 0.78,
@@ -1311,8 +1530,8 @@ function buildStaffTypeChart(data) {
         tooltip: {
           bodyFont: font, titleFont: { ...font, weight: '600' },
           padding: 12, cornerRadius: 6,
-          backgroundColor: '#0A1940',
-          borderColor: 'rgba(201,162,39,0.45)', borderWidth: 1,
+          backgroundColor: '#1A2444',
+          borderColor: 'rgba(201, 162, 39,0.45)', borderWidth: 1,
           callbacks: {
             title: items => labels[items[0].dataIndex],
             label: ctx => {
@@ -1340,20 +1559,66 @@ function buildStaffTypeChart(data) {
   });
 }
 
+// ── Live updates ─────────────────────────────────────────────────
+// AppLayout already owns the lifecycle of the shared 'attendance' channel
+// (it uses the same punches for the toast notification), so this only adds
+// its own listener and removes only that listener on unmount — never
+// `.leave()`s the channel itself, which would kill AppLayout's subscription
+// for the rest of the app too.
+let echoChannel = null;
+// True only while the underlying WebSocket is actually connected — merely
+// having a window.Echo *object* doesn't mean anything, since it's created
+// unconditionally at app boot and stays truthy even if the Reverb server is
+// unreachable (wrong host/IP, server down, network change). Previously this
+// just checked `if (window.Echo)`, so the "Live" dot could show as active
+// indefinitely while real-time updates were silently never arriving.
+const liveUpdatesActive = ref(false);
+let unbindConnectionState = null;
+const debouncedLiveRefresh = debounce(refresh, 800);
+
+function handleLivePunch() {
+  // A punch landing right now always belongs to today — refreshing while
+  // browsing a past date would silently swap the view out from under the
+  // user, so only auto-refresh when today is actually on screen.
+  if (filters.date === todayStr) debouncedLiveRefresh();
+}
+
 onBeforeUnmount(() => {
   clearInterval(clockTimer);
   trendChart?.destroy();
   deptChart?.destroy();
   staffTypeChart?.destroy();
+  echoChannel?.stopListening('.punched', handleLivePunch);
+  unbindConnectionState?.();
 });
 
 onMounted(async () => {
   tickClock();
   clockTimer = setInterval(tickClock, 1000);
-  await refresh();
-  await loadAnalytics();
+  // refresh() already loads the date-scoped dept/staff/campus breakdowns —
+  // only the trend (a separate, days-range-scoped query) needs to run
+  // alongside it here, rather than fetching the date-scoped ones twice.
+  analyticsLoading.value = true;
+  try {
+    await Promise.all([refresh(), loadTrendAnalytics()]);
+  } finally {
+    analyticsLoading.value = false;
+  }
   checkDeviceStatus();
   fetchPendingCorrections();
+
+  if (window.Echo) {
+    echoChannel = window.Echo.channel('attendance');
+    echoChannel.listen('.punched', handleLivePunch);
+
+    const pusher = window.Echo.connector?.pusher;
+    if (pusher?.connection) {
+      liveUpdatesActive.value = pusher.connection.state === 'connected';
+      const onStateChange = (states) => { liveUpdatesActive.value = states.current === 'connected'; };
+      pusher.connection.bind('state_change', onStateChange);
+      unbindConnectionState = () => pusher.connection.unbind('state_change', onStateChange);
+    }
+  }
 });
 </script>
 
@@ -1361,7 +1626,10 @@ onMounted(async () => {
 /* ── Page ─────────────────────────────────────────────────────── */
 .dash-page {
   min-height: 100%;
-  background: #F4F6FB;
+  background:
+    radial-gradient(1000px 520px at 102% -10%, rgba(46, 74, 140,0.06), transparent 60%),
+    radial-gradient(760px 460px at -8% 22%, rgba(201, 162, 39,0.05), transparent 55%),
+    #F4F6FB;
   display: flex;
   flex-direction: column;
 }
@@ -1415,7 +1683,7 @@ onMounted(async () => {
   gap: 16px;
   padding: 16px 24px;
   background: rgba(0,0,0,0.30);
-  border-left: 3px solid rgba(201,162,39,0.60);
+  border-left: 3px solid rgba(201, 162, 39,0.60);
   border-right: 1px solid rgba(255,255,255,0.07);
   flex-shrink: 0;
   min-width: 300px;
@@ -1443,8 +1711,8 @@ onMounted(async () => {
   height: 62px;
   border-radius: 50%;
   background: rgba(255,255,255,0.05);
-  border: 1.5px solid rgba(201,162,39,0.50);
-  box-shadow: 0 0 18px rgba(201,162,39,0.28), inset 0 0 12px rgba(201,162,39,0.08);
+  border: 1.5px solid rgba(201, 162, 39,0.50);
+  box-shadow: 0 0 18px rgba(201, 162, 39,0.28), inset 0 0 12px rgba(201, 162, 39,0.08);
   display: flex;
   align-items: center;
   justify-content: center;
@@ -1458,13 +1726,13 @@ onMounted(async () => {
   object-fit: contain;
   position: relative;
   z-index: 1;
-  filter: drop-shadow(0 0 5px rgba(201,162,39,0.45)) brightness(1.05);
+  filter: drop-shadow(0 0 5px rgba(201, 162, 39,0.45)) brightness(1.05);
 }
 .seal-ring {
   position: absolute;
   inset: 4px;
   border-radius: 50%;
-  border: 1px solid rgba(201,162,39,0.22);
+  border: 1px solid rgba(201, 162, 39,0.22);
   pointer-events: none;
 }
 
@@ -1495,7 +1763,7 @@ onMounted(async () => {
   letter-spacing: 0.55px;
   margin: 0;
   line-height: 1;
-  text-shadow: 0 0 12px rgba(201,162,39,0.40);
+  text-shadow: 0 0 12px rgba(201, 162, 39,0.40);
   opacity: 0.92;
 }
 .tb-center-date {
@@ -1519,6 +1787,22 @@ onMounted(async () => {
   font-size: 9.5px;
   color: rgba(255,255,255,0.32);
   letter-spacing: 0.3px;
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+}
+.tb-live-dot {
+  display: inline-block;
+  width: 6px; height: 6px;
+  border-radius: 50%;
+  background: #4ADE80;
+  box-shadow: 0 0 0 rgba(74,222,128,0.6);
+  animation: liveDotPulse 2s ease-out infinite;
+}
+@keyframes liveDotPulse {
+  0%   { box-shadow: 0 0 0 0 rgba(74,222,128,0.55); }
+  70%  { box-shadow: 0 0 0 5px rgba(74,222,128,0); }
+  100% { box-shadow: 0 0 0 0 rgba(74,222,128,0); }
 }
 
 /* Controls (right side of row 1) */
@@ -1597,9 +1881,9 @@ onMounted(async () => {
 .summary-panel {
   background: #fff;
   border: 1px solid #E4E9F2;
-  border-radius: 14px;
+  border-radius: 16px;
   overflow: hidden;
-  box-shadow: 0 4px 20px rgba(8,14,128,0.10), 0 1px 4px rgba(8,14,128,0.06);
+  box-shadow: 0 10px 32px -8px rgba(27, 42, 94,0.14), 0 1px 4px rgba(27, 42, 94,0.06);
 }
 
 /* Hero gradient header */
@@ -1660,11 +1944,30 @@ onMounted(async () => {
   flex-direction: column;
   position: relative;
   overflow: hidden;
-  transition: background 0.2s;
+  transition: background 0.2s, box-shadow 0.2s;
+  cursor: pointer;
 }
+.sc-col:focus-visible { outline: 2px solid #2E4A8C; outline-offset: -2px; }
 .sc-col--present { background: linear-gradient(180deg, rgba(21,128,61,0.04) 0%, rgba(21,128,61,0.01) 100%); }
 .sc-col--late    { background: linear-gradient(180deg, rgba(217,119,6,0.04) 0%, rgba(217,119,6,0.01) 100%); }
 .sc-col--absent  { background: linear-gradient(180deg, rgba(220,38,38,0.04) 0%, rgba(220,38,38,0.01) 100%); }
+
+/* Active drill-down state — a card stays visibly "pressed" while its
+   status filter is applied to the table below. */
+.sc-col--active.sc-col--present { box-shadow: inset 0 0 0 2px rgba(21,128,61,0.45); }
+.sc-col--active.sc-col--late    { box-shadow: inset 0 0 0 2px rgba(180,83,9,0.45); }
+.sc-col--active.sc-col--absent  { box-shadow: inset 0 0 0 2px rgba(153,27,27,0.45); }
+
+/* Day-over-day delta chip next to each big number */
+.sc-delta {
+  display: inline-flex; align-items: center; gap: 1px;
+  font-size: 11px; font-weight: 700;
+  padding: 1px 5px 1px 4px; border-radius: 999px;
+  margin-left: 2px;
+}
+.sc-delta--up   { background: #F0FDF4; color: #15803D; }
+.sc-delta--down { background: #FEF2F2; color: #B91C1C; }
+.sc-vs { color: #94A3B8; font-weight: 500; }
 
 /* Top accent line per column */
 .sc-top-accent {
@@ -1689,7 +1992,7 @@ onMounted(async () => {
 .sc-icon--green { background: linear-gradient(135deg, #16A34A, #15803D); box-shadow: 0 3px 10px rgba(21,128,61,0.30); }
 .sc-icon--amber { background: linear-gradient(135deg, #F59E0B, #D97706); box-shadow: 0 3px 10px rgba(217,119,6,0.30); }
 .sc-icon--red   { background: linear-gradient(135deg, #EF4444, #DC2626); box-shadow: 0 3px 10px rgba(220,38,38,0.30); }
-.sc-icon--navy  { background: linear-gradient(135deg, #1228CC, #0E1EC0); box-shadow: 0 3px 10px rgba(14,30,192,0.30); }
+.sc-icon--navy  { background: linear-gradient(135deg, #3D5CA3, #2E4A8C); box-shadow: 0 3px 10px rgba(46, 74, 140,0.30); }
 
 .sc-label {
   font-size: 11px;
@@ -1700,7 +2003,7 @@ onMounted(async () => {
   display: block;
 }
 .sc-sublabel {
-  font-size: 10px; color: #94A3B8; margin-top: 1px;
+  font-size: 10px; color: #6B7A94; margin-top: 1px;
 }
 
 /* Metric number row: large value + denominator */
@@ -1708,7 +2011,7 @@ onMounted(async () => {
   display: flex; align-items: baseline; gap: 6px;
 }
 .sc-denom {
-  font-size: 15px; font-weight: 500; color: #CBD5E1;
+  font-size: 15px; font-weight: 500; color: #6B7A94;
 }
 
 .sc-num {
@@ -1732,13 +2035,13 @@ onMounted(async () => {
   min-width: 0;
 }
 .sc-pct {
-  font-size: 11px; color: #94A3B8;
+  font-size: 11px; color: #6B7A94;
 }
 .sc-pct strong { color: #475569; font-weight: 700; }
 
 .sc-divider {
   width: 1px;
-  background: rgba(0,0,0,0.06);
+  background: linear-gradient(180deg, transparent, rgba(15,23,42,0.09) 22%, rgba(15,23,42,0.09) 78%, transparent);
   margin: 0;
   flex-shrink: 0;
 }
@@ -1746,7 +2049,7 @@ onMounted(async () => {
 /* Vertical rule */
 .summary-vdiv {
   width: 1px;
-  background: #F4F6FB;
+  background: linear-gradient(180deg, transparent, rgba(27, 42, 94,0.12) 18%, rgba(27, 42, 94,0.12) 82%, transparent);
   flex-shrink: 0;
 }
 
@@ -1843,9 +2146,9 @@ onMounted(async () => {
 .panel {
   background: #fff;
   border: 1px solid #E4E9F2;
-  border-radius: 14px;
+  border-radius: 16px;
   overflow: hidden;
-  box-shadow: 0 4px 20px rgba(8,14,128,0.09), 0 1px 4px rgba(8,14,128,0.05);
+  box-shadow: 0 10px 32px -8px rgba(27, 42, 94,0.13), 0 1px 4px rgba(27, 42, 94,0.05);
 }
 
 /* Panel gradient hero header */
@@ -1908,7 +2211,7 @@ onMounted(async () => {
   outline: none;
   transition: border-color 0.15s;
 }
-.f-ctrl:focus { border-color: #0E1EC0; }
+.f-ctrl:focus { border-color: #2E4A8C; }
 .f-btn {
   font-size: 12px;
   font-weight: 500;
@@ -1922,14 +2225,14 @@ onMounted(async () => {
   white-space: nowrap;
 }
 .f-btn:hover  { background: #F8FAFC; }
-.f-btn--on    { background: #1020BC; color: #fff; border-color: #1020BC; }
+.f-btn--on    { background: #2A3C76; color: #fff; border-color: #2A3C76; }
 .f-search-wrap { position: relative; }
 .f-search-icon {
   position: absolute;
   left: 8px; top: 50%;
   transform: translateY(-50%);
   width: 13px; height: 13px;
-  color: #9CA3AF;
+  color: #6B7A94;
   pointer-events: none;
 }
 .f-search { padding-left: 28px; padding-right: 24px; width: 170px; }
@@ -1940,7 +2243,7 @@ onMounted(async () => {
   width: 16px; height: 16px;
   display: flex; align-items: center; justify-content: center;
   border-radius: 4px;
-  color: #9CA3AF;
+  color: #6B7A94;
   transition: background 0.12s, color 0.12s;
 }
 .f-search-clear:hover { background: #F1F5F9; color: #475569; }
@@ -1976,6 +2279,11 @@ onMounted(async () => {
 .th-r  { text-align: right; }
 .th-no { width: 40px; }
 
+.th-sort { cursor: pointer; user-select: none; transition: color 0.12s; }
+.th-sort:hover { color: #2E4A8C; }
+.th-sort-inner { display: inline-flex; align-items: center; gap: 4px; }
+.th-sort-inner--r { justify-content: flex-end; }
+
 .log-row      { border-bottom: 1px solid #F1F5F9; transition: background 0.12s; }
 .log-row:hover { background: #F4F7FD !important; }
 .log-row--alt { background: #FAFBFE; }
@@ -1988,7 +2296,7 @@ onMounted(async () => {
 .row-status--holiday { box-shadow: inset 4px 0 0 #6366F1; }
 
 .td      { padding: 10px 16px; color: #374151; text-align: center; vertical-align: middle; }
-.td-no   { font-size: 11px; color: #CBD5E1; font-family: monospace; }
+.td-no   { font-size: 11px; color: #94A3B8; font-family: monospace; }
 .td-muted { text-align: left; font-size: 12px; color: #64748B; }
 .td-mono { font-family: 'Courier New', monospace; font-size: 12px; color: #475569; }
 .td-r    { text-align: right; }
@@ -2012,9 +2320,9 @@ onMounted(async () => {
   transition: background 0.35s ease;
 }
 .emp-name { font-size: 13px; font-weight: 600; color: #0F172A; }
-.emp-id   { font-size: 10px; color: #94A3B8; font-family: monospace; margin-top: 1px; }
+.emp-id   { font-size: 10px; color: #6B7A94; font-family: monospace; margin-top: 1px; }
 .hrs-val  { font-weight: 600; color: #0F172A; font-family: monospace; }
-.hrs-nil  { color: #CBD5E1; }
+.hrs-nil  { color: #94A3B8; }
 
 /* ── Empty state ──────────────────────────────────────────────── */
 .empty-state {
@@ -2034,15 +2342,15 @@ onMounted(async () => {
   transition: background 0.35s ease;
 }
 .empty-title { font-size: 13px; font-weight: 700; color: #475569; margin: 0; }
-.empty-sub   { font-size: 12px; color: #94A3B8; margin: 0; text-align: center; max-width: 280px; line-height: 1.5; }
+.empty-sub   { font-size: 12px; color: #6B7A94; margin: 0; text-align: center; max-width: 280px; line-height: 1.5; }
 
 /* ── Analytics card (wrapper) ─────────────────────────────────── */
 .analytics-card {
   background: #fff;
   border: 1px solid #E4E9F2;
-  border-radius: 14px;
+  border-radius: 16px;
   overflow: hidden;
-  box-shadow: 0 4px 20px rgba(8,14,128,0.09), 0 1px 4px rgba(8,14,128,0.05);
+  box-shadow: 0 10px 32px -8px rgba(27, 42, 94,0.13), 0 1px 4px rgba(27, 42, 94,0.05);
 }
 
 /* Analytics gradient hero header */
@@ -2071,14 +2379,24 @@ onMounted(async () => {
   white-space: nowrap;
 }
 .range-pill:hover { background: rgba(255,255,255,0.12); color: rgba(255,255,255,0.85); }
-.range-pill--active { background: rgba(255,255,255,0.18); color: #fff; }
+.range-pill--active {
+  background: rgba(255,255,255,0.20);
+  color: #fff;
+  box-shadow: inset 0 1px 0 rgba(255,255,255,0.30), 0 3px 8px rgba(0,0,0,0.18);
+}
 
 /* ── Top KPI cards ────────────────────────────────────────────── */
 .top-kpis {
   display: grid;
-  grid-template-columns: repeat(4, 1fr);
+  grid-template-columns: repeat(5, 1fr);
   gap: 0;
   border-bottom: 1px solid #F1F5F9;
+}
+@media (max-width: 1200px) {
+  .top-kpis { grid-template-columns: repeat(3, 1fr); }
+}
+@media (max-width: 640px) {
+  .top-kpis { grid-template-columns: repeat(2, 1fr); }
 }
 .tk-card {
   background: #fff;
@@ -2088,9 +2406,26 @@ onMounted(async () => {
   display: flex;
   align-items: center;
   gap: 16px;
-  transition: background 0.15s;
+  position: relative;
+  overflow: hidden;
+  transition: background 0.15s, transform 0.22s cubic-bezier(0.34,1.56,0.64,1), box-shadow 0.22s ease;
 }
-.tk-card:hover { background: #FAFBFF; }
+.tk-card::before {
+  content: '';
+  position: absolute;
+  top: 0; left: 0; right: 0;
+  height: 2px;
+  background: linear-gradient(90deg, transparent, rgba(46, 74, 140,0.45), transparent);
+  opacity: 0;
+  transition: opacity 0.25s ease;
+}
+.tk-card:hover {
+  background: #FAFBFF;
+  transform: translateY(-3px);
+  box-shadow: 0 14px 28px -12px rgba(27, 42, 94,0.22);
+  z-index: 1;
+}
+.tk-card:hover::before { opacity: 1; }
 .tk-card:last-child { border-right: none; }
 .tk-icon {
   width: 46px; height: 46px;
@@ -2098,15 +2433,18 @@ onMounted(async () => {
   display: flex; align-items: center; justify-content: center;
   flex-shrink: 0;
   color: #fff;
+  transition: transform 0.25s cubic-bezier(0.34,1.56,0.64,1);
 }
-.tk-icon--blue  { background: linear-gradient(135deg, #2563EB, #1D4ED8); box-shadow: 0 3px 10px rgba(37,99,235,0.30); }
+.tk-card:hover .tk-icon { transform: scale(1.08) rotate(-3deg); }
+.tk-card:hover .tk-ring { transform: scale(1.06); }
+.tk-icon--blue  { background: linear-gradient(135deg, #2E4A8C, #3D5CA3); box-shadow: 0 3px 10px rgba(46, 74, 140,0.30); }
 .tk-icon--green { background: linear-gradient(135deg, #16A34A, #15803D); box-shadow: 0 3px 10px rgba(21,128,61,0.30); }
 .tk-icon--red   { background: linear-gradient(135deg, #EF4444, #DC2626); box-shadow: 0 3px 10px rgba(220,38,38,0.30); }
 .tk-icon--gold  { background: linear-gradient(135deg, #F59E0B, #D97706); box-shadow: 0 3px 10px rgba(217,119,6,0.30); }
 .tk-body {
   display: flex; flex-direction: column; gap: 3px; flex: 1; min-width: 0;
 }
-.tk-label { font-size: 10px; font-weight: 600; text-transform: uppercase; letter-spacing: 0.09em; color: #94A3B8; }
+.tk-label { font-size: 10px; font-weight: 600; text-transform: uppercase; letter-spacing: 0.09em; color: #6B7A94; }
 .tk-val   { font-size: 28px; font-weight: 800; color: #0F172A; line-height: 1.1; }
 .tk-val--sm { font-size: 13px; font-weight: 700; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; line-height: 1.3; }
 .tk-val-row { display: flex; align-items: baseline; gap: 8px; flex-wrap: wrap; }
@@ -2123,6 +2461,22 @@ onMounted(async () => {
 .tk-chip--green { background: #F0FFF4; color: #15803D; }
 .tk-chip--red   { background: #FEF2F2; color: #B91C1C; }
 .tk-chip--gold  { background: #FFFBEB; color: #B45309; }
+
+/* ── "Today's Mix" ring KPI ──────────────────────────────────────── */
+.tk-ring {
+  width: 52px; height: 52px; border-radius: 50%; flex-shrink: 0;
+  display: flex; align-items: center; justify-content: center;
+  transition: background 0.5s ease, transform 0.25s cubic-bezier(0.34,1.56,0.64,1);
+}
+.tk-ring-hole {
+  width: 36px; height: 36px; border-radius: 50%;
+  background: #fff;
+  display: flex; align-items: center; justify-content: center;
+}
+.tk-ring-total { font-size: 12px; font-weight: 800; color: #0F172A; }
+.tk-ring-legend { display: flex; gap: 8px; flex-wrap: wrap; }
+.tk-ring-legend span { display: inline-flex; align-items: center; gap: 3px; font-size: 10.5px; font-weight: 700; color: #374151; }
+.tk-ring-legend i { display: inline-block; width: 6px; height: 6px; border-radius: 50%; }
 
 /* ── Charts ───────────────────────────────────────────────────── */
 .charts-row { display: grid; grid-template-columns: 1fr 1fr; gap: 14px; padding: 16px 20px 20px; }
@@ -2164,7 +2518,7 @@ onMounted(async () => {
 }
 .cp-badge--gold { background: #FEF9E7; color: #92400E; }
 .cp-title { font-size: 13px; font-weight: 700; color: #0F172A; margin: 0; }
-.cp-sub   { font-size: 11px; color: #94A3B8; margin: 2px 0 0; }
+.cp-sub   { font-size: 11px; color: #6B7A94; margin: 2px 0 0; }
 
 /* ── KPI strip ────────────────────────────────────────────────── */
 .kpi-strip {
@@ -2194,7 +2548,7 @@ onMounted(async () => {
 .kpi-icon--red   { background: linear-gradient(135deg, #EF4444, #DC2626); color: #fff; }
 .kpi-icon--gold  { background: linear-gradient(135deg, #F59E0B, #D97706); color: #fff; }
 .kpi-body  { display: flex; flex-direction: column; gap: 2px; min-width: 0; }
-.kpi-label { font-size: 9px; font-weight: 700; text-transform: uppercase; letter-spacing: 0.09em; color: #9CA3AF; }
+.kpi-label { font-size: 9px; font-weight: 700; text-transform: uppercase; letter-spacing: 0.09em; color: #6B7A94; }
 .kpi-val   { font-size: 12px; font-weight: 700; color: #0F172A; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
 .kpi-val--green { color: #166534; }
 .kpi-val--red   { color: #B91C1C; }
@@ -2215,7 +2569,7 @@ onMounted(async () => {
   padding: 9px 18px;
   border-top: 1px solid #F4F6FB;
   font-size: 10.5px;
-  color: #94A3B8;
+  color: #6B7A94;
   background: #FAFBFD;
 }
 
@@ -2224,7 +2578,7 @@ onMounted(async () => {
   position: absolute; inset: 0;
   display: flex; flex-direction: column;
   align-items: center; justify-content: center;
-  font-size: 12px; color: #9CA3AF;
+  font-size: 12px; color: #6B7A94;
 }
 
 /* Campus comparison empty state — not inside a positioned .chart-area
@@ -2234,7 +2588,7 @@ onMounted(async () => {
   display: flex; flex-direction: column;
   align-items: center; justify-content: center;
   padding: 34px 20px;
-  font-size: 12px; color: #9CA3AF;
+  font-size: 12px; color: #6B7A94;
 }
 
 .chart-spinner-wrap { position: absolute; inset: 0; display: flex; align-items: center; justify-content: center; }
@@ -2307,7 +2661,7 @@ onMounted(async () => {
   font-weight: 700;
   text-transform: uppercase;
   letter-spacing: 0.09em;
-  color: #94A3B8;
+  color: #6B7A94;
   gap: 8px;
 }
 .drl-row {
@@ -2328,10 +2682,10 @@ onMounted(async () => {
 }
 .drl-row--clickable:hover,
 .drl-row--clickable:focus-visible { background: #F4F6FB; }
-.drl-rank    { font-size: 9.5px; font-weight: 700; color: #CBD5E1; width: 14px; flex-shrink: 0; text-align: right; }
+.drl-rank    { font-size: 9.5px; font-weight: 700; color: #94A3B8; width: 14px; flex-shrink: 0; text-align: right; }
 .drl-name    { font-size: 10.5px; font-weight: 500; color: #374151; flex: 1; min-width: 0; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
 .drl-present { font-size: 10.5px; font-weight: 700; color: #0F172A; width: 32px; text-align: center; flex-shrink: 0; }
-.drl-total   { font-size: 9px; color: #94A3B8; font-weight: 400; }
+.drl-total   { font-size: 9px; color: #6B7A94; font-weight: 400; }
 .drl-bar-wrap { flex: 1; height: 5px; background: #F4F6FB; border-radius: 3px; overflow: hidden; }
 .drl-bar      { height: 100%; border-radius: 3px; transition: width 0.6s ease; }
 .drl-rate     { font-size: 10.5px; font-weight: 700; width: 34px; text-align: right; flex-shrink: 0; }
@@ -2491,6 +2845,40 @@ onMounted(async () => {
 .rate-donut-svg { filter: drop-shadow(0 2px 12px rgba(0,0,0,0.13)); }
 
 /* ── 6. Chart panel hover shadow ─────────────────────────────── */
-.chart-panel { transition: border-top-color 0.35s ease, box-shadow 0.2s; }
-.chart-panel:hover { box-shadow: 0 4px 20px rgba(8,14,128,0.10); }
+.chart-panel { transition: border-top-color 0.35s ease, box-shadow 0.25s ease, transform 0.25s ease; }
+.chart-panel:hover { box-shadow: 0 16px 32px -14px rgba(27, 42, 94,0.20); transform: translateY(-2px); }
+
+/* ── 7. Icon boxes lift subtly with their parent card ─────────── */
+.sc-icon-box { transition: transform 0.25s cubic-bezier(0.34,1.56,0.64,1); }
+.sc-col:hover .sc-icon-box { transform: scale(1.08) rotate(-3deg); }
+
+/* ── 8. Table row avatar responds to row hover ────────────────── */
+.emp-avatar { transition: background 0.35s ease, transform 0.2s ease; }
+.log-row:hover .emp-avatar { transform: scale(1.06); }
+
+/* ── 9. Pending-corrections banner lifts on hover ─────────────── */
+.corrections-alert { transition: background 0.15s, transform 0.18s ease, box-shadow 0.18s ease; }
+.corrections-alert:hover { transform: translateY(-1px); box-shadow: 0 6px 18px -6px rgba(217,119,6,0.28); }
+
+/* ── 10. Department ranking rows nudge right on hover ─────────── */
+.drl-row--clickable { transition: background 0.15s ease, transform 0.15s ease; }
+.drl-row--clickable:hover { transform: translateX(2px); }
+
+/* ── 11. Ambient glow behind the attendance-rate donut ────────── */
+.rate-donut-wrap { position: relative; }
+.rate-donut-wrap::before {
+  content: '';
+  position: absolute;
+  inset: -10px;
+  border-radius: 50%;
+  background: radial-gradient(circle, var(--rate-glow, rgba(21,128,61,0.20)) 0%, transparent 72%);
+  filter: blur(7px);
+  z-index: 0;
+  animation: rateGlowPulse 3.2s ease-in-out infinite;
+}
+.rate-donut-svg { position: relative; z-index: 1; }
+@keyframes rateGlowPulse {
+  0%, 100% { opacity: 0.5; }
+  50%      { opacity: 1; }
+}
 </style>

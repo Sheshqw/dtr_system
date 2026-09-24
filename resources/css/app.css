@@ -1,4 +1,4 @@
-﻿@import 'tailwindcss';
+@import 'tailwindcss';
 
 @source '../../vendor/laravel/framework/src/Illuminate/Pagination/resources/views/*.blade.php';
 @source '../../storage/framework/views/*.php';
@@ -17,7 +17,7 @@ input:focus-visible,
 select:focus-visible,
 textarea:focus-visible,
 [tabindex]:focus-visible {
-  outline: 2px solid #0E1EC0 !important;
+  outline: 2px solid #2E4A8C !important;
   outline-offset: 2px !important;
 }
 [data-theme="dark"] a:focus-visible,
@@ -38,6 +38,91 @@ textarea:focus-visible,
 
 /* ─── Selection ─────────────────────────────────────────────────────────────── */
 ::selection { background: rgba(14, 32, 114, 0.14); }
+
+/* ─── Stat tile — shared "advanced" stat card used across list/report pages ───
+   Previously each view (Attendance, Employees, Reports, Tracking, Shifts)
+   hand-rolled its own plain white box + icon square for summary numbers.
+   This gives them a shared, richer treatment (gradient icon badge, colored
+   top accent, hover lift) via a class swap instead of a rewrite, and stays
+   consistent with the Dashboard's KPI-card language. Color is set per
+   instance via the --stat-color/--stat-bg/--stat-glow custom properties. ── */
+.stat-tile {
+  position: relative;
+  overflow: hidden;
+  background: #fff;
+  border: 1px solid #E2E8F0;
+  border-radius: 14px;
+  padding: 14px 16px;
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  transition: transform 0.18s ease, box-shadow 0.18s ease, border-color 0.18s ease;
+}
+.stat-tile::before {
+  content: '';
+  position: absolute; top: 0; left: 0; right: 0; height: 2px;
+  background: var(--stat-color, #2E4A8C);
+  opacity: 0.75;
+}
+.stat-tile:hover {
+  transform: translateY(-2px);
+  box-shadow: 0 10px 24px rgba(15,23,42,0.09);
+  border-color: color-mix(in srgb, var(--stat-color, #2E4A8C) 35%, #E2E8F0);
+}
+.stat-tile-icon {
+  width: 40px; height: 40px; border-radius: 11px; flex-shrink: 0;
+  display: flex; align-items: center; justify-content: center;
+  /* Derived from --stat-color rather than a separate pastel --stat-bg hex —
+     a low-alpha wash of the same hue reads correctly on both a white card
+     and a dark one, where a light-mode-only pastel hex would look wrong. */
+  background: color-mix(in srgb, var(--stat-color, #2E4A8C) 12%, transparent);
+  color: var(--stat-color, #2E4A8C);
+  box-shadow: 0 3px 10px var(--stat-glow, transparent);
+}
+.stat-tile-value {
+  font-size: 22px; font-weight: 800; letter-spacing: -0.02em; line-height: 1;
+  color: #0F172A; font-variant-numeric: tabular-nums;
+}
+.stat-tile-label { font-size: 11.5px; color: #64748B; margin-top: 3px; }
+
+[data-theme="dark"] .stat-tile        { background: #1C2A44 !important; border-color: rgba(255,255,255,0.08) !important; }
+[data-theme="dark"] .stat-tile:hover  { border-color: color-mix(in srgb, var(--stat-color, #2E4A8C) 45%, rgba(255,255,255,0.08)) !important; }
+[data-theme="dark"] .stat-tile-icon   { background: color-mix(in srgb, var(--stat-color, #2E4A8C) 24%, transparent) !important; }
+[data-theme="dark"] .stat-tile-value  { color: #E4EAF5 !important; }
+[data-theme="dark"] .stat-tile-label  { color: #9AAAC9 !important; }
+
+/* ─── Programmer-style detail pass ────────────────────────────────────────────
+   Small, consistent "dev tool" touches layered onto the existing NEMSU
+   navy/gold identity rather than replacing it: a shared monospace face for
+   every inline code/ID/IP snippet (previously each view picked its own
+   fallback — ui-monospace, Consolas, etc. — so the same kind of value
+   rendered in a slightly different font from page to page), plus a couple
+   of small reusable badge classes for numeric/code-like data. ──────────── */
+code, kbd {
+  font-family: var(--font-mono);
+}
+
+/* A small tinted, bordered badge for short code-like values (record IDs,
+   short hashes, device serials) — used where a plain monospace span isn't
+   enough to read as "this is data, not prose". */
+.code-chip {
+  display: inline-flex;
+  align-items: center;
+  font-family: var(--font-mono);
+  font-size: 10.5px;
+  font-weight: 600;
+  line-height: 1.6;
+  padding: 0 5px;
+  border-radius: 4px;
+  color: #2E4A8C;
+  background: rgba(46, 74, 140,0.08);
+  border: 1px solid rgba(46, 74, 140,0.14);
+}
+[data-theme="dark"] .code-chip {
+  color: #93C5FD;
+  background: rgba(147,197,253,0.12);
+  border-color: rgba(147,197,253,0.22);
+}
 
 /* ─── Page transitions ───────────────────────────────────────────────────────── */
 /* (Enhanced transitions are in AppLayout.vue; these are a fallback.) */
@@ -116,12 +201,12 @@ input, select, textarea {
 
 /* ── Page wrappers ────────────────────────────────────────────────────────── */
 [data-theme="dark"] .dash-page    { background: #121B2E !important; }
-[data-theme="dark"] [style*="background: #EBF0FF"],
-[data-theme="dark"] [style*="background: #EEF1F8"],
-[data-theme="dark"] [style*="background:#EEF1F8"],
-[data-theme="dark"] [style*="background: #F4F6FB"],
-[data-theme="dark"] [style*="background:#F4F6FB"],
-[data-theme="dark"] [style*="background: #F7F9FC"] { background: #121B2E !important; }
+[data-theme="dark"] [style*="background: #EBF0FF"], [data-theme="dark"] [style*="background: rgb(235, 240, 255)"],
+[data-theme="dark"] [style*="background: #EEF1F8"], [data-theme="dark"] [style*="background: rgb(238, 241, 248)"],
+[data-theme="dark"] [style*="background:#EEF1F8"], [data-theme="dark"] [style*="background:rgb(238, 241, 248)"],
+[data-theme="dark"] [style*="background: #F4F6FB"], [data-theme="dark"] [style*="background: rgb(244, 246, 251)"],
+[data-theme="dark"] [style*="background:#F4F6FB"], [data-theme="dark"] [style*="background:rgb(244, 246, 251)"],
+[data-theme="dark"] [style*="background: #F7F9FC"], [data-theme="dark"] [style*="background: rgb(247, 249, 252)"] { background: #121B2E !important; }
 
 /* ── Panels / cards ────────────────────────────────────────────────────────── */
 [data-theme="dark"] .panel,
@@ -150,6 +235,8 @@ input, select, textarea {
 [data-theme="dark"] .sc-bar-wrap,
 [data-theme="dark"] .breakdown      { background: #1E3050 !important; }
 [data-theme="dark"] .sc-num         { color: #E2E8F0 !important; }
+[data-theme="dark"] .sc-delta--up   { background: rgba(21,128,61,0.16)  !important; color: #6EE7B7 !important; }
+[data-theme="dark"] .sc-delta--down { background: rgba(220,38,38,0.16)  !important; color: #FCA5A5 !important; }
 [data-theme="dark"] .rate-big       { color: #E2E8F0 !important; }
 [data-theme="dark"] .tracked-num    { color: #E2E8F0 !important; }
 [data-theme="dark"] .tracked-label  { color: #9AAAC9 !important; }
@@ -176,11 +263,13 @@ input, select, textarea {
   color: #9AAAC9 !important;
   border-bottom-color: rgba(255,255,255,0.07) !important;
 }
+[data-theme="dark"] .th-sort:hover { color: #93C5FD !important; }
 [data-theme="dark"] .log-row,
 [data-theme="dark"] table tbody tr        { border-bottom-color: rgba(255,255,255,0.04) !important; }
 [data-theme="dark"] .log-row--alt         { background: rgba(255,255,255,0.022) !important; }
 [data-theme="dark"] .log-row:hover,
-[data-theme="dark"] table tbody tr:hover  { background: rgba(255,255,255,0.055) !important; }
+[data-theme="dark"] table tbody tr:hover,
+[data-theme="dark"] #app .log-row:hover  { background: rgba(255,255,255,0.055) !important; }
 [data-theme="dark"] .td, [data-theme="dark"] table tbody td { color: #E4EAF5 !important; }
 [data-theme="dark"] .td-muted  { color: #B7C3DE !important; }
 [data-theme="dark"] .td-mono   { color: #B7C3DE !important; }
@@ -248,13 +337,12 @@ input, select, textarea {
 /* ── Tailwind text color utilities ───────────────────────────────────────── */
 [data-theme="dark"] .text-\[\#0F172A\]   { color: #E2E8F0 !important; }
 [data-theme="dark"] .text-\[\#64748B\]   { color: #B7C3DE !important; }
-[data-theme="dark"] .text-\[\#94A3B8\]   { color: #9AAAC9 !important; }
+[data-theme="dark"] .text-\[\#6B7A94\]   { color: #9AAAC9 !important; }
 [data-theme="dark"] .text-\[\#374151\]   { color: #E4EAF5 !important; }
 [data-theme="dark"] .text-\[\#475569\]   { color: #B7C3DE !important; }
 [data-theme="dark"] .text-\[\#1D4ED8\]   { color: #60A5FA !important; }
 [data-theme="dark"] .text-\[\#065F46\]   { color: #34D399 !important; }
 [data-theme="dark"] .text-\[\#991B1B\]   { color: #F87171 !important; }
-[data-theme="dark"] .text-\[\#9CA3AF\]   { color: #9AAAC9 !important; }
 /* Primary brand blue — nearly invisible on dark; map to a readable light blue */
 [data-theme="dark"] .text-\[\#0E2072\]   { color: #93C5FD !important; }
 [data-theme="dark"] .text-\[\#1628A8\]   { color: #93C5FD !important; }
@@ -263,10 +351,12 @@ input, select, textarea {
 [data-theme="dark"] .text-amber-800 { color: #FDE68A !important; }
 [data-theme="dark"] .text-amber-700 { color: #FCD34D !important; }
 [data-theme="dark"] .text-amber-600 { color: #FBBF24 !important; }
+[data-theme="dark"] .text-red-800   { color: #FCA5A5 !important; }
 [data-theme="dark"] .text-red-700   { color: #FCA5A5 !important; }
 [data-theme="dark"] .text-red-600   { color: #F87171 !important; }
 [data-theme="dark"] .text-blue-700  { color: #93C5FD !important; }
 [data-theme="dark"] .text-blue-600  { color: #60A5FA !important; }
+[data-theme="dark"] .text-green-800 { color: #6EE7B7 !important; }
 [data-theme="dark"] .text-green-700 { color: #6EE7B7 !important; }
 [data-theme="dark"] .text-green-600 { color: #34D399 !important; }
 [data-theme="dark"] .text-indigo-700,
@@ -356,12 +446,12 @@ input, select, textarea {
    dark card since the color itself is dark; the inline-style equivalent of
    this exact case is already remapped above (line ~605), this is just the
    Tailwind-class form of the same color. */
-[data-theme="dark"] .text-\[\#0E1EC0\],
-[data-theme="dark"] .hover\:text-\[\#0E1EC0\]:hover,
-[data-theme="dark"] .group:hover .group-hover\:text-\[\#0E1EC0\]  { color: #93C5FD !important; }
-[data-theme="dark"] .border-\[\#0E1EC0\]                          { border-color: #3B82F6 !important; }
-[data-theme="dark"] .focus\:ring-\[\#0E1EC0\]:focus,
-[data-theme="dark"] .ring-\[\#0E1EC0\]                             { --tw-ring-color: #60A5FA !important; }
+[data-theme="dark"] .text-\[\#2E4A8C\],
+[data-theme="dark"] .hover\:text-\[\#2E4A8C\]:hover,
+[data-theme="dark"] .group:hover .group-hover\:text-\[\#2E4A8C\]  { color: #93C5FD !important; }
+[data-theme="dark"] .border-\[\#2E4A8C\]                          { border-color: #3B82F6 !important; }
+[data-theme="dark"] .focus\:ring-\[\#2E4A8C\]:focus,
+[data-theme="dark"] .ring-\[\#2E4A8C\]                             { --tw-ring-color: #60A5FA !important; }
 
 /* Status colors used as Tailwind text classes (their inline-style form is
    already covered above) */
@@ -377,7 +467,7 @@ input, select, textarea {
 /* A light slate meant to look "quiet" on white (empty-state icons, sort
    chevrons, dividers) instead glowed too bright against a dark card —
    toned down to match this theme's own muted-text convention. */
-[data-theme="dark"] .text-\[\#CBD5E1\] { color: #475569 !important; }
+[data-theme="dark"] .text-\[\#94A3B8\] { color: #475569 !important; }
 [data-theme="dark"] .bg-\[\#CBD5E1\]   { background-color: #475569 !important; }
 
 /* Neutral borders/dividers as Tailwind classes */
@@ -395,6 +485,12 @@ input, select, textarea {
 /* Tinted hover/drag-active backgrounds as Tailwind classes */
 [data-theme="dark"] .bg-\[\#EEF4FF\]              { background-color: rgba(59,130,246,0.14) !important; }
 [data-theme="dark"] .hover\:bg-\[\#F4F6FF\]:hover  { background-color: rgba(99,102,241,0.14) !important; }
+
+/* ── DepartmentsView.vue — .dept-card is a plain scoped class (its own
+   `<style>` block, not a Tailwind utility), so none of the Tailwind-class
+   rules above ever reached it — the card stayed white while its own text
+   correctly went light-on-dark, which is what made it unreadable. ──────── */
+[data-theme="dark"] .dept-card { background: #1C2A44 !important; border-color: rgba(255,255,255,0.07) !important; }
 
 /* ══════════════════════════════════════════════════════════════════════════════
    Extended semantic-color families — StatusBadge / StaffTypeBadge audit
@@ -450,12 +546,12 @@ input, select, textarea {
 [data-theme="dark"] .ring-slate-200    { --tw-ring-color: rgba(148,163,184,0.30) !important; }
 
 /* ── Remaining gaps found in a full inline-style / scoped-class sweep ────── */
-[data-theme="dark"] [style*="color:#1D4ED8" i],   [data-theme="dark"] [style*="color: #1D4ED8" i],
-[data-theme="dark"] [style*="color:#2563EB" i],   [data-theme="dark"] [style*="color: #2563EB" i] { color: #60A5FA !important; }
-[data-theme="dark"] [style*="color:#10B981" i],   [data-theme="dark"] [style*="color: #10B981" i],
-[data-theme="dark"] [style*="color:#16A34A" i],   [data-theme="dark"] [style*="color: #16A34A" i] { color: #34D399 !important; }
-[data-theme="dark"] [style*="background:#CBD5E1" i], [data-theme="dark"] [style*="background: #CBD5E1" i] { background: #475569 !important; }
-[data-theme="dark"] [style*="background:#F5F7FA" i], [data-theme="dark"] [style*="background: #F5F7FA" i] { background: #1E2D45 !important; }
+[data-theme="dark"] [style*="color:#1D4ED8" i], [data-theme="dark"] [style*="color:rgb(29, 78, 216)" i],   [data-theme="dark"] [style*="color: #1D4ED8" i], [data-theme="dark"] [style*="color: rgb(29, 78, 216)" i],
+[data-theme="dark"] [style*="color:#2563EB" i], [data-theme="dark"] [style*="color:rgb(37, 99, 235)" i],   [data-theme="dark"] [style*="color: #2563EB" i], [data-theme="dark"] [style*="color: rgb(37, 99, 235)" i] { color: #60A5FA !important; }
+[data-theme="dark"] [style*="color:#10B981" i], [data-theme="dark"] [style*="color:rgb(16, 185, 129)" i],   [data-theme="dark"] [style*="color: #10B981" i], [data-theme="dark"] [style*="color: rgb(16, 185, 129)" i],
+[data-theme="dark"] [style*="color:#16A34A" i], [data-theme="dark"] [style*="color:rgb(22, 163, 74)" i],   [data-theme="dark"] [style*="color: #16A34A" i], [data-theme="dark"] [style*="color: rgb(22, 163, 74)" i] { color: #34D399 !important; }
+[data-theme="dark"] [style*="background:#CBD5E1" i], [data-theme="dark"] [style*="background:rgb(203, 213, 225)" i], [data-theme="dark"] [style*="background: #CBD5E1" i], [data-theme="dark"] [style*="background: rgb(203, 213, 225)" i] { background: #475569 !important; }
+[data-theme="dark"] [style*="background:#F5F7FA" i], [data-theme="dark"] [style*="background:rgb(245, 247, 250)" i], [data-theme="dark"] [style*="background: #F5F7FA" i], [data-theme="dark"] [style*="background: rgb(245, 247, 250)" i] { background: #1E2D45 !important; }
 
 /* AuditView timeline — muted relative-time / IP text had no dark rule at all */
 [data-theme="dark"] .tl-relative, [data-theme="dark"] .tl-ip { color: #9AAAC9 !important; }
@@ -464,14 +560,14 @@ input, select, textarea {
 
 /* Literal `white` keyword backgrounds (not caught by the #fff/#FFFFFF rules above) */
 [data-theme="dark"] [style*="background:white" i], [data-theme="dark"] [style*="background: white" i] { background: #1C2A44 !important; }
-[data-theme="dark"] [style*="border-color:#E5E7EB" i], [data-theme="dark"] [style*="border-color: #E5E7EB" i],
-[data-theme="dark"] [style*="border-color:#F1F5F9" i], [data-theme="dark"] [style*="border-color: #F1F5F9" i] { border-color: rgba(255,255,255,0.10) !important; }
+[data-theme="dark"] [style*="border-color:#E5E7EB" i], [data-theme="dark"] [style*="border-color:rgb(229, 231, 235)" i], [data-theme="dark"] [style*="border-color: #E5E7EB" i], [data-theme="dark"] [style*="border-color: rgb(229, 231, 235)" i],
+[data-theme="dark"] [style*="border-color:#F1F5F9" i], [data-theme="dark"] [style*="border-color:rgb(241, 245, 249)" i], [data-theme="dark"] [style*="border-color: #F1F5F9" i], [data-theme="dark"] [style*="border-color: rgb(241, 245, 249)" i] { border-color: rgba(255,255,255,0.10) !important; }
 
 /* DashboardView chart-panel top accent — the gold/purple accents already read
    fine on a dark card; the brand-blue one is dark-on-dark and needs lifting */
-[data-theme="dark"] [style*="border-top-color:#0E1EC0" i], [data-theme="dark"] [style*="border-top-color: #0E1EC0" i] { border-top-color: #3B82F6 !important; }
+[data-theme="dark"] [style*="border-top-color:#2E4A8C" i], [data-theme="dark"] [style*="border-top-color:rgb(46, 74, 140)" i], [data-theme="dark"] [style*="border-top-color: #2E4A8C" i], [data-theme="dark"] [style*="border-top-color: rgb(46, 74, 140)" i] { border-top-color: #3B82F6 !important; }
 
-/* Per-view input classes whose own :focus { border-color: #0E1EC0 } rule has
+/* Per-view input classes whose own :focus { border-color: #2E4A8C } rule has
    no !important — the dark-mode base border color (which does) was silently
    winning, so these lost focus indication entirely in dark mode. */
 [data-theme="dark"] .audit-filter-input:focus,
@@ -483,6 +579,27 @@ input, select, textarea {
   background: #1E3050 !important;
   border-color: rgba(255,255,255,0.12) !important;
   color: #E2E8F0 !important;
+}
+
+/* ── System Settings page ────────────────────────────────────────────────── */
+[data-theme="dark"] .settings-card       { background: #1C2A44 !important; border-color: rgba(255,255,255,0.07) !important; }
+[data-theme="dark"] .settings-card-head  { border-color: rgba(255,255,255,0.07) !important; background: #17223A !important; }
+[data-theme="dark"] .settings-card-title { color: #E4EAF5 !important; }
+[data-theme="dark"] .settings-card-sub,
+[data-theme="dark"] .settings-icon-muted,
+[data-theme="dark"] .settings-hint       { color: #9AAAC9 !important; }
+[data-theme="dark"] .settings-label      { color: #E4EAF5 !important; }
+[data-theme="dark"] .settings-check      { color: #E4EAF5 !important; }
+[data-theme="dark"] .settings-link-muted { color: #94A3B8 !important; }
+[data-theme="dark"] .settings-link-muted:hover { color: #CBD5E1 !important; }
+[data-theme="dark"] .settings-upload-btn { background: rgba(99,102,241,0.16) !important; color: #A5B4FC !important; }
+[data-theme="dark"] .settings-upload-btn:hover { background: rgba(99,102,241,0.24) !important; }
+[data-theme="dark"] .settings-danger-btn { background: rgba(220,38,38,0.15) !important; color: #FCA5A5 !important; }
+[data-theme="dark"] .settings-danger-btn:hover { background: rgba(220,38,38,0.24) !important; }
+[data-theme="dark"] .settings-error {
+  background: rgba(220,38,38,0.12) !important;
+  border-color: rgba(220,38,38,0.35) !important;
+  color: #FCA5A5 !important;
 }
 
 /* ── Hover background overrides ──────────────────────────────────────────── */
@@ -506,6 +623,9 @@ input, select, textarea {
 [data-theme="dark"] .tk-card::before { background: linear-gradient(90deg, rgba(255,255,255,0.05), transparent) !important; }
 [data-theme="dark"] .tk-val          { color: #E2E8F0 !important; }
 [data-theme="dark"] .tk-label        { color: #9AAAC9 !important; }
+[data-theme="dark"] .tk-ring-hole    { background: #1C2A44 !important; }
+[data-theme="dark"] .tk-ring-total   { color: #E2E8F0 !important; }
+[data-theme="dark"] .tk-ring-legend span { color: #B7C3DE !important; }
 
 /* ── DashboardView — Department rankings ─────────────────────────────────── */
 [data-theme="dark"] .drl-header   { background: #17223A !important; border-bottom-color: rgba(255,255,255,0.06) !important; }
@@ -515,6 +635,10 @@ input, select, textarea {
 [data-theme="dark"] .drl-present  { color: #E2E8F0 !important; }
 [data-theme="dark"] .drl-total    { color: #9AAAC9 !important; }
 [data-theme="dark"] .drl-bar-wrap { background: #1E2D45 !important; }
+[data-theme="dark"] .drl-rank     { color: #64748B !important; }
+[data-theme="dark"] .dept-rank-list { background: #17223A !important; border-top-color: rgba(255,255,255,0.06) !important; }
+[data-theme="dark"] .drl-row--clickable:hover,
+[data-theme="dark"] .drl-row--clickable:focus-visible { background: rgba(255,255,255,0.045) !important; }
 
 /* ── DashboardView — Corrections alert ───────────────────────────────────── */
 [data-theme="dark"] .corrections-alert       { background: rgba(217,119,6,0.10) !important; border-color: rgba(217,119,6,0.25) !important; }
@@ -719,103 +843,136 @@ input, select, textarea {
    ══════════════════════════════════════════════════════════════════════════════ */
 
 /* ── Muted / label text ──────────────────────────────────────────────────── */
-[data-theme="dark"] [style*="color:#9CA3AF" i],  [data-theme="dark"] [style*="color: #9CA3AF" i],
-[data-theme="dark"] [style*="color:#94A3B8" i],  [data-theme="dark"] [style*="color: #94A3B8" i],
-[data-theme="dark"] [style*="color:#D1D5DB" i],  [data-theme="dark"] [style*="color: #D1D5DB" i] { color: #9AAAC9 !important; }
+[data-theme="dark"] [style*="color:#6B7A94" i], [data-theme="dark"] [style*="color:rgb(107, 122, 148)" i],  [data-theme="dark"] [style*="color: #6B7A94" i], [data-theme="dark"] [style*="color: rgb(107, 122, 148)" i] { color: #9AAAC9 !important; }
+[data-theme="dark"] [style*="color:#94A3B8" i], [data-theme="dark"] [style*="color:rgb(148, 163, 184)" i],  [data-theme="dark"] [style*="color: #94A3B8" i], [data-theme="dark"] [style*="color: rgb(148, 163, 184)" i] { color: #475569 !important; }
 
-[data-theme="dark"] [style*="color:#64748B" i],  [data-theme="dark"] [style*="color: #64748B" i],
-[data-theme="dark"] [style*="color:#475569" i],  [data-theme="dark"] [style*="color: #475569" i] { color: #B7C3DE !important; }
+[data-theme="dark"] [style*="color:#64748B" i], [data-theme="dark"] [style*="color:rgb(100, 116, 139)" i],  [data-theme="dark"] [style*="color: #64748B" i], [data-theme="dark"] [style*="color: rgb(100, 116, 139)" i],
+[data-theme="dark"] [style*="color:#475569" i], [data-theme="dark"] [style*="color:rgb(71, 85, 105)" i],  [data-theme="dark"] [style*="color: #475569" i], [data-theme="dark"] [style*="color: rgb(71, 85, 105)" i] { color: #B7C3DE !important; }
 
 /* ── Primary / heading text ──────────────────────────────────────────────── */
-[data-theme="dark"] [style*="color:#0F172A" i],  [data-theme="dark"] [style*="color: #0F172A" i],
-[data-theme="dark"] [style*="color:#1E293B" i],  [data-theme="dark"] [style*="color: #1E293B" i],
-[data-theme="dark"] [style*="color:#374151" i],  [data-theme="dark"] [style*="color: #374151" i] { color: #E4EAF5 !important; }
+[data-theme="dark"] [style*="color:#0F172A" i], [data-theme="dark"] [style*="color:rgb(15, 23, 42)" i],  [data-theme="dark"] [style*="color: #0F172A" i], [data-theme="dark"] [style*="color: rgb(15, 23, 42)" i],
+[data-theme="dark"] [style*="color:#1E293B" i], [data-theme="dark"] [style*="color:rgb(30, 41, 59)" i],  [data-theme="dark"] [style*="color: #1E293B" i], [data-theme="dark"] [style*="color: rgb(30, 41, 59)" i],
+[data-theme="dark"] [style*="color:#374151" i], [data-theme="dark"] [style*="color:rgb(55, 65, 81)" i],  [data-theme="dark"] [style*="color: #374151" i], [data-theme="dark"] [style*="color: rgb(55, 65, 81)" i] { color: #E4EAF5 !important; }
 
 /* ── Saturated accent text (authored for a white card — too dark to read on a dark one) ── */
-[data-theme="dark"] [style*="color:#D97706" i],  [data-theme="dark"] [style*="color: #D97706" i] { color: #FBBF24 !important; }
-[data-theme="dark"] [style*="color:#92400E" i],  [data-theme="dark"] [style*="color: #92400E" i],
-[data-theme="dark"] [style*="color:#B45309" i],  [data-theme="dark"] [style*="color: #B45309" i] { color: #FCD34D !important; }
-[data-theme="dark"] [style*="color:#DC2626" i],  [data-theme="dark"] [style*="color: #DC2626" i],
-[data-theme="dark"] [style*="color:#EF4444" i],  [data-theme="dark"] [style*="color: #EF4444" i] { color: #F87171 !important; }
-[data-theme="dark"] [style*="color:#991B1B" i],  [data-theme="dark"] [style*="color: #991B1B" i],
-[data-theme="dark"] [style*="color:#B91C1C" i],  [data-theme="dark"] [style*="color: #B91C1C" i],
-[data-theme="dark"] [style*="color:#7F1D1D" i],  [data-theme="dark"] [style*="color: #7F1D1D" i] { color: #FCA5A5 !important; }
-[data-theme="dark"] [style*="color:#15803D" i],  [data-theme="dark"] [style*="color: #15803D" i],
-[data-theme="dark"] [style*="color:#059669" i],  [data-theme="dark"] [style*="color: #059669" i] { color: #34D399 !important; }
-[data-theme="dark"] [style*="color:#166534" i],  [data-theme="dark"] [style*="color: #166534" i],
-[data-theme="dark"] [style*="color:#14532D" i],  [data-theme="dark"] [style*="color: #14532D" i],
-[data-theme="dark"] [style*="color:#065F46" i],  [data-theme="dark"] [style*="color: #065F46" i] { color: #6EE7B7 !important; }
-[data-theme="dark"] [style*="color:#0E1EC0" i],  [data-theme="dark"] [style*="color: #0E1EC0" i],
-[data-theme="dark"] [style*="color:#1228CC" i],  [data-theme="dark"] [style*="color: #1228CC" i],
-[data-theme="dark"] [style*="color:#0A16A0" i],  [data-theme="dark"] [style*="color: #0A16A0" i],
-[data-theme="dark"] [style*="color:#3B82F6" i],  [data-theme="dark"] [style*="color: #3B82F6" i] { color: #93C5FD !important; }
-[data-theme="dark"] [style*="color:#0284C7" i],  [data-theme="dark"] [style*="color: #0284C7" i],
+[data-theme="dark"] [style*="color:#D97706" i], [data-theme="dark"] [style*="color:rgb(217, 119, 6)" i],  [data-theme="dark"] [style*="color: #D97706" i], [data-theme="dark"] [style*="color: rgb(217, 119, 6)" i] { color: #FBBF24 !important; }
+[data-theme="dark"] [style*="color:#92400E" i], [data-theme="dark"] [style*="color:rgb(146, 64, 14)" i],  [data-theme="dark"] [style*="color: #92400E" i], [data-theme="dark"] [style*="color: rgb(146, 64, 14)" i],
+[data-theme="dark"] [style*="color:#B45309" i], [data-theme="dark"] [style*="color:rgb(180, 83, 9)" i],  [data-theme="dark"] [style*="color: #B45309" i], [data-theme="dark"] [style*="color: rgb(180, 83, 9)" i] { color: #FCD34D !important; }
+[data-theme="dark"] [style*="color:#DC2626" i], [data-theme="dark"] [style*="color:rgb(220, 38, 38)" i],  [data-theme="dark"] [style*="color: #DC2626" i], [data-theme="dark"] [style*="color: rgb(220, 38, 38)" i],
+[data-theme="dark"] [style*="color:#EF4444" i], [data-theme="dark"] [style*="color:rgb(239, 68, 68)" i],  [data-theme="dark"] [style*="color: #EF4444" i], [data-theme="dark"] [style*="color: rgb(239, 68, 68)" i] { color: #F87171 !important; }
+[data-theme="dark"] [style*="color:#991B1B" i], [data-theme="dark"] [style*="color:rgb(153, 27, 27)" i],  [data-theme="dark"] [style*="color: #991B1B" i], [data-theme="dark"] [style*="color: rgb(153, 27, 27)" i],
+[data-theme="dark"] [style*="color:#B91C1C" i], [data-theme="dark"] [style*="color:rgb(185, 28, 28)" i],  [data-theme="dark"] [style*="color: #B91C1C" i], [data-theme="dark"] [style*="color: rgb(185, 28, 28)" i],
+[data-theme="dark"] [style*="color:#7F1D1D" i], [data-theme="dark"] [style*="color:rgb(127, 29, 29)" i],  [data-theme="dark"] [style*="color: #7F1D1D" i], [data-theme="dark"] [style*="color: rgb(127, 29, 29)" i] { color: #FCA5A5 !important; }
+[data-theme="dark"] [style*="color:#15803D" i], [data-theme="dark"] [style*="color:rgb(21, 128, 61)" i],  [data-theme="dark"] [style*="color: #15803D" i], [data-theme="dark"] [style*="color: rgb(21, 128, 61)" i],
+[data-theme="dark"] [style*="color:#059669" i], [data-theme="dark"] [style*="color:rgb(5, 150, 105)" i],  [data-theme="dark"] [style*="color: #059669" i], [data-theme="dark"] [style*="color: rgb(5, 150, 105)" i] { color: #34D399 !important; }
+[data-theme="dark"] [style*="color:#166534" i], [data-theme="dark"] [style*="color:rgb(22, 101, 52)" i],  [data-theme="dark"] [style*="color: #166534" i], [data-theme="dark"] [style*="color: rgb(22, 101, 52)" i],
+[data-theme="dark"] [style*="color:#14532D" i], [data-theme="dark"] [style*="color:rgb(20, 83, 45)" i],  [data-theme="dark"] [style*="color: #14532D" i], [data-theme="dark"] [style*="color: rgb(20, 83, 45)" i],
+[data-theme="dark"] [style*="color:#065F46" i], [data-theme="dark"] [style*="color:rgb(6, 95, 70)" i],  [data-theme="dark"] [style*="color: #065F46" i], [data-theme="dark"] [style*="color: rgb(6, 95, 70)" i] { color: #6EE7B7 !important; }
+[data-theme="dark"] [style*="color:#2E4A8C" i], [data-theme="dark"] [style*="color:rgb(46, 74, 140)" i],  [data-theme="dark"] [style*="color: #2E4A8C" i], [data-theme="dark"] [style*="color: rgb(46, 74, 140)" i],
+[data-theme="dark"] [style*="color:#3D5CA3" i], [data-theme="dark"] [style*="color:rgb(61, 92, 163)" i],  [data-theme="dark"] [style*="color: #3D5CA3" i], [data-theme="dark"] [style*="color: rgb(61, 92, 163)" i],
+[data-theme="dark"] [style*="color:#24356F" i], [data-theme="dark"] [style*="color:rgb(36, 53, 111)" i],  [data-theme="dark"] [style*="color: #24356F" i], [data-theme="dark"] [style*="color: rgb(36, 53, 111)" i],
+[data-theme="dark"] [style*="color:#3B82F6" i], [data-theme="dark"] [style*="color:rgb(59, 130, 246)" i],  [data-theme="dark"] [style*="color: #3B82F6" i], [data-theme="dark"] [style*="color: rgb(59, 130, 246)" i] { color: #93C5FD !important; }
+[data-theme="dark"] [style*="color:#0284C7" i], [data-theme="dark"] [style*="color:rgb(2, 132, 199)" i],  [data-theme="dark"] [style*="color: #0284C7" i], [data-theme="dark"] [style*="color: rgb(2, 132, 199)" i],
 [data-theme="dark"] .text-\[\#0284C7\]                                                          { color: #7DD3FC !important; }
 [data-theme="dark"] .border-\[\#0284C7\]                                                        { border-color: #7DD3FC !important; }
-[data-theme="dark"] [style*="color:#4338CA" i],  [data-theme="dark"] [style*="color: #4338CA" i] { color: #A5B4FC !important; }
-[data-theme="dark"] [style*="color:#6D28D9" i],  [data-theme="dark"] [style*="color: #6D28D9" i],
-[data-theme="dark"] [style*="color:#7C3AED" i],  [data-theme="dark"] [style*="color: #7C3AED" i] { color: #C4B5FD !important; }
+[data-theme="dark"] [style*="color:#4338CA" i], [data-theme="dark"] [style*="color:rgb(67, 56, 202)" i],  [data-theme="dark"] [style*="color: #4338CA" i], [data-theme="dark"] [style*="color: rgb(67, 56, 202)" i] { color: #A5B4FC !important; }
+[data-theme="dark"] [style*="color:#6D28D9" i], [data-theme="dark"] [style*="color:rgb(109, 40, 217)" i],  [data-theme="dark"] [style*="color: #6D28D9" i], [data-theme="dark"] [style*="color: rgb(109, 40, 217)" i],
+[data-theme="dark"] [style*="color:#7C3AED" i], [data-theme="dark"] [style*="color:rgb(124, 58, 237)" i],  [data-theme="dark"] [style*="color: #7C3AED" i], [data-theme="dark"] [style*="color: rgb(124, 58, 237)" i] { color: #C4B5FD !important; }
 
 /* ── Neutral card / surface backgrounds ──────────────────────────────────── */
-[data-theme="dark"] [style*="background:#F1F5F9" i], [data-theme="dark"] [style*="background: #F1F5F9" i] { background: #22314D !important; }
-[data-theme="dark"] [style*="background:#F8FAFC" i], [data-theme="dark"] [style*="background: #F8FAFC" i],
-[data-theme="dark"] [style*="background:#F7F8FD" i], [data-theme="dark"] [style*="background: #F7F8FD" i],
-[data-theme="dark"] [style*="background:#FAFAFA" i], [data-theme="dark"] [style*="background: #FAFAFA" i],
-[data-theme="dark"] [style*="background:#F9FAFB" i], [data-theme="dark"] [style*="background: #F9FAFB" i],
-[data-theme="dark"] [style*="background:#F5F5F5" i], [data-theme="dark"] [style*="background: #F5F5F5" i] { background: #17223A !important; }
-[data-theme="dark"] [style*="background:#F4F6FB" i], [data-theme="dark"] [style*="background: #F4F6FB" i] { background: #121B2E !important; }
-[data-theme="dark"] [style*="background:#FAFBFD" i], [data-theme="dark"] [style*="background: #FAFBFD" i],
-[data-theme="dark"] [style*="background:#FAFBFF" i], [data-theme="dark"] [style*="background: #FAFBFF" i],
-[data-theme="dark"] [style*="background:#FAFBFE" i], [data-theme="dark"] [style*="background: #FAFBFE" i],
-[data-theme="dark"] [style*="background:#F8FAFF" i], [data-theme="dark"] [style*="background: #F8FAFF" i] { background: #182742 !important; }
-[data-theme="dark"] [style*="background:#E2E8F0" i], [data-theme="dark"] [style*="background: #E2E8F0" i],
-[data-theme="dark"] [style*="background:#EEF2FA" i], [data-theme="dark"] [style*="background: #EEF2FA" i],
-[data-theme="dark"] [style*="background:#DDE4EE" i], [data-theme="dark"] [style*="background: #DDE4EE" i] { background: #1E3050 !important; }
-[data-theme="dark"] [style*="background:#fff" i],     [data-theme="dark"] [style*="background: #fff" i],
-[data-theme="dark"] [style*="background:#FFFFFF" i],  [data-theme="dark"] [style*="background: #FFFFFF" i] { background: #1C2A44 !important; }
+[data-theme="dark"] [style*="background:#F1F5F9" i], [data-theme="dark"] [style*="background:rgb(241, 245, 249)" i], [data-theme="dark"] [style*="background: #F1F5F9" i], [data-theme="dark"] [style*="background: rgb(241, 245, 249)" i] { background: #22314D !important; }
+[data-theme="dark"] [style*="background:#F8FAFC" i], [data-theme="dark"] [style*="background:rgb(248, 250, 252)" i], [data-theme="dark"] [style*="background: #F8FAFC" i], [data-theme="dark"] [style*="background: rgb(248, 250, 252)" i],
+[data-theme="dark"] [style*="background:#F7F8FD" i], [data-theme="dark"] [style*="background:rgb(247, 248, 253)" i], [data-theme="dark"] [style*="background: #F7F8FD" i], [data-theme="dark"] [style*="background: rgb(247, 248, 253)" i],
+[data-theme="dark"] [style*="background:#FAFAFA" i], [data-theme="dark"] [style*="background:rgb(250, 250, 250)" i], [data-theme="dark"] [style*="background: #FAFAFA" i], [data-theme="dark"] [style*="background: rgb(250, 250, 250)" i],
+[data-theme="dark"] [style*="background:#F9FAFB" i], [data-theme="dark"] [style*="background:rgb(249, 250, 251)" i], [data-theme="dark"] [style*="background: #F9FAFB" i], [data-theme="dark"] [style*="background: rgb(249, 250, 251)" i],
+[data-theme="dark"] [style*="background:#F5F5F5" i], [data-theme="dark"] [style*="background:rgb(245, 245, 245)" i], [data-theme="dark"] [style*="background: #F5F5F5" i], [data-theme="dark"] [style*="background: rgb(245, 245, 245)" i] { background: #17223A !important; }
+[data-theme="dark"] [style*="background:#F4F6FB" i], [data-theme="dark"] [style*="background:rgb(244, 246, 251)" i], [data-theme="dark"] [style*="background: #F4F6FB" i], [data-theme="dark"] [style*="background: rgb(244, 246, 251)" i] { background: #121B2E !important; }
+[data-theme="dark"] [style*="background:#FAFBFD" i], [data-theme="dark"] [style*="background:rgb(250, 251, 253)" i], [data-theme="dark"] [style*="background: #FAFBFD" i], [data-theme="dark"] [style*="background: rgb(250, 251, 253)" i],
+[data-theme="dark"] [style*="background:#FAFBFF" i], [data-theme="dark"] [style*="background:rgb(250, 251, 255)" i], [data-theme="dark"] [style*="background: #FAFBFF" i], [data-theme="dark"] [style*="background: rgb(250, 251, 255)" i],
+[data-theme="dark"] [style*="background:#FAFBFE" i], [data-theme="dark"] [style*="background:rgb(250, 251, 254)" i], [data-theme="dark"] [style*="background: #FAFBFE" i], [data-theme="dark"] [style*="background: rgb(250, 251, 254)" i],
+[data-theme="dark"] [style*="background:#F8FAFF" i], [data-theme="dark"] [style*="background:rgb(248, 250, 255)" i], [data-theme="dark"] [style*="background: #F8FAFF" i], [data-theme="dark"] [style*="background: rgb(248, 250, 255)" i] { background: #182742 !important; }
+[data-theme="dark"] .rate-col { background: #182742 !important; border-left-color: rgba(255,255,255,0.07) !important; }
+[data-theme="dark"] [style*="background:#E2E8F0" i], [data-theme="dark"] [style*="background:rgb(226, 232, 240)" i], [data-theme="dark"] [style*="background: #E2E8F0" i], [data-theme="dark"] [style*="background: rgb(226, 232, 240)" i],
+[data-theme="dark"] [style*="background:#EEF2FA" i], [data-theme="dark"] [style*="background:rgb(238, 242, 250)" i], [data-theme="dark"] [style*="background: #EEF2FA" i], [data-theme="dark"] [style*="background: rgb(238, 242, 250)" i],
+[data-theme="dark"] [style*="background:#DDE4EE" i], [data-theme="dark"] [style*="background:rgb(221, 228, 238)" i], [data-theme="dark"] [style*="background: #DDE4EE" i], [data-theme="dark"] [style*="background: rgb(221, 228, 238)" i] { background: #1E3050 !important; }
+[data-theme="dark"] [style*="background:#fff" i], [data-theme="dark"] [style*="background:rgb(255, 255, 255)" i],     [data-theme="dark"] [style*="background: #fff" i], [data-theme="dark"] [style*="background: rgb(255, 255, 255)" i],
+[data-theme="dark"] [style*="background:#FFFFFF" i], [data-theme="dark"] [style*="background:rgb(255, 255, 255)" i],  [data-theme="dark"] [style*="background: #FFFFFF" i], [data-theme="dark"] [style*="background: rgb(255, 255, 255)" i] { background: #1C2A44 !important; }
 
 /* ── Tinted icon-box / banner backgrounds (semantic color washes) ───────────
    These carry a colored icon or text on top, so they keep a color — just a
    translucent wash on the dark surface instead of a solid pale fill. ────── */
-[data-theme="dark"] [style*="background:#EEF2FF" i], [data-theme="dark"] [style*="background: #EEF2FF" i],
-[data-theme="dark"] [style*="background:#EEF1FF" i], [data-theme="dark"] [style*="background: #EEF1FF" i],
-[data-theme="dark"] [style*="background:#E0E7FF" i], [data-theme="dark"] [style*="background: #E0E7FF" i],
-[data-theme="dark"] [style*="background:#DDE5FF" i], [data-theme="dark"] [style*="background: #DDE5FF" i] { background: rgba(99,102,241,0.14)  !important; }
-[data-theme="dark"] [style*="background:#FEF2F2" i], [data-theme="dark"] [style*="background: #FEF2F2" i],
-[data-theme="dark"] [style*="background:#FEE2E2" i], [data-theme="dark"] [style*="background: #FEE2E2" i] { background: rgba(239,68,68,0.14)   !important; }
-[data-theme="dark"] [style*="background:#ECFDF5" i], [data-theme="dark"] [style*="background: #ECFDF5" i],
-[data-theme="dark"] [style*="background:#F0FDF4" i], [data-theme="dark"] [style*="background: #F0FDF4" i],
-[data-theme="dark"] [style*="background:#F0FFF4" i], [data-theme="dark"] [style*="background: #F0FFF4" i],
-[data-theme="dark"] [style*="background:#DCFCE7" i], [data-theme="dark"] [style*="background: #DCFCE7" i] { background: rgba(16,185,129,0.14)  !important; }
-[data-theme="dark"] [style*="background:#FFFBEB" i], [data-theme="dark"] [style*="background: #FFFBEB" i],
-[data-theme="dark"] [style*="background:#FEF3C7" i], [data-theme="dark"] [style*="background: #FEF3C7" i],
-[data-theme="dark"] [style*="background:#FEF9E7" i], [data-theme="dark"] [style*="background: #FEF9E7" i],
-[data-theme="dark"] [style*="background:#FFF7E6" i], [data-theme="dark"] [style*="background: #FFF7E6" i] { background: rgba(217,119,6,0.14)   !important; }
-[data-theme="dark"] [style*="background:#EFF6FF" i], [data-theme="dark"] [style*="background: #EFF6FF" i],
-[data-theme="dark"] [style*="background:#F0F9FF" i], [data-theme="dark"] [style*="background: #F0F9FF" i],
-[data-theme="dark"] [style*="background:#DBEAFE" i], [data-theme="dark"] [style*="background: #DBEAFE" i] { background: rgba(59,130,246,0.14)  !important; }
-[data-theme="dark"] [style*="background:#F5F3FF" i], [data-theme="dark"] [style*="background: #F5F3FF" i],
-[data-theme="dark"] [style*="background:#FDF4FF" i], [data-theme="dark"] [style*="background: #FDF4FF" i] { background: rgba(147,51,234,0.14)  !important; }
-[data-theme="dark"] [style*="background:#FFF7ED" i], [data-theme="dark"] [style*="background: #FFF7ED" i] { background: rgba(234,88,12,0.14)   !important; }
+[data-theme="dark"] [style*="background:#EEF2FF" i], [data-theme="dark"] [style*="background:rgb(238, 242, 255)" i], [data-theme="dark"] [style*="background: #EEF2FF" i], [data-theme="dark"] [style*="background: rgb(238, 242, 255)" i],
+[data-theme="dark"] [style*="background:#EEF1FF" i], [data-theme="dark"] [style*="background:rgb(238, 241, 255)" i], [data-theme="dark"] [style*="background: #EEF1FF" i], [data-theme="dark"] [style*="background: rgb(238, 241, 255)" i],
+[data-theme="dark"] [style*="background:#E0E7FF" i], [data-theme="dark"] [style*="background:rgb(224, 231, 255)" i], [data-theme="dark"] [style*="background: #E0E7FF" i], [data-theme="dark"] [style*="background: rgb(224, 231, 255)" i],
+[data-theme="dark"] [style*="background:#DDE5FF" i], [data-theme="dark"] [style*="background:rgb(221, 229, 255)" i], [data-theme="dark"] [style*="background: #DDE5FF" i], [data-theme="dark"] [style*="background: rgb(221, 229, 255)" i] { background: rgba(99,102,241,0.14)  !important; }
+[data-theme="dark"] [style*="background:#FEF2F2" i], [data-theme="dark"] [style*="background:rgb(254, 242, 242)" i], [data-theme="dark"] [style*="background: #FEF2F2" i], [data-theme="dark"] [style*="background: rgb(254, 242, 242)" i],
+[data-theme="dark"] [style*="background:#FEE2E2" i], [data-theme="dark"] [style*="background:rgb(254, 226, 226)" i], [data-theme="dark"] [style*="background: #FEE2E2" i], [data-theme="dark"] [style*="background: rgb(254, 226, 226)" i] { background: rgba(239,68,68,0.14)   !important; }
+[data-theme="dark"] [style*="background:#ECFDF5" i], [data-theme="dark"] [style*="background:rgb(236, 253, 245)" i], [data-theme="dark"] [style*="background: #ECFDF5" i], [data-theme="dark"] [style*="background: rgb(236, 253, 245)" i],
+[data-theme="dark"] [style*="background:#F0FDF4" i], [data-theme="dark"] [style*="background:rgb(240, 253, 244)" i], [data-theme="dark"] [style*="background: #F0FDF4" i], [data-theme="dark"] [style*="background: rgb(240, 253, 244)" i],
+[data-theme="dark"] [style*="background:#F0FFF4" i], [data-theme="dark"] [style*="background:rgb(240, 255, 244)" i], [data-theme="dark"] [style*="background: #F0FFF4" i], [data-theme="dark"] [style*="background: rgb(240, 255, 244)" i],
+[data-theme="dark"] [style*="background:#DCFCE7" i], [data-theme="dark"] [style*="background:rgb(220, 252, 231)" i], [data-theme="dark"] [style*="background: #DCFCE7" i], [data-theme="dark"] [style*="background: rgb(220, 252, 231)" i] { background: rgba(16,185,129,0.14)  !important; }
+[data-theme="dark"] [style*="background:#FFFBEB" i], [data-theme="dark"] [style*="background:rgb(255, 251, 235)" i], [data-theme="dark"] [style*="background: #FFFBEB" i], [data-theme="dark"] [style*="background: rgb(255, 251, 235)" i],
+[data-theme="dark"] [style*="background:#FEF3C7" i], [data-theme="dark"] [style*="background:rgb(254, 243, 199)" i], [data-theme="dark"] [style*="background: #FEF3C7" i], [data-theme="dark"] [style*="background: rgb(254, 243, 199)" i],
+[data-theme="dark"] [style*="background:#FEF9E7" i], [data-theme="dark"] [style*="background:rgb(254, 249, 231)" i], [data-theme="dark"] [style*="background: #FEF9E7" i], [data-theme="dark"] [style*="background: rgb(254, 249, 231)" i],
+[data-theme="dark"] [style*="background:#FFF7E6" i], [data-theme="dark"] [style*="background:rgb(255, 247, 230)" i], [data-theme="dark"] [style*="background: #FFF7E6" i], [data-theme="dark"] [style*="background: rgb(255, 247, 230)" i] { background: rgba(217,119,6,0.14)   !important; }
+[data-theme="dark"] [style*="background:#EFF6FF" i], [data-theme="dark"] [style*="background:rgb(239, 246, 255)" i], [data-theme="dark"] [style*="background: #EFF6FF" i], [data-theme="dark"] [style*="background: rgb(239, 246, 255)" i],
+[data-theme="dark"] [style*="background:#F0F9FF" i], [data-theme="dark"] [style*="background:rgb(240, 249, 255)" i], [data-theme="dark"] [style*="background: #F0F9FF" i], [data-theme="dark"] [style*="background: rgb(240, 249, 255)" i],
+[data-theme="dark"] [style*="background:#DBEAFE" i], [data-theme="dark"] [style*="background:rgb(219, 234, 254)" i], [data-theme="dark"] [style*="background: #DBEAFE" i], [data-theme="dark"] [style*="background: rgb(219, 234, 254)" i] { background: rgba(59,130,246,0.14)  !important; }
+[data-theme="dark"] [style*="background:#F5F3FF" i], [data-theme="dark"] [style*="background:rgb(245, 243, 255)" i], [data-theme="dark"] [style*="background: #F5F3FF" i], [data-theme="dark"] [style*="background: rgb(245, 243, 255)" i],
+[data-theme="dark"] [style*="background:#FDF4FF" i], [data-theme="dark"] [style*="background:rgb(253, 244, 255)" i], [data-theme="dark"] [style*="background: #FDF4FF" i], [data-theme="dark"] [style*="background: rgb(253, 244, 255)" i] { background: rgba(147,51,234,0.14)  !important; }
+[data-theme="dark"] [style*="background:#FFF7ED" i], [data-theme="dark"] [style*="background:rgb(255, 247, 237)" i], [data-theme="dark"] [style*="background: #FFF7ED" i], [data-theme="dark"] [style*="background: rgb(255, 247, 237)" i] { background: rgba(234,88,12,0.14)   !important; }
+
+/* BiometricView.vue's "Auto Push (ADMS)" guide card border */
+[data-theme="dark"] [style*="border:1px solid #DDD6FE" i], [data-theme="dark"] [style*="border:1px solid rgb(221, 214, 254)" i], [data-theme="dark"] [style*="border: 1px solid #DDD6FE" i], [data-theme="dark"] [style*="border: 1px solid rgb(221, 214, 254)" i] { border-color: rgba(147,51,234,0.30) !important; }
 
 /* ── Inline border colors on the same light-tinted banners/cards ────────── */
-[data-theme="dark"] [style*="border:1px solid #E5E7EB" i], [data-theme="dark"] [style*="border: 1px solid #E5E7EB" i],
-[data-theme="dark"] [style*="#E2E8F0" i] { border-color: rgba(255,255,255,0.10) !important; }
-[data-theme="dark"] [style*="#BFDBFE" i] { border-color: rgba(59,130,246,0.28)  !important; }
-[data-theme="dark"] [style*="#BBF7D0" i], [data-theme="dark"] [style*="#A7F3D0" i] { border-color: rgba(16,185,129,0.28) !important; }
-[data-theme="dark"] [style*="#FECACA" i] { border-color: rgba(239,68,68,0.28)   !important; }
+[data-theme="dark"] [style*="border:1px solid #E5E7EB" i], [data-theme="dark"] [style*="border:1px solid rgb(229, 231, 235)" i], [data-theme="dark"] [style*="border: 1px solid #E5E7EB" i], [data-theme="dark"] [style*="border: 1px solid rgb(229, 231, 235)" i],
+[data-theme="dark"] [style*="#E2E8F0" i], [data-theme="dark"] [style*="rgb(226, 232, 240)" i] { border-color: rgba(255,255,255,0.10) !important; }
+[data-theme="dark"] [style*="#BFDBFE" i], [data-theme="dark"] [style*="rgb(191, 219, 254)" i] { border-color: rgba(59,130,246,0.28)  !important; }
+[data-theme="dark"] [style*="#BBF7D0" i], [data-theme="dark"] [style*="rgb(187, 247, 208)" i], [data-theme="dark"] [style*="#A7F3D0" i], [data-theme="dark"] [style*="rgb(167, 243, 208)" i] { border-color: rgba(16,185,129,0.28) !important; }
+[data-theme="dark"] [style*="#FECACA" i], [data-theme="dark"] [style*="rgb(254, 202, 202)" i] { border-color: rgba(239,68,68,0.28)   !important; }
+
+/* ── AccessControlView — scoped class overrides ──────────────────────────── */
+[data-theme="dark"] .ac-picker,
+[data-theme="dark"] .ac-panel {
+  background: #1C2A44 !important;
+  border-color: rgba(255,255,255,0.07) !important;
+}
+[data-theme="dark"] .ac-panel-head { border-bottom-color: rgba(255,255,255,0.07) !important; }
+[data-theme="dark"] .ac-emp-row:hover    { background: rgba(255,255,255,0.05) !important; }
+[data-theme="dark"] .ac-emp-row--active  { background: rgba(99,102,241,0.15) !important; }
+[data-theme="dark"] .ac-override-tag     { background: rgba(217,119,6,0.14) !important; color: #FCD34D !important; }
+[data-theme="dark"] .ac-reset-btn {
+  border-color: rgba(255,255,255,0.12) !important;
+  color: #B7C3DE !important;
+}
+[data-theme="dark"] .ac-reset-btn:hover:not(:disabled) { background: rgba(255,255,255,0.06) !important; }
+
+[data-theme="dark"] .ac-scope-row     { background: #1E3050 !important; border-bottom-color: rgba(255,255,255,0.07) !important; }
+[data-theme="dark"] .ac-scope-label   { color: #9AAAC9 !important; }
+[data-theme="dark"] .ac-scope-toggle  { background: #17223A !important; }
+[data-theme="dark"] .ac-scope-btn     { color: #9AAAC9 !important; }
+[data-theme="dark"] .ac-scope-btn:hover { color: #E4EAF5 !important; }
+[data-theme="dark"] .ac-scope-btn--active { background: #2A3C76 !important; color: #fff !important; box-shadow: none !important; }
+[data-theme="dark"] .ac-scope-warning { background: rgba(217,119,6,0.14) !important; border-color: rgba(217,119,6,0.30) !important; color: #FCD34D !important; }
+[data-theme="dark"] .ac-switch          { background: #1E3050 !important; }
+[data-theme="dark"] .ac-switch--on      { background: #3B82F6 !important; }
+[data-theme="dark"] .ac-picker-title    { color: #64748B !important; }
+[data-theme="dark"] .ac-picker-count    { background: rgba(255,255,255,0.08) !important; color: #9AAAC9 !important; }
+[data-theme="dark"] .ac-feature-row:hover { background: rgba(255,255,255,0.04) !important; }
+[data-theme="dark"] .ac-history-icon    { background: rgba(147,197,253,0.14) !important; color: #93C5FD !important; }
 
 /* ─── Theme ─────────────────────────────────────────────────────────────────── */
 @theme {
     --font-sans: 'IBM Plex Sans', ui-sans-serif, system-ui, sans-serif;
     --font-mono: 'IBM Plex Mono', ui-monospace, monospace;
 
-    /* NEMSU brand — deep royal blue + rich gold */
+    /* NEMSU brand — softened navy + rich gold */
     --color-bg:              #F4F6FB;
     --color-surface:         #FFFFFF;
-    --color-sidebar:         #0C1A62;
-    --color-sidebar-hover:   #172482;
-    --color-sidebar-active:  #0A1248;
+    --color-sidebar:         #1B2A5E;
+    --color-sidebar-hover:   #24356F;
+    --color-sidebar-active:  #182140;
     --color-sidebar-text:    #9DADD8;
     --color-accent:          #C9A227;
     --color-accent-hover:    #B8911F;
@@ -830,7 +987,7 @@ input, select, textarea {
        draft values — see the color-consolidation pass in git history. */
     --color-text-primary:    #0C1445;
     --color-text-secondary:  #64748B;
-    --color-text-muted:      #94A3B8;
+    --color-text-muted:      #6B7A94;
     --color-border:          #D4DEFF;
 }
 
@@ -873,3 +1030,128 @@ input, select, textarea {
   /* Hide page-UI controls that have no meaning in print */
   .no-print { display: none !important; }
 }
+
+/* ══════════════════════════════════════════════════════════════════════════════
+   DARK MODE GAP-FILL — scoped classes that set their own light color/background
+   directly (not via an inline `style=""` attribute), so none of the generic
+   [style*="..."] rules above ever applied to them. Found via a full audit that
+   cross-referenced every component's <style> block against the color mapping
+   already established above, then verified each one live in the browser.
+   ══════════════════════════════════════════════════════════════════════════════ */
+
+/* ── CommandPalette.vue (Ctrl+K quick search) ────────────────────────────── */
+[data-theme="dark"] .cp-panel         { background: #1C2A44 !important; }
+[data-theme="dark"] .cp-input         { color: #E4EAF5 !important; }
+[data-theme="dark"] .cp-esc,
+[data-theme="dark"] .cp-section-label,
+[data-theme="dark"] .cp-item-sub,
+[data-theme="dark"] .cp-loading, [data-theme="dark"] .cp-empty,
+[data-theme="dark"] .cp-hint          { color: #9AAAC9 !important; }
+[data-theme="dark"] .cp-item--active  { background: rgba(99,102,241,0.14) !important; }
+[data-theme="dark"] .cp-item-icon     { color: #B7C3DE !important; background: #22314D !important; }
+[data-theme="dark"] .cp-item-label    { color: #E4EAF5 !important; }
+[data-theme="dark"] .cp-footer        { background: #1E3050 !important; }
+
+/* ── ConfirmDialog.vue ────────────────────────────────────────────────────── */
+[data-theme="dark"] .cd-panel         { background: #1C2A44 !important; }
+[data-theme="dark"] .cd-title         { color: #E4EAF5 !important; }
+[data-theme="dark"] .cd-message       { color: #B7C3DE !important; }
+[data-theme="dark"] .cd-btn--cancel   { color: #E4EAF5 !important; background: #22314D !important; }
+
+/* ── EmptyState.vue (shared "no results" block) ──────────────────────────── */
+[data-theme="dark"] .es-icon-ring     { background: rgba(99,102,241,0.14) !important; }
+[data-theme="dark"] .es-title         { color: #E4EAF5 !important; }
+[data-theme="dark"] .es-body          { color: #9AAAC9 !important; }
+
+/* ── NotificationBell.vue ─────────────────────────────────────────────────── */
+[data-theme="dark"] .nb-panel                    { background: #1C2A44 !important; }
+[data-theme="dark"] .nb-panel-title,
+[data-theme="dark"] .nb-empty-title,
+[data-theme="dark"] .nb-item-title               { color: #E4EAF5 !important; }
+[data-theme="dark"] .nb-refresh,
+[data-theme="dark"] .nb-empty-sub                { color: #9AAAC9 !important; }
+[data-theme="dark"] .nb-empty-icon               { color: #34D399 !important; background: rgba(16,185,129,0.14) !important; }
+[data-theme="dark"] .nb-item                     { background: #17223A !important; }
+[data-theme="dark"] .nb-item-msg                 { color: #B7C3DE !important; }
+[data-theme="dark"] .nb-item-icon--critical      { color: #F87171 !important; background: rgba(239,68,68,0.14) !important; }
+[data-theme="dark"] .nb-item-icon--warning       { color: #FBBF24 !important; background: rgba(217,119,6,0.14) !important; }
+[data-theme="dark"] .nb-item-count--critical     { color: #FCA5A5 !important; background: rgba(239,68,68,0.14) !important; }
+[data-theme="dark"] .nb-item-count--warning      { color: #FCD34D !important; background: rgba(217,119,6,0.14) !important; }
+
+/* ── AuditView.vue ────────────────────────────────────────────────────────── */
+[data-theme="dark"] .tl-item          { background: #1E3050 !important; }
+[data-theme="dark"] .tl-text,
+[data-theme="dark"] .tl-user,
+[data-theme="dark"] .tl-table         { color: #E4EAF5 !important; }
+[data-theme="dark"] .tl-meta          { color: #9AAAC9 !important; }
+[data-theme="dark"] .tl-reason        { color: #B7C3DE !important; }
+[data-theme="dark"] .tl-record        {
+  color: #93C5FD !important;
+  background: rgba(147,197,253,0.12) !important;
+  border-color: rgba(147,197,253,0.22) !important;
+}
+
+/* ── BackupView.vue ───────────────────────────────────────────────────────── */
+[data-theme="dark"] .backup-item      { background: #1C2A44 !important; }
+
+/* ── BiometricView.vue ────────────────────────────────────────────────────── */
+[data-theme="dark"] .bio-card              { background: #1C2A44 !important; }
+[data-theme="dark"] .bio-card-head,
+[data-theme="dark"] .upload-zone           { background: #17223A !important; }
+[data-theme="dark"] .upload-zone:hover     { background: rgba(99,102,241,0.14) !important; border-color: #3B82F6 !important; }
+[data-theme="dark"] .status-online         { color: #34D399 !important; }
+[data-theme="dark"] .status-offline        { color: #F87171 !important; }
+
+/* ── DashboardView.vue ────────────────────────────────────────────────────── */
+[data-theme="dark"] .analytics-card   { background: #1C2A44 !important; }
+[data-theme="dark"] .sc-vs            { color: #475569 !important; }
+[data-theme="dark"] .sc-sublabel,
+[data-theme="dark"] .f-search-icon,
+[data-theme="dark"] .empty-sub,
+[data-theme="dark"] .chart-empty,
+[data-theme="dark"] .campus-empty     { color: #9AAAC9 !important; }
+[data-theme="dark"] .bdl-item,
+[data-theme="dark"] .dl-item,
+[data-theme="dark"] .empty-title      { color: #B7C3DE !important; }
+[data-theme="dark"] .dl-dot--absent   { background: #1E3050 !important; }
+[data-theme="dark"] .tk-delta--up,
+[data-theme="dark"] .tk-chip--green   { color: #34D399 !important; background: rgba(16,185,129,0.14) !important; }
+[data-theme="dark"] .tk-delta--down,
+[data-theme="dark"] .tk-chip--red,
+[data-theme="dark"] .kpi-val--red     { color: #FCA5A5 !important; }
+[data-theme="dark"] .tk-delta--down,
+[data-theme="dark"] .tk-chip--red     { background: rgba(239,68,68,0.14) !important; }
+[data-theme="dark"] .tk-chip--blue    { color: #60A5FA !important; background: rgba(99,102,241,0.14) !important; }
+[data-theme="dark"] .tk-chip--gold,
+[data-theme="dark"] .cp-badge--gold   { color: #FCD34D !important; background: rgba(217,119,6,0.14) !important; }
+[data-theme="dark"] .kpi-val--green   { color: #6EE7B7 !important; }
+
+/* ── EmployeesView.vue ────────────────────────────────────────────────────── */
+[data-theme="dark"] .req              { color: #F87171 !important; }
+
+/* ── ReportsView.vue — live page only (the print/PDF template embedded as a
+   JS string further up the file is a standalone paper document and must
+   stay black-on-white regardless of the app's theme) ─────────────────────── */
+[data-theme="dark"] .legend-item      { color: #B7C3DE !important; }
+[data-theme="dark"] .tf-label         { color: #9AAAC9 !important; }
+[data-theme="dark"] .af-note          { color: #B7C3DE !important; }
+
+/* ── SystemHealthView.vue ─────────────────────────────────────────────────── */
+[data-theme="dark"] .sh-stat-label,
+[data-theme="dark"] .sh-stat-tag,
+[data-theme="dark"] .sh-th            { color: #9AAAC9 !important; }
+[data-theme="dark"] .sh-stat-tag,
+[data-theme="dark"] .sh-icon-btn      { background: #22314D !important; }
+[data-theme="dark"] .sh-row           { background: #17223A !important; }
+[data-theme="dark"] .sh-occ-tag       { color: #A5B4FC !important; background: rgba(99,102,241,0.14) !important; }
+[data-theme="dark"] .sh-badge--critical    { color: #FCA5A5 !important; background: rgba(239,68,68,0.14) !important; }
+[data-theme="dark"] .sh-badge--warning     { color: #FCD34D !important; background: rgba(217,119,6,0.14) !important; }
+[data-theme="dark"] .sh-badge--info,
+[data-theme="dark"] .sh-badge--new         { color: #60A5FA !important; background: rgba(59,130,246,0.14) !important; }
+[data-theme="dark"] .sh-badge--acknowledged { color: #C4B5FD !important; background: rgba(147,51,234,0.14) !important; }
+[data-theme="dark"] .sh-badge--resolved    { color: #6EE7B7 !important; background: rgba(16,185,129,0.14) !important; }
+
+/* ── TrackingView.vue ─────────────────────────────────────────────────────── */
+[data-theme="dark"] .filter-label     { color: #9AAAC9 !important; }
+[data-theme="dark"] .tk-stat-value    { color: #E4EAF5 !important; }
+[data-theme="dark"] .tk-stat-label    { color: #B7C3DE !important; }

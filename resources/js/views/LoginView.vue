@@ -1,7 +1,7 @@
 <template>
   <div
     class="min-h-screen flex items-center justify-center relative overflow-hidden px-5 py-10"
-    style="background: linear-gradient(150deg, #0550A8 0%, #082E88 28%, #081A68 58%, #080E80 100%);"
+    style="background: linear-gradient(150deg, #2E4A8C 0%, #2A3C76 28%, #22305C 58%, #1B2A5E 100%);"
   >
 
     <!-- ── Ambient orbs ────────────────────────────────────────────────────── -->
@@ -58,7 +58,7 @@
     <!-- Gold shimmer line -->
     <div
       class="absolute left-0 right-0 h-px pointer-events-none"
-      style="top: 38%; background: linear-gradient(90deg, transparent 5%, rgba(201,162,39,0.14) 35%, rgba(201,162,39,0.26) 50%, rgba(201,162,39,0.14) 65%, transparent 95%);"
+      style="top: 38%; background: linear-gradient(90deg, transparent 5%, rgba(201, 162, 39,0.14) 35%, rgba(201, 162, 39,0.26) 50%, rgba(201, 162, 39,0.14) 65%, transparent 95%);"
     ></div>
 
     <!-- ── Centered card wrapper ───────────────────────────────────────────── -->
@@ -72,9 +72,9 @@
             :src="settings.logoUrl"
             :alt="settings.systemName"
             class="relative w-[80px] h-[80px] rounded-full object-cover"
-            style="box-shadow: 0 0 0 2.5px rgba(201,162,39,0.70), 0 0 0 7px rgba(201,162,39,0.12), 0 12px 44px rgba(0,0,0,0.55);"
+            style="box-shadow: 0 0 0 2.5px rgba(201, 162, 39,0.70), 0 0 0 7px rgba(201, 162, 39,0.12), 0 12px 44px rgba(0,0,0,0.55);"
           />
-          <span class="absolute -bottom-0.5 -right-0.5 w-3.5 h-3.5 rounded-full border-2 border-[#081A68] bg-emerald-400 pulse-dot"></span>
+          <span class="absolute -bottom-0.5 -right-0.5 w-3.5 h-3.5 rounded-full border-2 border-[#22305C] bg-emerald-400 pulse-dot"></span>
         </div>
 
         <h1 class="text-white text-[22px] font-extrabold tracking-[0.20em] uppercase leading-tight">{{ settings.systemName }}</h1>
@@ -94,7 +94,7 @@
       <div class="card-enter card-glass rounded-3xl overflow-hidden">
 
         <!-- Top accent bar: sky-blue → navy → gold -->
-        <div class="h-[3px] w-full" style="background: linear-gradient(90deg, #0284C7 0%, #0E1EC0 35%, #C9A227 70%, #F0C040 100%);"></div>
+        <div class="h-[3px] w-full" style="background: linear-gradient(90deg, #0284C7 0%, #2E4A8C 35%, #C9A227 70%, #E8C040 100%);"></div>
 
         <div class="px-8 pt-7 pb-8">
 
@@ -108,7 +108,7 @@
 
             <!-- Email -->
             <div>
-              <label class="block text-[10px] font-bold tracking-[0.18em] uppercase mb-2"
+              <label for="login-email" class="block text-[10px] font-bold tracking-[0.18em] uppercase mb-2"
                      style="color: rgba(168,184,232,0.52);">
                 Email Address
               </label>
@@ -118,6 +118,7 @@
                   :style="{ color: focused === 'email' ? '#C9A227' : 'rgba(168,184,232,0.32)' }"
                 />
                 <input
+                  id="login-email"
                   v-model="form.email"
                   type="email"
                   required
@@ -125,15 +126,16 @@
                   placeholder="you@nemsu-cantilan.edu.ph"
                   class="input-field w-full pl-10 pr-4 py-3 text-sm rounded-xl outline-none transition-all duration-200"
                   :style="inputStyle('email')"
+                  :aria-invalid="!!error"
                   @focus="focused = 'email'"
-                  @blur="focused = null"
+                  @blur="focused = null; form.email = form.email.trim()"
                 />
               </div>
             </div>
 
             <!-- Password -->
             <div>
-              <label class="block text-[10px] font-bold tracking-[0.18em] uppercase mb-2"
+              <label for="login-password" class="block text-[10px] font-bold tracking-[0.18em] uppercase mb-2"
                      style="color: rgba(168,184,232,0.52);">
                 Password
               </label>
@@ -143,15 +145,18 @@
                   :style="{ color: focused === 'pwd' ? '#C9A227' : 'rgba(168,184,232,0.32)' }"
                 />
                 <input
+                  id="login-password"
                   v-model="form.password"
                   :type="showPwd ? 'text' : 'password'"
                   required
                   autocomplete="current-password"
-                  placeholder="••••••••"
+                  placeholder="Enter your password"
                   class="input-field w-full pl-10 pr-11 py-3 text-sm rounded-xl outline-none transition-all duration-200"
                   :style="inputStyle('pwd')"
+                  :aria-invalid="!!error"
                   @focus="focused = 'pwd'"
                   @blur="focused = null"
+                  @keyup="capsLockOn = $event.getModifierState && $event.getModifierState('CapsLock')"
                 />
                 <button
                   type="button"
@@ -159,17 +164,28 @@
                   tabindex="-1"
                   class="absolute right-3.5 top-1/2 -translate-y-1/2 p-1 rounded-md transition-all duration-150"
                   :style="{ color: showPwd ? '#C9A227' : 'rgba(168,184,232,0.38)' }"
+                  :aria-label="showPwd ? 'Hide password' : 'Show password'"
+                  :aria-pressed="showPwd"
                 >
                   <EyeOffIcon v-if="showPwd" class="w-4 h-4" />
                   <EyeIcon    v-else          class="w-4 h-4" />
                 </button>
               </div>
+              <!-- Caps Lock warning — the single most common cause of a
+                   silently-wrong password on a login form. -->
+              <p v-if="capsLockOn" class="flex items-center gap-1.5 mt-1.5 text-[11px] font-medium" style="color: #FCD34D;">
+                <TriangleAlertIcon class="w-3 h-3 flex-shrink-0" />
+                Caps Lock is on
+              </p>
             </div>
 
             <!-- Remember me -->
             <div class="flex items-center gap-2.5 pt-0.5">
               <button
                 type="button"
+                role="checkbox"
+                :aria-checked="rememberMe"
+                aria-label="Remember me"
                 @click="rememberMe = !rememberMe"
                 class="remember-toggle flex-shrink-0"
                 :class="rememberMe ? 'remember-on' : 'remember-off'"
@@ -189,6 +205,8 @@
             <Transition name="err">
               <div
                 v-if="error"
+                role="alert"
+                aria-live="assertive"
                 class="flex items-start gap-2.5 px-4 py-3 rounded-xl text-sm"
                 style="background: rgba(220,38,38,0.12); border: 1px solid rgba(220,38,38,0.28); color: #FCA5A5;"
               >
@@ -208,14 +226,14 @@
                 class="absolute inset-0 opacity-0 group-hover:opacity-100 transition-opacity duration-300 pointer-events-none"
                 style="background: linear-gradient(135deg, rgba(255,255,255,0.20) 0%, transparent 60%);"
               ></div>
-              <span v-if="loading" class="relative flex items-center justify-center gap-2.5 text-[#081A68]">
+              <span v-if="loading" class="relative flex items-center justify-center gap-2.5 text-[#22305C]">
                 <svg class="w-4 h-4 animate-spin" fill="none" viewBox="0 0 24 24">
                   <circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"/>
                   <path class="opacity-80" fill="currentColor" d="M4 12a8 8 0 018-8v8H4z"/>
                 </svg>
                 Authenticating…
               </span>
-              <span v-else class="relative flex items-center justify-center gap-2 text-[#081A68]">
+              <span v-else class="relative flex items-center justify-center gap-2 text-[#22305C]">
                 Sign In
                 <ArrowRightIcon class="w-4 h-4 transition-transform duration-200 group-hover:translate-x-1" />
               </span>
@@ -227,7 +245,7 @@
           <div class="mt-6 pt-5" style="border-top: 1px solid rgba(255,255,255,0.07);">
             <p class="text-center text-[10.5px]" style="color: rgba(168,184,232,0.28);">
               Authorized personnel only &nbsp;&middot;&nbsp;
-              <span style="color: rgba(201,162,39,0.52);">© {{ currentYear }} {{ settings.systemName }} Cantilan Campus</span>
+              <span style="color: rgba(201, 162, 39,0.52);">© {{ currentYear }} {{ settings.systemName }} Cantilan Campus</span>
             </p>
           </div>
         </div>
@@ -258,6 +276,7 @@ import {
   AlertCircle   as AlertCircleIcon,
   ArrowRight    as ArrowRightIcon,
   Check         as CheckIcon,
+  TriangleAlert as TriangleAlertIcon,
 } from 'lucide-vue-next';
 
 const auth     = useAuthStore();
@@ -271,6 +290,7 @@ const error      = ref('');
 const showPwd    = ref(false);
 const focused    = ref(null);
 const rememberMe = ref(true);
+const capsLockOn = ref(false);
 
 const currentYear = new Date().getFullYear();
 
@@ -278,21 +298,22 @@ function inputStyle(field) {
   const active = focused.value === field;
   return {
     background: active ? 'rgba(255,255,255,0.10)' : 'rgba(255,255,255,0.055)',
-    border:     `1.5px solid ${active ? 'rgba(201,162,39,0.65)' : 'rgba(255,255,255,0.10)'}`,
-    boxShadow:  active ? '0 0 0 3px rgba(201,162,39,0.12)' : 'none',
+    border:     `1.5px solid ${active ? 'rgba(201, 162, 39,0.65)' : 'rgba(255,255,255,0.10)'}`,
+    boxShadow:  active ? '0 0 0 3px rgba(201, 162, 39,0.12)' : 'none',
     color:      '#FFFFFF',
   };
 }
 
 const btnStyle = computed(() => ({
-  background:     'linear-gradient(135deg, #C9A227, #E8B830, #C9A227)',
+  background:     'linear-gradient(135deg, #C9A227, #E8C040, #C9A227)',
   backgroundSize: '200% 100%',
-  boxShadow:      loading.value ? 'none' : '0 4px 28px rgba(201,162,39,0.45), 0 2px 8px rgba(0,0,0,0.25)',
+  boxShadow:      loading.value ? 'none' : '0 4px 28px rgba(201, 162, 39,0.45), 0 2px 8px rgba(0,0,0,0.25)',
 }));
 
 async function handleLogin() {
   error.value   = '';
   loading.value = true;
+  form.email    = form.email.trim();
   try {
     await auth.login(form.email, form.password, rememberMe.value);
     const redirect = route.query.redirect;
@@ -325,7 +346,7 @@ async function handleLogin() {
 }
 .orb-2 {
   width: 460px; height: 460px;
-  background: radial-gradient(circle, rgba(201,162,39,0.42), transparent 70%);
+  background: radial-gradient(circle, rgba(201, 162, 39,0.42), transparent 70%);
   top: 30%; right: -180px;
   opacity: 0.20;
   animation: drift 26s ease-in-out infinite reverse;
@@ -361,7 +382,7 @@ async function handleLogin() {
   border: 1px solid rgba(255,255,255,0.06);
 }
 .ring-1 { width: 260px; height: 260px; top: 0;    left: 0;    }
-.ring-2 { width: 400px; height: 400px; top: -70px; left: -70px; border-color: rgba(201,162,39,0.07); }
+.ring-2 { width: 400px; height: 400px; top: -70px; left: -70px; border-color: rgba(201, 162, 39,0.07); }
 .ring-3 { width: 540px; height: 540px; top: -140px; left: -140px; border-color: rgba(255,255,255,0.03); }
 
 /* ── Card float ───────────────────────────────────────────────────────────── */
@@ -390,7 +411,7 @@ async function handleLogin() {
 
 /* ── Logo glow ────────────────────────────────────────────────────────────── */
 .logo-glow {
-  background: radial-gradient(circle, rgba(201,162,39,0.40), transparent 65%);
+  background: radial-gradient(circle, rgba(201, 162, 39,0.40), transparent 65%);
   filter: blur(14px);
   animation: glowPulse 4s ease-in-out infinite;
   transform: scale(1.5);
@@ -441,19 +462,35 @@ async function handleLogin() {
   border: 1.5px solid rgba(255,255,255,0.18);
 }
 .remember-off:hover {
-  border-color: rgba(201,162,39,0.50);
-  background: rgba(201,162,39,0.08);
+  border-color: rgba(201, 162, 39,0.50);
+  background: rgba(201, 162, 39,0.08);
 }
 .remember-on {
   background: #C9A227;
   border: 1.5px solid #C9A227;
-  color: #081A68;
-  box-shadow: 0 0 0 3px rgba(201,162,39,0.18);
+  color: #22305C;
+  box-shadow: 0 0 0 3px rgba(201, 162, 39,0.18);
 }
 
 /* ── Input ────────────────────────────────────────────────────────────────── */
 .input-field::placeholder {
   color: rgba(168, 184, 232, 0.26);
+}
+
+/* Chrome/Edge force a light autofill background that can't be overridden
+   via background-color directly — this is the standard workaround: an
+   absurdly long background-color transition delays the forced repaint
+   indefinitely, and the inset box-shadow paints over it in the meantime.
+   Without this, a saved/autofilled credential would flash a jarring
+   white-on-dark box that clashes with the glass card. */
+.input-field:-webkit-autofill,
+.input-field:-webkit-autofill:hover,
+.input-field:-webkit-autofill:focus {
+  -webkit-text-fill-color: #FFFFFF;
+  -webkit-box-shadow: 0 0 0px 1000px rgba(30, 44, 84, 0.85) inset;
+  box-shadow: 0 0 0px 1000px rgba(30, 44, 84, 0.85) inset;
+  transition: background-color 9999s ease-in-out 0s;
+  caret-color: #FFFFFF;
 }
 
 /* ── Error transition ─────────────────────────────────────────────────────── */

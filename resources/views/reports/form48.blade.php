@@ -54,10 +54,7 @@ html, body {
   font-size: 7.5pt;
   margin-bottom: 1pt;
 }
-.info-tbl td {
-  padding: 1.5pt 0;
-  vertical-align: bottom;
-}
+.info-tbl td { padding: 1.5pt 0; vertical-align: bottom; }
 .lbl { white-space: nowrap; padding-right: 2pt; }
 .val {
   border-bottom: 1pt solid #000;
@@ -65,9 +62,8 @@ html, body {
   display: inline-block;
   padding: 0 2pt;
 }
-.val-lg  { min-width: 115pt; }
-.val-md  { min-width: 80pt; }
-.val-sm  { min-width: 30pt; }
+.val-name  { min-width: 130pt; }
+.val-month { min-width: 70pt; }
 
 /* ── Office hours ─────────────────────────────── */
 .oh-tbl {
@@ -159,22 +155,13 @@ $shiftAftIn  = optional($employee->shift)->afternoon_in  ? \Carbon\Carbon::parse
 $shiftAftOut = optional($employee->shift)->afternoon_out ? \Carbon\Carbon::parse($employee->shift->afternoon_out)->format('h:i') : '05:00';
 
 // Totals
-$lateMins  = (int)($totals['tardiness_minutes'] ?? 0);
+$lateMins = (int)($totals['tardiness_minutes'] ?? 0);
 
-// Employee info (uppercase to match photo)
+// Employee info (uppercase to match the CSC form convention)
 $empName = strtoupper($employee->full_name);
-$empPos  = strtoupper($employee->position ?? '');
-$empDept = strtoupper($employee->department?->name ?? '');
 
-// Employee photo (base64 for DomPDF inline embedding)
-$empPhoto = '';
-if (!empty($employee->photo_path)) {
-    $photoPath = storage_path('app/public/' . ltrim($employee->photo_path, '/'));
-    if (file_exists($photoPath)) {
-        $mime     = mime_content_type($photoPath);
-        $empPhoto = 'data:' . $mime . ';base64,' . base64_encode(file_get_contents($photoPath));
-    }
-}
+// "January - 2026" per the CSC form's month/year format
+$monthYearLabel = \Carbon\Carbon::create($year, $month)->format('F') . ' - ' . $year;
 
 // Director by campus code
 $directors = [
@@ -195,31 +182,27 @@ $director   = $directors[$campusCode] ?? ['name' => '', 'title' => 'Campus Direc
   {{-- ══ LEFT COPY ══ --}}
   <td class="copy copy-left">
     @include('reports._form48_copy', [
-      'empName'     => $empName,
-      'empPos'      => $empPos,
-      'empDept'     => $empDept,
-      'empPhoto'    => $empPhoto,
-      'shiftMorIn'  => $shiftMorIn,
-      'shiftMorOut' => $shiftMorOut,
-      'shiftAftIn'  => $shiftAftIn,
-      'shiftAftOut' => $shiftAftOut,
-      'lateMins'    => $lateMins,
-      'director'    => $director,
+      'empName'        => $empName,
+      'monthYearLabel' => $monthYearLabel,
+      'shiftMorIn'     => $shiftMorIn,
+      'shiftMorOut'    => $shiftMorOut,
+      'shiftAftIn'     => $shiftAftIn,
+      'shiftAftOut'    => $shiftAftOut,
+      'lateMins'       => $lateMins,
+      'director'       => $director,
     ])
   </td>
   {{-- ══ RIGHT COPY ══ --}}
   <td class="copy copy-right">
     @include('reports._form48_copy', [
-      'empName'     => $empName,
-      'empPos'      => $empPos,
-      'empDept'     => $empDept,
-      'empPhoto'    => $empPhoto,
-      'shiftMorIn'  => $shiftMorIn,
-      'shiftMorOut' => $shiftMorOut,
-      'shiftAftIn'  => $shiftAftIn,
-      'shiftAftOut' => $shiftAftOut,
-      'lateMins'    => $lateMins,
-      'director'    => $director,
+      'empName'        => $empName,
+      'monthYearLabel' => $monthYearLabel,
+      'shiftMorIn'     => $shiftMorIn,
+      'shiftMorOut'    => $shiftMorOut,
+      'shiftAftIn'     => $shiftAftIn,
+      'shiftAftOut'    => $shiftAftOut,
+      'lateMins'       => $lateMins,
+      'director'       => $director,
     ])
   </td>
 </tr>

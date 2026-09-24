@@ -18,40 +18,40 @@
 
         <!-- Summary cards -->
         <div class="grid grid-cols-2 sm:grid-cols-4 gap-4">
-          <div class="sh-stat-card">
-            <div class="sh-stat-icon" style="background:#FEF2F2;">
-              <ShieldAlertIcon class="w-4 h-4" style="color:#DC2626;" />
+          <div class="stat-tile" style="--stat-color:#DC2626;--stat-glow:rgba(220,38,38,0.28);">
+            <div class="stat-tile-icon">
+              <ShieldAlertIcon class="w-4 h-4" />
             </div>
             <div>
               <p class="sh-stat-label">Critical <span class="sh-stat-tag">new</span></p>
-              <p class="sh-stat-value">{{ summary.critical ?? 0 }}</p>
+              <p class="stat-tile-value">{{ summary.critical ?? 0 }}</p>
             </div>
           </div>
-          <div class="sh-stat-card">
-            <div class="sh-stat-icon" style="background:#FFFBEB;">
-              <AlertTriangleIcon class="w-4 h-4" style="color:#D97706;" />
+          <div class="stat-tile" style="--stat-color:#D97706;--stat-glow:rgba(217,119,6,0.28);">
+            <div class="stat-tile-icon">
+              <AlertTriangleIcon class="w-4 h-4" />
             </div>
             <div>
               <p class="sh-stat-label">Errors &amp; Warnings <span class="sh-stat-tag">new</span></p>
-              <p class="sh-stat-value">{{ summary.warnings ?? 0 }}</p>
+              <p class="stat-tile-value">{{ summary.warnings ?? 0 }}</p>
             </div>
           </div>
-          <div class="sh-stat-card">
-            <div class="sh-stat-icon" style="background:#F5F3FF;">
-              <EyeIcon class="w-4 h-4" style="color:#6D28D9;" />
+          <div class="stat-tile" style="--stat-color:#6D28D9;--stat-glow:rgba(109,40,217,0.28);">
+            <div class="stat-tile-icon">
+              <EyeIcon class="w-4 h-4" />
             </div>
             <div>
               <p class="sh-stat-label">Acknowledged</p>
-              <p class="sh-stat-value">{{ summary.acknowledged ?? 0 }}</p>
+              <p class="stat-tile-value">{{ summary.acknowledged ?? 0 }}</p>
             </div>
           </div>
-          <div class="sh-stat-card">
-            <div class="sh-stat-icon" style="background:#ECFDF5;">
-              <CircleCheckBigIcon class="w-4 h-4" style="color:#059669;" />
+          <div class="stat-tile" style="--stat-color:#059669;--stat-glow:rgba(5,150,105,0.28);">
+            <div class="stat-tile-icon">
+              <CircleCheckBigIcon class="w-4 h-4" />
             </div>
             <div>
               <p class="sh-stat-label">Resolved</p>
-              <p class="sh-stat-value">{{ summary.resolved ?? 0 }}</p>
+              <p class="stat-tile-value">{{ summary.resolved ?? 0 }}</p>
             </div>
           </div>
         </div>
@@ -59,7 +59,7 @@
         <!-- Filter bar -->
         <div class="bg-white rounded-xl px-4 py-3 flex flex-wrap items-center gap-3" style="border:1px solid #E5E7EB;">
           <div class="relative flex-1 min-w-[200px]">
-            <SearchIcon class="w-4 h-4 absolute left-3 top-1/2 -translate-y-1/2" style="color:#9CA3AF;" />
+            <SearchIcon class="w-4 h-4 absolute left-3 top-1/2 -translate-y-1/2" style="color:#6B7A94;" />
             <input
               v-model="filters.search"
               type="text"
@@ -101,7 +101,7 @@
             <button @click="bulkDelete" class="sh-bulk-btn" style="background:#FEF2F2;color:#DC2626;border:1px solid #FECACA;">
               <Trash2Icon class="w-3.5 h-3.5" /> Delete
             </button>
-            <button @click="selected.clear()" class="text-xs font-medium ml-1" style="color:#94A3B8;">Clear selection</button>
+            <button @click="selected.clear()" class="text-xs font-medium ml-1" style="color:#6B7A94;">Clear selection</button>
           </template>
           <template v-else>
             <button
@@ -171,7 +171,7 @@
                     <td class="px-3 py-3 text-xs" style="color:#64748B;">{{ typeLabel(log.type) }}</td>
                     <td class="px-3 py-3 max-w-[380px]">
                       <p class="text-xs font-medium truncate" style="color:#0F172A;" :title="log.message">{{ log.message }}</p>
-                      <p v-if="log.file" class="text-[11px] font-mono mt-0.5 truncate" style="color:#94A3B8;">
+                      <p v-if="log.file" class="text-[11px] font-mono mt-0.5 truncate" style="color:#6B7A94;">
                         {{ log.file }}<span v-if="log.line">:{{ log.line }}</span>
                         <span v-if="log.occurrences > 1" class="sh-occ-tag">×{{ log.occurrences }}</span>
                       </p>
@@ -193,7 +193,7 @@
                         <button @click="removeOne(log)" class="sh-icon-btn" style="color:#DC2626;" title="Delete">
                           <Trash2Icon class="w-3.5 h-3.5" />
                         </button>
-                        <ChevronDownIcon class="w-4 h-4 transition-transform duration-200 ml-1" :class="expanded === log.id ? 'rotate-180' : ''" style="color:#9CA3AF;" />
+                        <ChevronDownIcon class="w-4 h-4 transition-transform duration-200 ml-1" :class="expanded === log.id ? 'rotate-180' : ''" style="color:#6B7A94;" />
                       </div>
                     </td>
                   </tr>
@@ -201,13 +201,13 @@
                   <tr v-if="expanded === log.id" style="background:#F8FAFC;border-bottom:1px solid #F1F5F9;">
                     <td colspan="7" class="px-6 py-4 space-y-3">
                       <div class="grid grid-cols-2 sm:grid-cols-4 gap-3 text-xs">
-                        <div><span style="color:#9CA3AF;">First seen</span><p class="font-mono mt-0.5" style="color:#0F172A;">{{ log.created_at }}</p></div>
-                        <div><span style="color:#9CA3AF;">Last seen</span><p class="font-mono mt-0.5" style="color:#0F172A;">{{ log.last_seen_at ?? '—' }}</p></div>
-                        <div><span style="color:#9CA3AF;">Acknowledged by</span><p class="mt-0.5" style="color:#0F172A;">{{ log.acknowledged_by ?? '—' }}</p></div>
-                        <div><span style="color:#9CA3AF;">Resolved by</span><p class="mt-0.5" style="color:#0F172A;">{{ log.resolved_by ?? '—' }}</p></div>
+                        <div><span style="color:#6B7A94;">First seen</span><p class="font-mono mt-0.5" style="color:#0F172A;">{{ log.created_at }}</p></div>
+                        <div><span style="color:#6B7A94;">Last seen</span><p class="font-mono mt-0.5" style="color:#0F172A;">{{ log.last_seen_at ?? '—' }}</p></div>
+                        <div><span style="color:#6B7A94;">Acknowledged by</span><p class="mt-0.5" style="color:#0F172A;">{{ log.acknowledged_by ?? '—' }}</p></div>
+                        <div><span style="color:#6B7A94;">Resolved by</span><p class="mt-0.5" style="color:#0F172A;">{{ log.resolved_by ?? '—' }}</p></div>
                       </div>
                       <div v-if="log.trace">
-                        <p class="text-[11px] font-semibold uppercase tracking-wider mb-1.5" style="color:#9CA3AF;">Stack Trace</p>
+                        <p class="text-[11px] font-semibold uppercase tracking-wider mb-1.5" style="color:#6B7A94;">Stack Trace</p>
                         <pre class="text-[11px] font-mono p-3 rounded-lg overflow-x-auto" style="background:#0F172A;color:#CBD5E1;max-height:220px;">{{ log.trace }}</pre>
                       </div>
                     </td>
@@ -433,21 +433,13 @@ onMounted(() => load(1));
 </script>
 
 <style scoped>
-/* ── Summary cards ───────────────────────────────────── */
-.sh-stat-card {
-  background: #fff; border: 1px solid #E5E7EB; border-radius: 12px;
-  padding: 14px 16px; display: flex; align-items: center; gap: 12px;
-}
-.sh-stat-icon {
-  width: 36px; height: 36px; border-radius: 10px; flex-shrink: 0;
-  display: flex; align-items: center; justify-content: center;
-}
-.sh-stat-label { font-size: 11px; font-weight: 500; color: #9CA3AF; display: flex; align-items: center; gap: 5px; }
+/* ── Summary cards (icon/value/wrap now come from the shared .stat-tile
+     classes in app.css; only the label + "new" tag stay page-specific) ── */
+.sh-stat-label { font-size: 11px; font-weight: 500; color: #6B7A94; display: flex; align-items: center; gap: 5px; }
 .sh-stat-tag {
   font-size: 9px; font-weight: 700; text-transform: uppercase; letter-spacing: 0.04em;
-  color: #94A3B8; background: #F1F5F9; padding: 1px 5px; border-radius: 4px;
+  color: #6B7A94; background: #F1F5F9; padding: 1px 5px; border-radius: 4px;
 }
-.sh-stat-value { font-size: 22px; font-weight: 800; color: #0F172A; line-height: 1.2; }
 
 /* ── Filter bar ──────────────────────────────────────── */
 .sh-filter-input {
@@ -455,7 +447,7 @@ onMounted(() => load(1));
   padding: 7px 12px; color: #0F172A; background: #fff;
   transition: border-color 0.15s, box-shadow 0.15s;
 }
-.sh-filter-input:focus { outline: none; border-color: #0E1EC0; box-shadow: 0 0 0 3px rgba(14,30,192,0.08); }
+.sh-filter-input:focus { outline: none; border-color: #2E4A8C; box-shadow: 0 0 0 3px rgba(46, 74, 140,0.08); }
 
 /* ── Bulk action buttons ─────────────────────────────── */
 .sh-bulk-btn {
@@ -466,10 +458,10 @@ onMounted(() => load(1));
 .sh-bulk-btn:hover:not(:disabled) { filter: brightness(0.97); }
 
 /* ── Table ───────────────────────────────────────────── */
-.sh-th { font-size: 10.5px; font-weight: 700; text-transform: uppercase; letter-spacing: 0.06em; color: #9CA3AF; }
+.sh-th { font-size: 10.5px; font-weight: 700; text-transform: uppercase; letter-spacing: 0.06em; color: #6B7A94; }
 .sh-row { border-bottom: 1px solid #F9FAFB; cursor: pointer; transition: background 0.12s; }
 .sh-row:hover { background: #FAFAFA; }
-.sh-checkbox { width: 15px; height: 15px; border-radius: 4px; accent-color: #0E1EC0; cursor: pointer; }
+.sh-checkbox { width: 15px; height: 15px; border-radius: 4px; accent-color: #2E4A8C; cursor: pointer; }
 
 .sh-occ-tag {
   display: inline-block; margin-left: 6px; padding: 0 5px; border-radius: 4px;

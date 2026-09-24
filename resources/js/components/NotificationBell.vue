@@ -27,7 +27,7 @@
           </div>
 
           <div v-if="loading && !loaded" class="nb-state">
-            <Loader2Icon class="w-5 h-5 animate-spin" style="color:#94A3B8;" />
+            <Loader2Icon class="w-5 h-5 animate-spin" style="color:#6B7A94;" />
           </div>
 
           <div v-else-if="alerts.length === 0" class="nb-state">
@@ -182,7 +182,7 @@ onBeforeUnmount(() => {
 }
 .nb-trigger:hover { background: rgba(255,255,255,0.18); border-color: rgba(255,255,255,0.32); }
 .nb-trigger:active { transform: scale(0.94); }
-.nb-trigger--active { background: rgba(255,255,255,0.18) !important; border-color: rgba(201,162,39,0.6) !important; box-shadow: 0 0 0 3px rgba(201,162,39,0.16); }
+.nb-trigger--active { background: rgba(255,255,255,0.18) !important; border-color: rgba(201, 162, 39,0.6) !important; box-shadow: 0 0 0 3px rgba(201, 162, 39,0.16); }
 .nb-trigger--critical { animation: nb-ring 2.2s ease-in-out infinite; }
 @keyframes nb-ring {
   0%, 100% { box-shadow: 0 0 0 0 rgba(220,38,38,0.35); }
@@ -209,7 +209,7 @@ onBeforeUnmount(() => {
   width: 340px; max-width: calc(100vw - 32px);
   background: #fff; border-radius: 14px;
   border: 1px solid #E4E9F2;
-  box-shadow: 0 16px 40px rgba(8,14,128,0.16), 0 4px 12px rgba(8,14,128,0.08);
+  box-shadow: 0 16px 40px rgba(27, 42, 94,0.16), 0 4px 12px rgba(27, 42, 94,0.08);
   overflow: hidden; z-index: 200;
 }
 .nb-panel-head {
@@ -218,7 +218,7 @@ onBeforeUnmount(() => {
 }
 .nb-panel-title { font-size: 13px; font-weight: 700; color: #0F172A; }
 .nb-refresh {
-  width: 24px; height: 24px; border-radius: 6px; color: #94A3B8;
+  width: 24px; height: 24px; border-radius: 6px; color: #6B7A94;
   display: flex; align-items: center; justify-content: center;
   transition: background 0.15s, color 0.15s;
 }
@@ -232,7 +232,7 @@ onBeforeUnmount(() => {
   display: flex; align-items: center; justify-content: center;
 }
 .nb-empty-title { font-size: 12.5px; font-weight: 600; color: #0F172A; }
-.nb-empty-sub   { font-size: 11.5px; color: #94A3B8; max-width: 220px; line-height: 1.4; }
+.nb-empty-sub   { font-size: 11.5px; color: #6B7A94; max-width: 220px; line-height: 1.4; }
 
 /* ── List items ───────────────────────────────────────── */
 .nb-list { max-height: 360px; overflow-y: auto; padding: 6px; }

@@ -42,7 +42,7 @@ defineProps({
   padding: 18px 24px;
   overflow: hidden;
   flex-shrink: 0;
-  background: linear-gradient(135deg, #080E80 0%, #1020BC 55%, #0E1EC0 100%);
+  background: linear-gradient(135deg, #1B2A5E 0%, #2A3C76 55%, #2E4A8C 100%);
 }
 
 /* Dot-grid texture */
@@ -60,7 +60,7 @@ defineProps({
   background: linear-gradient(
     108deg,
     transparent 35%,
-    rgba(201,162,39,0.07) 50%,
+    rgba(201, 162, 39,0.07) 50%,
     transparent 65%
   );
   transform: skewX(-6deg);
@@ -81,17 +81,17 @@ defineProps({
 .ph-icon-badge {
   width: 44px; height: 44px;
   border-radius: 12px; flex-shrink: 0;
-  background: rgba(201,162,39,0.14);
-  border: 1px solid rgba(201,162,39,0.32);
+  background: rgba(201, 162, 39,0.14);
+  border: 1px solid rgba(201, 162, 39,0.32);
   display: flex; align-items: center; justify-content: center;
   color: #C9A227;
-  box-shadow: 0 0 0 4px rgba(201,162,39,0.06);
+  box-shadow: 0 0 0 4px rgba(201, 162, 39,0.06);
 }
 
 .ph-crumb {
   font-size: 9.5px; font-weight: 700;
   text-transform: uppercase; letter-spacing: 0.15em;
-  color: rgba(201,162,39,0.55);
+  color: rgba(201, 162, 39,0.55);
   margin-bottom: 4px;
 }
 
@@ -104,7 +104,7 @@ defineProps({
 
 .ph-sub {
   font-size: 12px; margin-top: 4px;
-  color: rgba(157,173,216,0.75);
+  color: rgba(157, 173, 216,0.75);
   line-height: 1.4;
 }
 
@@ -134,13 +134,13 @@ defineProps({
 
 /* Primary accent button (add/create) — gold style */
 .ph-actions :deep(.ph-btn-primary) {
-  background: rgba(201,162,39,0.2) !important;
-  border-color: rgba(201,162,39,0.45) !important;
+  background: rgba(201, 162, 39,0.2) !important;
+  border-color: rgba(201, 162, 39,0.45) !important;
   color: #E8C040 !important;
 }
 .ph-actions :deep(.ph-btn-primary:hover:not(:disabled)) {
-  background: rgba(201,162,39,0.32) !important;
-  border-color: rgba(201,162,39,0.65) !important;
+  background: rgba(201, 162, 39,0.32) !important;
+  border-color: rgba(201, 162, 39,0.65) !important;
 }
 
 /* ── Mobile ─────────────────────────────────────────── */

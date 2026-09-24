@@ -5,7 +5,7 @@
         <Transition name="cp-pop" appear>
           <div class="cp-panel" role="dialog" aria-modal="true" aria-label="Quick search">
             <div class="cp-input-row">
-              <SearchIcon class="w-4 h-4 flex-shrink-0" style="color:#94A3B8;" />
+              <SearchIcon class="w-4 h-4 flex-shrink-0" style="color:#6B7A94;" />
               <input
                 ref="inputEl"
                 v-model="query"
@@ -39,7 +39,7 @@
               <div v-if="query.trim().length >= 2" class="cp-section">
                 <p class="cp-section-label">Employees</p>
                 <div v-if="searching" class="cp-loading">
-                  <Loader2Icon class="w-4 h-4 animate-spin" style="color:#94A3B8;" />
+                  <Loader2Icon class="w-4 h-4 animate-spin" style="color:#6B7A94;" />
                 </div>
                 <template v-else-if="employees.length">
                   <button
@@ -125,7 +125,7 @@ const debouncedQuery = useDebounce(query, 220);
 const PAGES = [
   { name: 'dashboard',      label: 'Dashboard',      icon: LayoutDashboardIcon, roles: 'all' },
   { name: 'attendance',     label: 'Attendance',     icon: ClockIcon,           roles: 'all' },
-  { name: 'employees',      label: 'Employees',      icon: UsersIcon,           roles: 'all' },
+  { name: 'employees',      label: 'Employee Logs',  icon: UsersIcon,           roles: 'all' },
   { name: 'tracking',       label: 'Tracking',       icon: BarChart2Icon,       roles: 'all' },
   { name: 'reports',        label: 'Reports',        icon: FileTextIcon,        roles: 'all' },
   { name: 'corrections',    label: 'DTR Corrections',icon: ClipboardEditIcon,   roles: 'all' },
@@ -254,9 +254,9 @@ onBeforeUnmount(() => window.removeEventListener('keydown', onGlobalKeydown));
   flex: 1; border: none; outline: none;
   font-size: 15px; color: #0F172A; background: transparent;
 }
-.cp-input::placeholder { color: #94A3B8; }
+.cp-input::placeholder { color: #6B7A94; }
 .cp-esc {
-  font-size: 10px; font-weight: 600; color: #94A3B8;
+  font-size: 10px; font-weight: 600; color: #6B7A94;
   border: 1px solid #E4E9F2; border-radius: 5px; padding: 2px 6px;
   font-family: inherit; flex-shrink: 0;
 }
@@ -265,7 +265,7 @@ onBeforeUnmount(() => window.removeEventListener('keydown', onGlobalKeydown));
 .cp-section + .cp-section { margin-top: 4px; }
 .cp-section-label {
   font-size: 10px; font-weight: 700; text-transform: uppercase; letter-spacing: 0.08em;
-  color: #94A3B8; padding: 8px 10px 4px;
+  color: #6B7A94; padding: 8px 10px 4px;
 }
 
 .cp-item {
@@ -290,16 +290,16 @@ onBeforeUnmount(() => window.removeEventListener('keydown', onGlobalKeydown));
   color: #fff; font-size: 11px; font-weight: 700;
 }
 .cp-item-body { flex: 1; min-width: 0; display: flex; flex-direction: column; gap: 1px; }
-.cp-item-sub { font-size: 11px; color: #94A3B8; font-family: ui-monospace, monospace; }
+.cp-item-sub { font-size: 11px; color: #6B7A94; font-family: ui-monospace, monospace; }
 
-.cp-loading, .cp-empty { padding: 16px 10px; text-align: center; font-size: 12.5px; color: #94A3B8; }
+.cp-loading, .cp-empty { padding: 16px 10px; text-align: center; font-size: 12.5px; color: #6B7A94; }
 
 .cp-footer {
   display: flex; align-items: center; gap: 14px;
   padding: 9px 16px; border-top: 1px solid #F1F5F9;
   background: #FAFBFF; flex-shrink: 0;
 }
-.cp-hint { display: inline-flex; align-items: center; gap: 4px; font-size: 10.5px; color: #94A3B8; }
+.cp-hint { display: inline-flex; align-items: center; gap: 4px; font-size: 10.5px; color: #6B7A94; }
 .cp-hint kbd {
   font-family: inherit; font-size: 10px; font-weight: 600; color: #64748B;
   background: #fff; border: 1px solid #E4E9F2; border-radius: 4px; padding: 1px 5px;

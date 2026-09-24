@@ -21,7 +21,7 @@
           @click="activeTab = tab.key"
           class="py-3 text-sm font-medium border-b-2 transition-colors"
           :class="activeTab === tab.key
-            ? 'border-[#C9A227] text-[#0E1EC0]'
+            ? 'border-[#C9A227] text-[#2E4A8C]'
             : 'border-transparent text-[#64748B] hover:text-[#0F172A]'"
         >
           {{ tab.label }}
@@ -77,13 +77,13 @@
 
         <!-- Stats strip -->
         <div v-if="punchLogs.length" class="grid grid-cols-4 gap-3">
-          <div v-for="s in punchStats" :key="s.label" class="bg-white border border-[#E2E8F0] rounded-xl px-4 py-3 flex items-center gap-3">
-            <div class="w-9 h-9 rounded-lg flex items-center justify-center flex-shrink-0" :class="s.iconBg">
-              <component :is="s.icon" class="w-5 h-5" :class="s.iconColor" />
+          <div v-for="s in punchStats" :key="s.label" class="stat-tile" :style="statVars(s.color)">
+            <div class="stat-tile-icon">
+              <component :is="s.icon" class="w-5 h-5" />
             </div>
             <div>
-              <p class="text-xl font-semibold text-[#0F172A] leading-none">{{ s.value }}</p>
-              <p class="text-xs text-[#64748B] mt-0.5">{{ s.label }}</p>
+              <p class="stat-tile-value">{{ s.value }}</p>
+              <p class="stat-tile-label">{{ s.label }}</p>
             </div>
           </div>
         </div>
@@ -140,7 +140,7 @@
                     </div>
                     <div>
                       <p class="font-medium text-[#0F172A] leading-tight">{{ log.name }}</p>
-                      <p class="text-xs text-[#94A3B8] font-mono">{{ log.employee_id }}</p>
+                      <p class="text-xs text-[#6B7A94] font-mono">{{ log.employee_id }}</p>
                     </div>
                   </div>
                 </td>
@@ -159,7 +159,7 @@
                 <td class="td-cell text-[#64748B] font-mono text-xs">{{ log.device_id ?? '—' }}</td>
                 <td class="td-cell text-[#64748B] text-xs max-w-[160px] truncate">{{ log.remarks ?? '—' }}</td>
                 <td v-if="auth.isAdmin || auth.isHrOfficer" class="td-cell text-center">
-                  <button @click="confirmDelete(log)" class="p-1.5 rounded-md text-[#94A3B8] hover:text-[#EF4444] hover:bg-red-50 transition-colors">
+                  <button @click="confirmDelete(log)" class="p-1.5 rounded-md text-[#6B7A94] hover:text-[#EF4444] hover:bg-red-50 transition-colors">
                     <Trash2Icon class="w-4 h-4" />
                   </button>
                 </td>
@@ -211,13 +211,13 @@
 
         <!-- Summary strip -->
         <div v-if="dailyRecords.length" class="grid grid-cols-4 gap-3">
-          <div v-for="s in dailyStats" :key="s.label" class="bg-white border border-[#E2E8F0] rounded-xl px-4 py-3 flex items-center gap-3">
-            <div class="w-9 h-9 rounded-lg flex items-center justify-center flex-shrink-0" :class="s.iconBg">
-              <component :is="s.icon" class="w-5 h-5" :class="s.iconColor" />
+          <div v-for="s in dailyStats" :key="s.label" class="stat-tile" :style="statVars(s.color)">
+            <div class="stat-tile-icon">
+              <component :is="s.icon" class="w-5 h-5" />
             </div>
             <div>
-              <p class="text-xl font-semibold text-[#0F172A] leading-none">{{ s.value }}</p>
-              <p class="text-xs text-[#64748B] mt-0.5">{{ s.label }}</p>
+              <p class="stat-tile-value">{{ s.value }}</p>
+              <p class="stat-tile-label">{{ s.label }}</p>
             </div>
           </div>
         </div>
@@ -271,7 +271,7 @@
                   :key="rec.id"
                   class="border-b border-[#E2E8F0] last:border-0 text-xs row-enter"
                   :class="[`row-status--${rec.status}`, {
-                    'bg-slate-50 text-[#94A3B8]':   rec.status === 'weekend',
+                    'bg-slate-50 text-[#6B7A94]':   rec.status === 'weekend',
                     'bg-amber-50':                    rec.status === 'holiday',
                     'bg-indigo-50':                   rec.status === 'on_leave',
                     'bg-white hover:bg-[#FAFBFF]':    !['weekend','holiday','on_leave'].includes(rec.status),
@@ -291,13 +291,13 @@
                       </div>
                       <div>
                         <p class="font-medium text-[#0F172A] leading-tight text-xs">{{ rec.name }}</p>
-                        <p class="text-[10px] text-[#94A3B8] font-mono">{{ rec.employee_id }}</p>
+                        <p class="text-[10px] text-[#6B7A94] font-mono">{{ rec.employee_id }}</p>
                       </div>
                     </div>
                   </td>
                   <td class="td-cell">
                     <span class="font-medium text-[#0F172A]">{{ formatDate(rec.work_date) }}</span>
-                    <span class="text-[#94A3B8] ml-1">{{ rec.day_name }}</span>
+                    <span class="text-[#6B7A94] ml-1">{{ rec.day_name }}</span>
                   </td>
                   <td class="td-cell text-center font-mono">{{ rec.morning_in ?? '—' }}</td>
                   <td class="td-cell text-center font-mono">{{ rec.morning_out ?? '—' }}</td>
@@ -306,18 +306,18 @@
                   <td class="td-cell text-center font-mono font-medium">
                     {{ rec.hours_rendered > 0 ? Number(rec.hours_rendered).toFixed(2) : '—' }}
                   </td>
-                  <td class="td-cell text-center" :class="rec.tardiness_minutes > 0 ? 'text-amber-600 font-medium' : 'text-[#94A3B8]'">
+                  <td class="td-cell text-center" :class="rec.tardiness_minutes > 0 ? 'text-amber-600 font-medium' : 'text-[#6B7A94]'">
                     {{ rec.tardiness_minutes > 0 ? rec.tardiness_minutes : '—' }}
                   </td>
-                  <td class="td-cell text-center" :class="rec.overtime_minutes > 0 ? 'text-emerald-600 font-medium' : 'text-[#94A3B8]'">
+                  <td class="td-cell text-center" :class="rec.overtime_minutes > 0 ? 'text-emerald-600 font-medium' : 'text-[#6B7A94]'">
                     {{ rec.overtime_minutes > 0 ? rec.overtime_minutes : '—' }}
                   </td>
-                  <td class="td-cell text-center" :class="rec.undertime_minutes > 0 ? 'text-red-500 font-medium' : 'text-[#94A3B8]'">
+                  <td class="td-cell text-center" :class="rec.undertime_minutes > 0 ? 'text-red-500 font-medium' : 'text-[#6B7A94]'">
                     {{ rec.undertime_minutes > 0 ? rec.undertime_minutes : '—' }}
                   </td>
                   <td class="td-cell text-center">
                     <StatusBadge v-if="rec.status !== 'weekend'" :status="rec.status" />
-                    <span v-else class="text-[#94A3B8] text-xs">—</span>
+                    <span v-else class="text-[#6B7A94] text-xs">—</span>
                   </td>
                 </tr>
               </tbody>
@@ -334,13 +334,13 @@
         <div class="relative bg-white rounded-2xl shadow-2xl w-full max-w-md">
           <div class="px-6 py-5 border-b border-[#E2E8F0] flex items-center gap-3">
             <div class="w-9 h-9 rounded-lg flex items-center justify-center" style="background:#EEF2FF;">
-              <PlusCircleIcon class="w-5 h-5 text-[#0E1EC0]" />
+              <PlusCircleIcon class="w-5 h-5 text-[#2E4A8C]" />
             </div>
             <div>
               <h3 class="font-semibold text-[#0F172A]">Add Manual Punch</h3>
               <p class="text-xs text-[#64748B]">Recorded as manual — will recompute daily DTR</p>
             </div>
-            <button @click="showAddModal = false" class="ml-auto text-[#94A3B8] hover:text-[#0F172A]">
+            <button @click="showAddModal = false" class="ml-auto text-[#6B7A94] hover:text-[#0F172A]">
               <XIcon class="w-5 h-5" />
             </button>
           </div>
@@ -497,12 +497,16 @@ const punchStats = computed(() => {
   const outs  = punchLogs.value.filter(l => l.punch_type === 'OUT').length;
   const manual = punchLogs.value.filter(l => l.source === 'manual').length;
   return [
-    { label: 'Total Punches', value: total,  icon: ClipboardIcon,   iconBg: 'bg-blue-50',    iconColor: 'text-[#0E1EC0]' },
-    { label: 'IN',            value: ins,    icon: CheckCircleIcon, iconBg: 'bg-emerald-50', iconColor: 'text-emerald-600' },
-    { label: 'OUT',           value: outs,   icon: XCircleIcon,     iconBg: 'bg-red-50',     iconColor: 'text-red-500' },
-    { label: 'Manual',        value: manual, icon: PenLineIcon,     iconBg: 'bg-amber-50',   iconColor: 'text-amber-600' },
+    { label: 'Total Punches', value: total,  icon: ClipboardIcon,   color: '#2E4A8C' },
+    { label: 'IN',            value: ins,    icon: CheckCircleIcon, color: '#059669' },
+    { label: 'OUT',           value: outs,   icon: XCircleIcon,     color: '#DC2626' },
+    { label: 'Manual',        value: manual, icon: PenLineIcon,     color: '#D97706' },
   ];
 });
+
+function statVars(hex) {
+  return { '--stat-color': hex, '--stat-bg': hex + '14', '--stat-glow': hex + '30' };
+}
 
 async function loadPunches() {
   punchLoading.value = true;
@@ -540,10 +544,10 @@ const dailyStats = computed(() => {
   const absent   = recs.filter(r => r.status === 'absent').length;
   const onLeave  = recs.filter(r => r.status === 'on_leave').length;
   return [
-    { label: 'Days Present', value: present, icon: CheckCircleIcon, iconBg: 'bg-emerald-50', iconColor: 'text-emerald-600' },
-    { label: 'Late',         value: late,    icon: ClockIcon2,      iconBg: 'bg-amber-50',   iconColor: 'text-amber-600'   },
-    { label: 'Absent',       value: absent,  icon: XCircleIcon,     iconBg: 'bg-red-50',     iconColor: 'text-red-500'     },
-    { label: 'On Leave',     value: onLeave, icon: CalendarDaysIcon,iconBg: 'bg-indigo-50',  iconColor: 'text-indigo-600'  },
+    { label: 'Days Present', value: present, icon: CheckCircleIcon,  color: '#059669' },
+    { label: 'Late',         value: late,    icon: ClockIcon2,       color: '#D97706' },
+    { label: 'Absent',       value: absent,  icon: XCircleIcon,      color: '#DC2626' },
+    { label: 'On Leave',     value: onLeave, icon: CalendarDaysIcon, color: '#4F46E5' },
   ];
 });
 
@@ -733,12 +737,12 @@ onMounted(async () => {
 @reference "../css/app.css";
 .th-cell     { @apply px-4 py-3 text-xs font-semibold text-[#64748B] uppercase tracking-wide bg-white; }
 .td-cell     { @apply px-4 py-3; }
-.filter-input { @apply text-sm border border-[#E2E8F0] rounded-lg px-3 py-1.5 text-[#0F172A] bg-white focus:outline-none focus:ring-2 focus:ring-[#0E1EC0]; }
+.filter-input { @apply text-sm border border-[#E2E8F0] rounded-lg px-3 py-1.5 text-[#0F172A] bg-white focus:outline-none focus:ring-2 focus:ring-[#2E4A8C]; }
 .form-label  { @apply block text-sm font-medium text-[#0F172A] mb-1.5; }
-.form-input  { @apply w-full px-3 py-2 text-sm border border-[#E2E8F0] rounded-lg text-[#0F172A] bg-white focus:outline-none focus:ring-2 focus:ring-[#0E1EC0]; }
-.btn-primary { @apply inline-flex items-center justify-center gap-2 px-4 py-2 bg-[#0E1EC0] text-white text-sm font-medium rounded-lg hover:bg-[#1228CC] disabled:opacity-60 transition-colors; }
+.form-input  { @apply w-full px-3 py-2 text-sm border border-[#E2E8F0] rounded-lg text-[#0F172A] bg-white focus:outline-none focus:ring-2 focus:ring-[#2E4A8C]; }
+.btn-primary { @apply inline-flex items-center justify-center gap-2 px-4 py-2 bg-[#2E4A8C] text-white text-sm font-medium rounded-lg hover:bg-[#3D5CA3] disabled:opacity-60 transition-colors; }
 .btn-outline  { @apply inline-flex items-center justify-center gap-2 px-4 py-2 text-sm font-medium border border-[#E2E8F0] rounded-lg text-[#0F172A] hover:bg-[#F0F4FF] transition-colors; }
-.refresh-btn  { @apply inline-flex items-center gap-2 px-4 py-1.5 bg-[#0E1EC0] text-white text-sm font-medium rounded-lg hover:bg-[#1228CC] disabled:opacity-60 transition-colors; }
+.refresh-btn  { @apply inline-flex items-center gap-2 px-4 py-1.5 bg-[#2E4A8C] text-white text-sm font-medium rounded-lg hover:bg-[#3D5CA3] disabled:opacity-60 transition-colors; }
 .badge-in    { @apply inline-flex px-2 py-0.5 text-xs font-semibold rounded-md bg-emerald-50 text-emerald-700; }
 .badge-out   { @apply inline-flex px-2 py-0.5 text-xs font-semibold rounded-md bg-rose-50 text-rose-700; }
 .badge-bio   { @apply inline-flex px-2 py-0.5 text-xs font-medium rounded-md bg-slate-100 text-slate-600; }

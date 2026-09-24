@@ -35,8 +35,8 @@
           </thead>
           <tbody>
             <tr v-if="shifts.length === 0">
-              <td colspan="7" class="px-5 py-12 text-center text-[#94A3B8]">
-                No shifts configured yet. Add your first shift schedule.
+              <td colspan="7">
+                <EmptyState title="No shifts configured" description="Add your first shift schedule to enable tardiness and undertime computation." />
               </td>
             </tr>
             <tr
@@ -50,7 +50,7 @@
                 <span v-if="shift.staff_type" class="mt-0.5 inline-block text-[10px] font-medium px-1.5 py-0.5 rounded bg-indigo-50 text-indigo-700">
                   {{ staffTypeLabel(shift.staff_type) }}
                 </span>
-                <span v-else class="text-[10px] text-[#CBD5E1]">General</span>
+                <span v-else class="text-[10px] text-[#94A3B8]">General</span>
               </td>
               <td class="px-4 py-4 text-center font-mono text-[#0F172A]">
                 {{ shift.morning_in }} – {{ shift.morning_out }}
@@ -77,7 +77,7 @@
                 <div class="flex items-center justify-end gap-1">
                   <button
                     @click="openEdit(shift)"
-                    class="p-1.5 rounded-md text-[#94A3B8] hover:text-[#0E1EC0] hover:bg-[#EEF2FF] transition-colors"
+                    class="p-1.5 rounded-md text-[#6B7A94] hover:text-[#2E4A8C] hover:bg-[#EEF2FF] transition-colors"
                     title="Edit"
                   >
                     <PencilIcon class="w-4 h-4" />
@@ -85,7 +85,7 @@
                   <button
                     @click="confirmDelete(shift)"
                     :disabled="(shift.employees_count ?? 0) > 0"
-                    class="p-1.5 rounded-md text-[#94A3B8] hover:text-red-600 hover:bg-red-50 disabled:opacity-30 disabled:cursor-not-allowed transition-colors"
+                    class="p-1.5 rounded-md text-[#6B7A94] hover:text-red-600 hover:bg-red-50 disabled:opacity-30 disabled:cursor-not-allowed transition-colors"
                     :title="(shift.employees_count ?? 0) > 0 ? 'Cannot delete: employees assigned' : 'Delete'"
                   >
                     <Trash2Icon class="w-4 h-4" />
@@ -99,7 +99,7 @@
 
       <!-- Info note -->
       <div class="mt-4 flex items-start gap-2 text-xs text-[#64748B] bg-white border border-[#E2E8F0] rounded-lg p-3">
-        <InfoIcon class="w-3.5 h-3.5 mt-0.5 flex-shrink-0 text-[#94A3B8]" />
+        <InfoIcon class="w-3.5 h-3.5 mt-0.5 flex-shrink-0 text-[#6B7A94]" />
         <span>Shifts define when employees are expected to arrive. The grace period allows a buffer before marking tardiness. Required hours are used for overtime and undertime computation.</span>
       </div>
     </div>
@@ -111,7 +111,7 @@
         <div class="relative bg-white rounded-2xl shadow-2xl w-full max-w-lg">
           <div class="px-6 py-5 border-b border-[#E2E8F0] flex items-center justify-between">
             <h2 class="text-base font-semibold text-[#0F172A]">{{ modal.editing ? 'Edit Shift' : 'Add Shift' }}</h2>
-            <button @click="closeModal" class="text-[#94A3B8] hover:text-[#0F172A]">
+            <button @click="closeModal" class="text-[#6B7A94] hover:text-[#0F172A]">
               <XIcon class="w-5 h-5" />
             </button>
           </div>
@@ -125,7 +125,7 @@
             <div>
               <label class="modal-label">
                 For Staff Type
-                <span class="text-[#94A3B8] font-normal text-xs ml-1">(optional — blank = usable by all)</span>
+                <span class="text-[#6B7A94] font-normal text-xs ml-1">(optional — blank = usable by all)</span>
               </label>
               <div class="grid grid-cols-4 gap-1.5 mt-1">
                 <button
@@ -135,7 +135,7 @@
                   @click="form.staff_type = form.staff_type === st.value ? '' : st.value"
                   class="py-1.5 px-2 rounded-md border text-xs font-medium transition-all text-center"
                   :class="form.staff_type === st.value
-                    ? 'border-[#0E1EC0] bg-[#EEF2FF] text-[#0E1EC0]'
+                    ? 'border-[#2E4A8C] bg-[#EEF2FF] text-[#2E4A8C]'
                     : 'border-[#E2E8F0] text-[#64748B] hover:border-[#C7D2F6] hover:bg-[#F8FAFF]'"
                 >
                   {{ st.label }}
@@ -181,7 +181,7 @@
               <button type="button" @click="closeModal" class="px-4 py-2 text-sm border border-[#E2E8F0] rounded-lg text-[#0F172A] hover:bg-[#F8FAFC] transition-colors">
                 Cancel
               </button>
-              <button type="submit" :disabled="modal.saving" class="px-4 py-2 text-sm font-medium text-white rounded-lg bg-[#0E1EC0] hover:bg-[#1228CC] disabled:opacity-60 transition-colors">
+              <button type="submit" :disabled="modal.saving" class="px-4 py-2 text-sm font-medium text-white rounded-lg bg-[#2E4A8C] hover:bg-[#3D5CA3] disabled:opacity-60 transition-colors">
                 {{ modal.saving ? 'Saving…' : (modal.editing ? 'Save Changes' : 'Add Shift') }}
               </button>
             </div>
@@ -220,6 +220,7 @@ import { ref, onMounted } from 'vue';
 import axios from 'axios';
 import { useToast } from '@/composables/useToast';
 import PageHeader from '@/components/PageHeader.vue';
+import EmptyState from '@/components/EmptyState.vue';
 import {
   Plus as PlusIcon, Pencil as PencilIcon, Trash2 as Trash2Icon,
   X as XIcon, Clock as ClockIcon, Users as UsersIcon, Info as InfoIcon,
@@ -345,7 +346,7 @@ onMounted(load);
 /* ── Table card ───────────────────────────────────── */
 .shift-table-card {
   background: #fff; border: 1px solid #E4E9F2; border-radius: 12px;
-  overflow: hidden; box-shadow: 0 2px 12px rgba(8,14,128,0.06), 0 1px 3px rgba(8,14,128,0.04);
+  overflow: hidden; box-shadow: 0 2px 12px rgba(27, 42, 94,0.06), 0 1px 3px rgba(27, 42, 94,0.04);
 }
 
 /* ── Modal form ───────────────────────────────────── */
@@ -357,7 +358,7 @@ onMounted(load);
   border: 1px solid #E4E9F2; border-radius: 8px; color: #0F172A; background: #fff;
   transition: border-color 0.15s, box-shadow 0.15s;
 }
-.modal-input:focus { outline: none; border-color: #0E1EC0; box-shadow: 0 0 0 3px rgba(14,30,192,0.08); }
+.modal-input:focus { outline: none; border-color: #2E4A8C; box-shadow: 0 0 0 3px rgba(46, 74, 140,0.08); }
 
 @media (max-width: 640px) {
   .px-5.py-4 { padding: 12px 14px; }

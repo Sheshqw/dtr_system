@@ -25,6 +25,8 @@
         <option value="LOGOUT">Logout</option>
         <option value="DTR_MONTH_LOCKED">DTR Month Locked</option>
         <option value="DTR_MONTH_UNLOCKED">DTR Month Unlocked</option>
+        <option value="FEATURE_PERMISSION_CHANGED">Feature Permission Changed</option>
+        <option value="FEATURE_PERMISSION_RESET">Feature Permission Reset</option>
       </select>
       <select v-model="filters.table" class="audit-filter-input">
         <option value="">All Tables</option>
@@ -34,12 +36,13 @@
         <option value="holidays">Holidays</option>
         <option value="shifts">Shifts</option>
         <option value="departments">Departments</option>
+        <option value="feature_permissions">Feature Permissions</option>
       </select>
       <button
         @click="load(1)"
         class="ml-auto px-4 py-1.5 text-sm font-semibold text-white rounded-lg transition-colors"
-        style="background: #0E1EC0;"
-        onmouseover="this.style.background='#1228CC'" onmouseout="this.style.background='#0E1EC0'"
+        style="background: #2E4A8C;"
+        onmouseover="this.style.background='#3D5CA3'" onmouseout="this.style.background='#2E4A8C'"
       >
         Apply Filter
       </button>
@@ -64,7 +67,7 @@
         </div>
 
         <!-- Timeline -->
-        <div v-else class="bg-white rounded-xl border border-[#E4E9F2] overflow-hidden shadow-[0_2px_12px_rgba(8,14,128,0.07),0_1px_3px_rgba(8,14,128,0.04)]">
+        <div v-else class="bg-white rounded-xl border border-[#E4E9F2] overflow-hidden shadow-[0_2px_12px_rgba(27, 42, 94,0.07),0_1px_3px_rgba(27, 42, 94,0.04)]">
 
           <EmptyState
             v-if="logs.length === 0"
@@ -165,6 +168,8 @@ const ACTION_META = {
   ACCOUNT_LOCKED: { icon: LockIcon,    color: '#DC2626', bg: '#FEF2F2', verb: 'was locked out after 5 failed attempts' },
   DTR_MONTH_LOCKED:   { icon: LockIcon,   color: '#B45309', bg: '#FFFBEB', verb: 'locked a month\'s DTR records' },
   DTR_MONTH_UNLOCKED: { icon: UnlockIcon, color: '#2563EB', bg: '#EFF6FF', verb: 'unlocked a month\'s DTR records' },
+  FEATURE_PERMISSION_CHANGED: { icon: LockIcon,   color: '#7C3AED', bg: '#F5F3FF', verb: 'changed a feature permission' },
+  FEATURE_PERMISSION_RESET:   { icon: UnlockIcon, color: '#64748B', bg: '#F1F5F9', verb: 'reset a feature permission' },
 };
 
 // These read as a complete sentence on their own ("X logged in") — the
@@ -172,7 +177,7 @@ const ACTION_META = {
 // lock actions join this list too: which month/campus is already spelled
 // out in the reason line below, so "#7" (the lock row's own id) would
 // only add noise.
-const AUTH_ACTIONS = ['LOGIN', 'LOGOUT', 'LOGIN_FAILED', 'LOGIN_BLOCKED', 'ACCOUNT_LOCKED', 'DTR_MONTH_LOCKED', 'DTR_MONTH_UNLOCKED'];
+const AUTH_ACTIONS = ['LOGIN', 'LOGOUT', 'LOGIN_FAILED', 'LOGIN_BLOCKED', 'ACCOUNT_LOCKED', 'DTR_MONTH_LOCKED', 'DTR_MONTH_UNLOCKED', 'FEATURE_PERMISSION_CHANGED', 'FEATURE_PERMISSION_RESET'];
 
 function actionMeta(action) {
   return ACTION_META[action] ?? { icon: ActivityIcon, color: '#64748B', bg: '#F1F5F9', verb: action?.toLowerCase() };
@@ -265,7 +270,7 @@ onMounted(() => load(1));
   padding: 6px 12px; color: #0F172A; background: #fff;
   transition: border-color 0.15s, box-shadow 0.15s;
 }
-.audit-filter-input:focus { outline: none; border-color: #0E1EC0; box-shadow: 0 0 0 3px rgba(14,30,192,0.08); }
+.audit-filter-input:focus { outline: none; border-color: #2E4A8C; box-shadow: 0 0 0 3px rgba(46, 74, 140,0.08); }
 
 /* ── Timeline ─────────────────────────────────────────── */
 .tl-wrap { padding: 20px 22px 22px; }
@@ -280,7 +285,7 @@ onMounted(() => load(1));
 }
 .tl-day-divider span {
   font-size: 11px; font-weight: 700; text-transform: uppercase; letter-spacing: 0.07em;
-  color: #94A3B8;
+  color: #6B7A94;
 }
 
 .tl-items { position: relative; }
@@ -310,7 +315,12 @@ onMounted(() => load(1));
 .tl-text { font-size: 13px; color: #334155; line-height: 1.5; }
 .tl-user { font-weight: 700; color: #0F172A; }
 .tl-table { font-weight: 600; color: #0F172A; }
-.tl-record { font-family: ui-monospace, monospace; font-size: 11.5px; color: #94A3B8; margin-left: 2px; }
+.tl-record {
+  font-family: var(--font-mono); font-size: 10.5px; font-weight: 600;
+  color: #2E4A8C; margin-left: 4px;
+  background: rgba(46, 74, 140,0.08); border: 1px solid rgba(46, 74, 140,0.14);
+  border-radius: 4px; padding: 0 5px;
+}
 
 .tl-reason {
   font-size: 12px; color: #64748B; font-style: italic;
@@ -320,10 +330,10 @@ onMounted(() => load(1));
 
 .tl-meta {
   display: flex; align-items: center; gap: 6px;
-  font-size: 11px; color: #94A3B8; margin-top: 3px;
+  font-size: 11px; color: #6B7A94; margin-top: 3px;
 }
-.tl-relative { color: #94A3B8; }
-.tl-ip { margin-left: auto; font-family: ui-monospace, monospace; color: #94A3B8; }
+.tl-relative { color: #6B7A94; }
+.tl-ip { margin-left: auto; font-family: var(--font-mono); color: #6B7A94; }
 
 /* ── Mobile ─────────────────────────────────────────── */
 @media (max-width: 768px) {

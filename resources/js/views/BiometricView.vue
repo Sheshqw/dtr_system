@@ -6,15 +6,27 @@
     <div class="flex-1 overflow-y-auto p-6 space-y-6" style="background:#F4F6FB;">
 
     <!-- Method guide banner -->
-    <div class="grid grid-cols-1 sm:grid-cols-2 gap-3">
+    <div class="grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-3 gap-3">
       <div class="flex items-start gap-3 px-4 py-3.5 rounded-xl" style="background:#EFF6FF;border:1px solid #BFDBFE;">
         <WifiIcon class="w-4 h-4 mt-0.5 flex-shrink-0" style="color:#1D4ED8;" />
         <div>
-          <p class="text-sm font-semibold" style="color:#1D4ED8;">Live Sync (TCP)</p>
+          <p class="text-sm font-semibold" style="color:#1D4ED8;">Live Sync — Pull (TCP)</p>
           <p class="text-xs mt-0.5" style="color:#3B82F6;">
-            Use when the biometric device and this server are on the <strong>same LAN network</strong>.
-            Logs are pulled directly over TCP — no USB drive needed.
-            Requires the IP in <code class="bg-blue-100 px-1 rounded">.env</code> to match the device.
+            This <strong>server reaches out to the device</strong>. Set
+            <code class="bg-blue-100 px-1 rounded">.env → BIOMETRIC_IP</code> to the
+            <strong>device's own IP</strong> (shown on its LCD under Menu → Comm → IP Address),
+            not your laptop's. Trigger with <strong>Sync Now</strong> or a schedule.
+          </p>
+        </div>
+      </div>
+      <div class="flex items-start gap-3 px-4 py-3.5 rounded-xl" style="background:#F5F3FF;border:1px solid #DDD6FE;">
+        <ActivityIcon class="w-4 h-4 mt-0.5 flex-shrink-0" style="color:#6D28D9;" />
+        <div>
+          <p class="text-sm font-semibold" style="color:#5B21B6;">Auto Push (ADMS)</p>
+          <p class="text-xs mt-0.5" style="color:#7C3AED;">
+            The <strong>opposite direction</strong> — the device pushes to this server the moment
+            someone punches in. On the device: Menu → Comm → Cloud Server Setting, and enter
+            <strong>this laptop's IP address</strong> and port 80. No Sync button needed — it's automatic.
           </p>
         </div>
       </div>
@@ -39,7 +51,7 @@
         <div class="px-5 py-4 border-b border-[#E2E8F0] flex items-center gap-3">
           <div class="w-9 h-9 rounded-lg flex items-center justify-center flex-shrink-0"
                style="background: #EEF2FF;">
-            <WifiIcon class="w-5 h-5 text-[#0E1EC0]" />
+            <WifiIcon class="w-5 h-5 text-[#2E4A8C]" />
           </div>
           <div>
             <h2 class="font-semibold text-[#0F172A] text-sm">Device Status</h2>
@@ -57,7 +69,7 @@
           <!-- Status indicator -->
           <div class="flex items-center justify-between">
             <span class="text-sm text-[#64748B]">Connection</span>
-            <div v-if="statusLoading" class="flex items-center gap-1.5 text-xs text-[#94A3B8]">
+            <div v-if="statusLoading" class="flex items-center gap-1.5 text-xs text-[#6B7A94]">
               <Loader2Icon class="w-3.5 h-3.5 animate-spin" />
               Checking…
             </div>
@@ -86,10 +98,47 @@
             <button @click="syncDevice"
                     :disabled="syncing || !status.reachable"
                     class="flex-1 flex items-center justify-center gap-2 px-3 py-2 rounded-lg text-xs font-semibold text-white transition-colors disabled:opacity-50"
-                    style="background: linear-gradient(135deg, #0550A8, #0E1EC0);">
+                    style="background: linear-gradient(135deg, #2E4A8C, #2E4A8C);">
               <DownloadCloudIcon class="w-3.5 h-3.5" :class="syncing ? 'animate-pulse' : ''" />
               {{ syncing ? 'Syncing…' : 'Sync Now' }}
             </button>
+          </div>
+
+          <!-- Test Connection — runs the full TCP + protocol handshake and
+               reports exactly which step failed, instead of a single
+               reachable/unreachable flag. This is the one to use while
+               physically wiring up a device for the first time. -->
+          <button @click="testConnection"
+                  :disabled="testingConnection"
+                  class="w-full flex items-center justify-center gap-2 px-3 py-2 rounded-lg text-xs font-semibold border border-[#C7D2F6] text-[#2E4A8C] hover:bg-[#EEF2FF] transition-colors disabled:opacity-50">
+            <ActivityIcon class="w-3.5 h-3.5" :class="testingConnection ? 'animate-pulse' : ''" />
+            {{ testingConnection ? 'Testing connection…' : 'Test Connection' }}
+          </button>
+
+          <!-- Test connection results — terminal-console styling, since this
+               is literally a step-by-step diagnostic trace and reads more
+               naturally as one than as tinted alert boxes. -->
+          <div v-if="testResult" class="term-console">
+            <div class="term-console-bar">
+              <span class="term-dot term-dot--red"></span>
+              <span class="term-dot term-dot--yellow"></span>
+              <span class="term-dot term-dot--green"></span>
+              <span class="term-console-title">test-connection --device={{ status.ip ?? 'biometric' }}</span>
+            </div>
+            <div class="term-console-body">
+              <div v-for="(step, i) in testResult.steps" :key="i" class="term-line">
+                <span class="term-tag" :class="step.ok ? 'term-tag--ok' : 'term-tag--fail'">{{ step.ok ? 'OK' : 'FAIL' }}</span>
+                <span class="term-label">{{ step.label }}</span>
+                <span class="term-detail">{{ step.detail }}</span>
+              </div>
+              <div class="term-line term-summary">
+                <span class="term-prompt">$</span>
+                <span :class="testResult.success ? 'term-ok-text' : 'term-fail-text'">
+                  {{ testResult.success ? 'connection established — Sync Now will work.' : 'connection failed — see steps above.' }}
+                </span>
+                <span class="term-cursor"></span>
+              </div>
+            </div>
           </div>
 
           <!-- Device offline notice -->
@@ -110,28 +159,32 @@
           </div>
           <div>
             <h2 class="font-semibold text-[#0F172A] text-sm">Connection Guide</h2>
-            <p class="text-xs text-[#64748B]">Steps to connect your BRANDING terminal</p>
+            <p class="text-xs text-[#64748B]">Steps for Live Sync — Pull setup. Using Auto Push instead? See that card above; no .env edit or restart needed there.</p>
           </div>
         </div>
         <div class="p-5 space-y-3 text-xs text-[#475569] leading-relaxed">
           <div class="flex gap-2.5">
-            <span class="flex-shrink-0 w-5 h-5 rounded-full bg-[#EEF2FF] text-[#0E1EC0] font-bold flex items-center justify-center text-[10px]">1</span>
+            <span class="flex-shrink-0 w-5 h-5 rounded-full bg-[#EEF2FF] text-[#2E4A8C] font-bold flex items-center justify-center text-[10px]">1</span>
             <span>Plug the <strong>Ethernet cable</strong> from the device into the same router/switch as this computer.</span>
           </div>
           <div class="flex gap-2.5">
-            <span class="flex-shrink-0 w-5 h-5 rounded-full bg-[#EEF2FF] text-[#0E1EC0] font-bold flex items-center justify-center text-[10px]">2</span>
+            <span class="flex-shrink-0 w-5 h-5 rounded-full bg-[#EEF2FF] text-[#2E4A8C] font-bold flex items-center justify-center text-[10px]">2</span>
             <span>On the device LCD: press <strong>Menu → Comm → IP Address</strong> and note the IP shown.</span>
           </div>
           <div class="flex gap-2.5">
-            <span class="flex-shrink-0 w-5 h-5 rounded-full bg-[#EEF2FF] text-[#0E1EC0] font-bold flex items-center justify-center text-[10px]">3</span>
+            <span class="flex-shrink-0 w-5 h-5 rounded-full bg-[#EEF2FF] text-[#2E4A8C] font-bold flex items-center justify-center text-[10px]">3</span>
             <span>Update <code class="bg-[#F1F5F9] px-1 rounded">.env → BIOMETRIC_IP</code> to match, then restart the server.</span>
           </div>
           <div class="flex gap-2.5">
-            <span class="flex-shrink-0 w-5 h-5 rounded-full bg-[#EEF2FF] text-[#0E1EC0] font-bold flex items-center justify-center text-[10px]">4</span>
+            <span class="flex-shrink-0 w-5 h-5 rounded-full bg-[#EEF2FF] text-[#2E4A8C] font-bold flex items-center justify-center text-[10px]">4</span>
+            <span>Click <strong>Test Connection</strong> — it checks the network link and the device handshake separately, so if something's wrong it tells you exactly which one.</span>
+          </div>
+          <div class="flex gap-2.5">
+            <span class="flex-shrink-0 w-5 h-5 rounded-full bg-[#EEF2FF] text-[#2E4A8C] font-bold flex items-center justify-center text-[10px]">5</span>
             <span>Make sure each employee's <strong>Fingerprint ID</strong> in the device matches their ID in the Employees page.</span>
           </div>
           <div class="flex gap-2.5">
-            <span class="flex-shrink-0 w-5 h-5 rounded-full bg-[#EEF2FF] text-[#0E1EC0] font-bold flex items-center justify-center text-[10px]">5</span>
+            <span class="flex-shrink-0 w-5 h-5 rounded-full bg-[#EEF2FF] text-[#2E4A8C] font-bold flex items-center justify-center text-[10px]">6</span>
             <span>Click <strong>Sync Now</strong> to pull logs. For automatic sync, run <code class="bg-[#F1F5F9] px-1 rounded">php artisan schedule:work</code> in terminal.</span>
           </div>
         </div>
@@ -167,11 +220,11 @@
           @keydown.enter="$refs.fileInput.click()"
           @keydown.space.prevent="$refs.fileInput.click()"
         >
-          <UploadCloudIcon class="w-10 h-10 mx-auto mb-3 text-[#94A3B8]" />
+          <UploadCloudIcon class="w-10 h-10 mx-auto mb-3 text-[#6B7A94]" />
           <p class="text-sm font-medium text-[#475569]">
             <span class="text-[#0284C7] font-semibold">Click to browse</span> or drag &amp; drop
           </p>
-          <p class="text-xs text-[#94A3B8] mt-1">Supports <strong>.dat</strong>, <strong>.csv</strong>, <strong>.txt</strong> · Max 10 MB</p>
+          <p class="text-xs text-[#6B7A94] mt-1">Supports <strong>.dat</strong>, <strong>.csv</strong>, <strong>.txt</strong> · Max 10 MB</p>
 
           <input ref="fileInput" type="file" accept=".dat,.csv,.txt" class="sr-only" @change="onFileSelect" />
 
@@ -180,7 +233,7 @@
             <div class="flex items-center gap-2 bg-white border border-[#E2E8F0] rounded-lg px-3 py-1.5 shadow-sm text-xs">
               <FileTextIcon class="w-3.5 h-3.5 text-[#0284C7]" />
               <span class="font-medium text-[#0F172A] max-w-[200px] truncate">{{ file.name }}</span>
-              <button @click.stop="file = null" class="text-[#94A3B8] hover:text-red-400 transition-colors">
+              <button @click.stop="file = null" class="text-[#6B7A94] hover:text-red-400 transition-colors">
                 <XIcon class="w-3 h-3" />
               </button>
             </div>
@@ -214,7 +267,7 @@
     <div v-if="result" class="bg-white rounded-2xl shadow-sm border border-[#E2E8F0] overflow-hidden">
       <div class="px-5 py-4 border-b border-[#E2E8F0] flex items-center justify-between">
         <h2 class="font-semibold text-[#0F172A] text-sm">Import / Sync Results</h2>
-        <button @click="result = null" class="text-[#94A3B8] hover:text-[#475569] transition-colors">
+        <button @click="result = null" class="text-[#6B7A94] hover:text-[#475569] transition-colors">
           <XIcon class="w-4 h-4" />
         </button>
       </div>
@@ -263,7 +316,7 @@
                         :class="d.punch_type === 'IN' ? 'bg-blue-50 text-blue-700' : 'bg-purple-50 text-purple-700'">
                     {{ d.punch_type }}
                   </span>
-                  <span v-else class="text-[#94A3B8]">—</span>
+                  <span v-else class="text-[#6B7A94]">—</span>
                 </td>
                 <td class="px-3 py-2">
                   <span class="px-2 py-0.5 rounded-full font-semibold text-[10px]"
@@ -293,7 +346,7 @@ import PageHeader from '@/components/PageHeader.vue';
 import { useToast } from '@/composables/useToast';
 import {
   WifiIcon, RefreshCwIcon, DownloadCloudIcon, UploadCloudIcon,
-  FileTextIcon, XIcon, InfoIcon, Loader2Icon,
+  FileTextIcon, XIcon, InfoIcon, Loader2Icon, ActivityIcon,
   CheckCircleIcon, MinusCircleIcon, AlertCircleIcon,
 } from 'lucide-vue-next';
 
@@ -303,6 +356,8 @@ const { toast } = useToast();
 const status       = ref({ ip: '…', port: 4370, reachable: false, last_synced: null });
 const statusLoading = ref(false);
 const syncing      = ref(false);
+const testingConnection = ref(false);
+const testResult   = ref(null);
 const importing    = ref(false);
 const dragging     = ref(false);
 const file         = ref(null);
@@ -322,6 +377,24 @@ async function checkStatus() {
     toast(e.response?.data?.message ?? 'Could not reach the server to check device status.', 'error');
   } finally {
     statusLoading.value = false;
+  }
+}
+
+async function testConnection() {
+  testingConnection.value = true;
+  testResult.value = null;
+  try {
+    const { data } = await axios.post('/api/biometric/test-connection');
+    testResult.value = data;
+    if (data.success) {
+      toast('Connection test passed — the device is reachable and responding correctly.', 'success');
+    } else {
+      toast('Connection test failed — see the details below for the exact step that failed.', 'error');
+    }
+  } catch (e) {
+    toast(e.response?.data?.message ?? 'Could not run the connection test.', 'error');
+  } finally {
+    testingConnection.value = false;
   }
 }
 
@@ -379,7 +452,7 @@ async function importFile() {
 /* ── Info cards ──────────────────────────────────── */
 .bio-card {
   background: #fff; border: 1px solid #E4E9F2; border-radius: 16px;
-  overflow: hidden; box-shadow: 0 2px 12px rgba(8,14,128,0.06), 0 1px 3px rgba(8,14,128,0.04);
+  overflow: hidden; box-shadow: 0 2px 12px rgba(27, 42, 94,0.06), 0 1px 3px rgba(27, 42, 94,0.04);
 }
 .bio-card-head {
   padding: 14px 20px; border-bottom: 1px solid #EEF2FA; background: #F7F8FD;
@@ -399,7 +472,7 @@ async function importFile() {
   flex: 1; display: flex; align-items: center; justify-content: center; gap: 7px;
   padding: 8px 14px; border-radius: 9px; font-size: 12px; font-weight: 600;
   color: #fff; border: none; cursor: pointer;
-  background: linear-gradient(135deg, #1228CC 0%, #0E1EC0 100%);
+  background: linear-gradient(135deg, #3D5CA3 0%, #2E4A8C 100%);
   transition: opacity 0.15s;
 }
 .sync-btn:disabled { opacity: 0.5; cursor: not-allowed; }
@@ -410,7 +483,66 @@ async function importFile() {
   text-align: center; cursor: pointer; background: #F7F8FD;
   transition: border-color 0.15s, background 0.15s;
 }
-.upload-zone:hover { border-color: #0E1EC0; background: #EEF2FF; }
+.upload-zone:hover { border-color: #2E4A8C; background: #EEF2FF; }
+
+/* ── Terminal-console diagnostic panel ────────────────────────────────────
+   Deliberately dark in both light and dark app themes — an embedded
+   terminal reads as "real" precisely because it doesn't reflow with the
+   surrounding UI, the same way a code editor's built-in terminal stays
+   dark regardless of the editor's own theme. ─────────────────────────── */
+.term-console {
+  border-radius: 10px;
+  overflow: hidden;
+  background: #0D1117;
+  border: 1px solid #30363D;
+  box-shadow: 0 4px 18px rgba(13,17,23,0.35);
+  animation: termIn 0.22s ease;
+}
+@keyframes termIn { from { opacity: 0; transform: translateY(4px); } to { opacity: 1; transform: none; } }
+.term-console-bar {
+  display: flex; align-items: center; gap: 7px;
+  padding: 8px 12px;
+  background: #161B22;
+  border-bottom: 1px solid #30363D;
+}
+.term-dot { width: 9px; height: 9px; border-radius: 50%; flex-shrink: 0; }
+.term-dot--red    { background: #FF5F56; }
+.term-dot--yellow { background: #FFBD2E; }
+.term-dot--green  { background: #27C93F; }
+.term-console-title {
+  margin-left: 6px;
+  font-family: var(--font-mono);
+  font-size: 10.5px;
+  color: #8B949E;
+  letter-spacing: 0.01em;
+}
+.term-console-body {
+  padding: 12px 14px;
+  font-family: var(--font-mono);
+  font-size: 11.5px;
+  line-height: 1.9;
+}
+.term-line { display: flex; flex-wrap: wrap; align-items: baseline; gap: 8px; }
+.term-tag {
+  flex-shrink: 0;
+  font-size: 9.5px; font-weight: 700; letter-spacing: 0.04em;
+  padding: 1px 6px; border-radius: 4px;
+  min-width: 32px; text-align: center;
+}
+.term-tag--ok   { color: #3FB950; background: rgba(63,185,80,0.14); }
+.term-tag--fail { color: #F85149; background: rgba(248,81,73,0.14); }
+.term-label  { color: #C9D1D9; font-weight: 600; flex-shrink: 0; }
+.term-detail { color: #6E7681; }
+.term-summary { margin-top: 8px; padding-top: 8px; border-top: 1px dashed #21262D; }
+.term-prompt { color: #58A6FF; font-weight: 700; }
+.term-ok-text   { color: #3FB950; }
+.term-fail-text { color: #F85149; }
+.term-cursor {
+  display: inline-block; width: 6px; height: 12px;
+  background: #C9D1D9; margin-left: 2px; vertical-align: middle;
+  animation: termBlink 1s step-end infinite;
+}
+@keyframes termBlink { 0%, 49% { opacity: 1; } 50%, 100% { opacity: 0; } }
 
 /* ── Mobile ──────────────────────────────────────── */
 @media (max-width: 768px) {

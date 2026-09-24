@@ -20,8 +20,8 @@
 
         <!-- Summary cards -->
         <div class="grid grid-cols-1 sm:grid-cols-3 gap-4">
-          <div class="bg-white rounded-xl px-5 py-4 cursor-pointer transition-shadow hover:shadow-md"
-            :style="activeTab === 'mine' && statusFilter === 'pending' ? 'border:1.5px solid #F59E0B;' : 'border:1px solid #E5E7EB;'"
+          <div class="stat-tile cursor-pointer"
+            :style="[{ '--stat-color':'#D97706', '--stat-bg':'#FFFBEB', '--stat-glow':'rgba(217,119,6,0.3)' }, activeTab === 'mine' && statusFilter === 'pending' ? { border: '1.5px solid #F59E0B' } : {}]"
             role="button"
             tabindex="0"
             :aria-pressed="activeTab === 'mine' && statusFilter === 'pending'"
@@ -30,18 +30,16 @@
             @keydown.enter="setFilter('pending')"
             @keydown.space.prevent="setFilter('pending')"
           >
-            <div class="flex items-center gap-3">
-              <div class="w-9 h-9 rounded-lg flex items-center justify-center flex-shrink-0" style="background:#FFFBEB;">
-                <ClockIcon class="w-4 h-4" style="color:#D97706;" />
-              </div>
-              <div>
-                <p class="text-xs font-medium" style="color:#9CA3AF;">Pending</p>
-                <p class="text-2xl font-bold" style="color:#0F172A;">{{ summary.pending ?? 0 }}</p>
-              </div>
+            <div class="stat-tile-icon">
+              <ClockIcon class="w-4 h-4" />
+            </div>
+            <div>
+              <p class="stat-tile-label" style="margin-top:0;">Pending</p>
+              <p class="stat-tile-value" style="font-size:24px;">{{ summary.pending ?? 0 }}</p>
             </div>
           </div>
-          <div class="bg-white rounded-xl px-5 py-4 cursor-pointer transition-shadow hover:shadow-md"
-            :style="activeTab === 'mine' && statusFilter === 'approved' ? 'border:1.5px solid #10B981;' : 'border:1px solid #E5E7EB;'"
+          <div class="stat-tile cursor-pointer"
+            :style="[{ '--stat-color':'#10B981', '--stat-bg':'#ECFDF5', '--stat-glow':'rgba(16,185,129,0.3)' }, activeTab === 'mine' && statusFilter === 'approved' ? { border: '1.5px solid #10B981' } : {}]"
             role="button"
             tabindex="0"
             :aria-pressed="activeTab === 'mine' && statusFilter === 'approved'"
@@ -50,18 +48,16 @@
             @keydown.enter="setFilter('approved')"
             @keydown.space.prevent="setFilter('approved')"
           >
-            <div class="flex items-center gap-3">
-              <div class="w-9 h-9 rounded-lg flex items-center justify-center flex-shrink-0" style="background:#ECFDF5;">
-                <CheckCircleIcon class="w-4 h-4" style="color:#10B981;" />
-              </div>
-              <div>
-                <p class="text-xs font-medium" style="color:#9CA3AF;">Approved</p>
-                <p class="text-2xl font-bold" style="color:#0F172A;">{{ summary.approved ?? 0 }}</p>
-              </div>
+            <div class="stat-tile-icon">
+              <CheckCircleIcon class="w-4 h-4" />
+            </div>
+            <div>
+              <p class="stat-tile-label" style="margin-top:0;">Approved</p>
+              <p class="stat-tile-value" style="font-size:24px;">{{ summary.approved ?? 0 }}</p>
             </div>
           </div>
-          <div class="bg-white rounded-xl px-5 py-4 cursor-pointer transition-shadow hover:shadow-md"
-            :style="activeTab === 'mine' && statusFilter === 'denied' ? 'border:1.5px solid #EF4444;' : 'border:1px solid #E5E7EB;'"
+          <div class="stat-tile cursor-pointer"
+            :style="[{ '--stat-color':'#EF4444', '--stat-bg':'#FEF2F2', '--stat-glow':'rgba(239,68,68,0.3)' }, activeTab === 'mine' && statusFilter === 'denied' ? { border: '1.5px solid #EF4444' } : {}]"
             role="button"
             tabindex="0"
             :aria-pressed="activeTab === 'mine' && statusFilter === 'denied'"
@@ -70,14 +66,12 @@
             @keydown.enter="setFilter('denied')"
             @keydown.space.prevent="setFilter('denied')"
           >
-            <div class="flex items-center gap-3">
-              <div class="w-9 h-9 rounded-lg flex items-center justify-center flex-shrink-0" style="background:#FEF2F2;">
-                <XCircleIcon class="w-4 h-4" style="color:#EF4444;" />
-              </div>
-              <div>
-                <p class="text-xs font-medium" style="color:#9CA3AF;">Denied</p>
-                <p class="text-2xl font-bold" style="color:#0F172A;">{{ summary.denied ?? 0 }}</p>
-              </div>
+            <div class="stat-tile-icon">
+              <XCircleIcon class="w-4 h-4" />
+            </div>
+            <div>
+              <p class="stat-tile-label" style="margin-top:0;">Denied</p>
+              <p class="stat-tile-value" style="font-size:24px;">{{ summary.denied ?? 0 }}</p>
             </div>
           </div>
         </div>
@@ -177,7 +171,7 @@
           <!-- Loading -->
           <div v-if="loading" class="p-10 text-center">
             <Loader2Icon class="w-7 h-7 mx-auto animate-spin mb-3" style="color:#C4B5FD;" />
-            <p class="text-sm" style="color:#9CA3AF;">Loading requests…</p>
+            <p class="text-sm" style="color:#6B7A94;">Loading requests…</p>
           </div>
 
           <!-- Empty -->
@@ -186,7 +180,7 @@
               <ClipboardEditIcon class="w-7 h-7 opacity-20" style="color:#64748B;" />
             </div>
             <p class="text-sm font-semibold mb-1" style="color:#374151;">No correction requests</p>
-            <p class="text-xs" style="color:#9CA3AF;">
+            <p class="text-xs" style="color:#6B7A94;">
               {{ statusFilter ? `No ${statusFilter} requests found.` : 'No requests yet. Click "New Request" to submit one.' }}
             </p>
           </div>
@@ -207,13 +201,13 @@
                       title="Select all pending"
                     />
                   </th>
-                  <th v-if="activeTab === 'campus'" class="text-left px-4 py-3 text-[11px] font-semibold uppercase tracking-wider" style="color:#9CA3AF;">Employee</th>
-                  <th class="text-left px-5 py-3 text-[11px] font-semibold uppercase tracking-wider" style="color:#9CA3AF;">Date</th>
-                  <th class="text-left px-4 py-3 text-[11px] font-semibold uppercase tracking-wider" style="color:#9CA3AF;">Field</th>
-                  <th class="text-center px-4 py-3 text-[11px] font-semibold uppercase tracking-wider" style="color:#9CA3AF;">Change</th>
-                  <th class="text-left px-4 py-3 text-[11px] font-semibold uppercase tracking-wider" style="color:#9CA3AF;">Reason</th>
-                  <th class="text-center px-4 py-3 text-[11px] font-semibold uppercase tracking-wider" style="color:#9CA3AF;">Status</th>
-                  <th class="text-center px-4 py-3 text-[11px] font-semibold uppercase tracking-wider" style="color:#9CA3AF;">Submitted</th>
+                  <th v-if="activeTab === 'campus'" class="text-left px-4 py-3 text-[11px] font-semibold uppercase tracking-wider" style="color:#6B7A94;">Employee</th>
+                  <th class="text-left px-5 py-3 text-[11px] font-semibold uppercase tracking-wider" style="color:#6B7A94;">Date</th>
+                  <th class="text-left px-4 py-3 text-[11px] font-semibold uppercase tracking-wider" style="color:#6B7A94;">Field</th>
+                  <th class="text-center px-4 py-3 text-[11px] font-semibold uppercase tracking-wider" style="color:#6B7A94;">Change</th>
+                  <th class="text-left px-4 py-3 text-[11px] font-semibold uppercase tracking-wider" style="color:#6B7A94;">Reason</th>
+                  <th class="text-center px-4 py-3 text-[11px] font-semibold uppercase tracking-wider" style="color:#6B7A94;">Status</th>
+                  <th class="text-center px-4 py-3 text-[11px] font-semibold uppercase tracking-wider" style="color:#6B7A94;">Submitted</th>
                   <th v-if="isPrivileged && activeTab === 'campus'" class="px-5 py-3"><span class="sr-only">Actions</span></th>
                 </tr>
               </thead>
@@ -242,12 +236,12 @@
                   <td v-if="activeTab === 'campus'" class="px-4 py-3.5">
                     <div class="flex items-center gap-2.5">
                       <div class="w-7 h-7 rounded-full flex items-center justify-center flex-shrink-0 text-white text-xs font-bold"
-                        style="background:linear-gradient(135deg,#0E1EC0,#1228CC);">
+                        style="background:linear-gradient(135deg,#2E4A8C,#3D5CA3);">
                         {{ initials(c.employee?.name) }}
                       </div>
                       <div>
                         <p class="text-xs font-semibold" style="color:#0F172A;">{{ c.employee?.name }}</p>
-                        <p class="text-[10px]" style="color:#9CA3AF;">{{ c.employee?.employee_id }}</p>
+                        <p class="text-[10px]" style="color:#6B7A94;">{{ c.employee?.employee_id }}</p>
                       </div>
                     </div>
                   </td>
@@ -255,7 +249,7 @@
                   <!-- Date -->
                   <td class="px-5 py-3.5">
                     <p class="text-xs font-semibold font-mono" style="color:#0F172A;">{{ c.work_date }}</p>
-                    <p class="text-[10px]" style="color:#9CA3AF;">{{ c.work_date_label }}</p>
+                    <p class="text-[10px]" style="color:#6B7A94;">{{ c.work_date_label }}</p>
                   </td>
 
                   <!-- Field + group indicator -->
@@ -282,7 +276,7 @@
                       <span class="font-mono text-xs px-1.5 py-0.5 rounded" style="background:#FEF2F2;color:#991B1B;">
                         {{ c.original_value ?? 'none' }}
                       </span>
-                      <ArrowRightIcon class="w-3 h-3 flex-shrink-0" style="color:#9CA3AF;" />
+                      <ArrowRightIcon class="w-3 h-3 flex-shrink-0" style="color:#6B7A94;" />
                       <span class="font-mono text-xs px-1.5 py-0.5 rounded" style="background:#ECFDF5;color:#065F46;">
                         {{ c.requested_value }}
                       </span>
@@ -292,7 +286,7 @@
                   <!-- Reason -->
                   <td class="px-4 py-3.5 max-w-[200px]">
                     <p class="text-xs truncate" style="color:#374151;" :title="c.reason">{{ c.reason }}</p>
-                    <p v-if="c.reviewer_remarks" class="text-[10px] mt-0.5 italic truncate" style="color:#9CA3AF;" :title="c.reviewer_remarks">
+                    <p v-if="c.reviewer_remarks" class="text-[10px] mt-0.5 italic truncate" style="color:#6B7A94;" :title="c.reviewer_remarks">
                       Reviewer: {{ c.reviewer_remarks }}
                     </p>
                   </td>
@@ -300,7 +294,7 @@
                   <!-- Status badge -->
                   <td class="px-4 py-3.5 text-center">
                     <StatusBadge :status="c.status" />
-                    <p v-if="c.reviewed_at" class="text-[10px] mt-1" style="color:#9CA3AF;">{{ c.reviewed_at }}</p>
+                    <p v-if="c.reviewed_at" class="text-[10px] mt-1" style="color:#6B7A94;">{{ c.reviewed_at }}</p>
                   </td>
 
                   <!-- Submitted date -->
@@ -328,7 +322,7 @@
                         Deny
                       </button>
                     </div>
-                    <span v-else class="text-[11px]" style="color:#9CA3AF;">
+                    <span v-else class="text-[11px]" style="color:#6B7A94;">
                       {{ c.reviewed_by_name ?? '—' }}
                     </span>
                   </td>
@@ -355,7 +349,7 @@
               <h3 class="text-base font-bold" style="color:#0F172A;">New Correction Request</h3>
               <p class="text-xs" style="color:#64748B;">Select one or more time fields to correct for the same date.</p>
             </div>
-            <button @click="submitModal = false" class="p-1.5 rounded-lg transition-colors" style="color:#9CA3AF;">
+            <button @click="submitModal = false" class="p-1.5 rounded-lg transition-colors" style="color:#6B7A94;">
               <XIcon class="w-4 h-4" />
             </button>
           </div>
@@ -373,14 +367,14 @@
                 required
                 class="modal-input"
               />
-              <p class="text-[10px] mt-1" style="color:#9CA3AF;">Cannot be a future date.</p>
+              <p class="text-[10px] mt-1" style="color:#6B7A94;">Cannot be a future date.</p>
             </div>
 
             <!-- Multi-field selector -->
             <div>
               <label class="modal-label">
                 Fields to Correct <span style="color:#EF4444;">*</span>
-                <span class="float-right font-normal text-xs" style="color:#9CA3AF;">Check all that apply</span>
+                <span class="float-right font-normal text-xs" style="color:#6B7A94;">Check all that apply</span>
               </label>
               <div class="space-y-2 mt-1">
                 <div
@@ -418,7 +412,7 @@
             <div>
               <label class="modal-label">
                 Reason <span style="color:#EF4444;">*</span>
-                <span class="float-right font-normal" style="color:#9CA3AF;">{{ form.reason.length }}/500</span>
+                <span class="float-right font-normal" style="color:#6B7A94;">{{ form.reason.length }}/500</span>
               </label>
               <textarea
                 v-model="form.reason"
@@ -440,7 +434,7 @@
               <button type="button" @click="submitModal = false" class="flex-1 py-2 rounded-lg text-sm font-semibold transition-colors" style="background:#F1F5F9;color:#374151;">
                 Cancel
               </button>
-              <button type="submit" :disabled="submitting" class="flex-1 py-2 rounded-lg text-sm font-semibold transition-colors disabled:opacity-50" style="background:#0E1EC0;color:white;">
+              <button type="submit" :disabled="submitting" class="flex-1 py-2 rounded-lg text-sm font-semibold transition-colors disabled:opacity-50" style="background:#2E4A8C;color:white;">
                 <span v-if="submitting" class="flex items-center justify-center gap-2">
                   <Loader2Icon class="w-4 h-4 animate-spin" /> Submitting…
                 </span>
@@ -483,22 +477,22 @@
           <div class="px-6 py-4 space-y-3">
             <div class="rounded-xl px-4 py-3 space-y-2" style="background:#F8FAFC;border:1px solid #E5E7EB;">
               <div class="flex justify-between items-center text-xs">
-                <span style="color:#9CA3AF;">Employee</span>
+                <span style="color:#6B7A94;">Employee</span>
                 <span class="font-semibold" style="color:#0F172A;">{{ reviewTarget?.employee?.name }}</span>
               </div>
               <div class="flex justify-between items-center text-xs">
-                <span style="color:#9CA3AF;">Date</span>
+                <span style="color:#6B7A94;">Date</span>
                 <span class="font-mono font-semibold" style="color:#0F172A;">{{ reviewTarget?.work_date_label }}</span>
               </div>
               <div class="flex justify-between items-center text-xs">
-                <span style="color:#9CA3AF;">Field</span>
+                <span style="color:#6B7A94;">Field</span>
                 <span class="font-semibold" style="color:#0F172A;">{{ reviewTarget?.field_label }}</span>
               </div>
               <div class="flex justify-between items-center text-xs">
-                <span style="color:#9CA3AF;">Change</span>
+                <span style="color:#6B7A94;">Change</span>
                 <div class="flex items-center gap-1.5">
                   <span class="font-mono px-1.5 py-0.5 rounded text-[11px]" style="background:#FEF2F2;color:#991B1B;">{{ reviewTarget?.original_value ?? 'none' }}</span>
-                  <ArrowRightIcon class="w-3 h-3" style="color:#9CA3AF;" />
+                  <ArrowRightIcon class="w-3 h-3" style="color:#6B7A94;" />
                   <span class="font-mono px-1.5 py-0.5 rounded text-[11px]" style="background:#ECFDF5;color:#065F46;">{{ reviewTarget?.requested_value }}</span>
                 </div>
               </div>
@@ -507,13 +501,13 @@
                 This is part of a multi-field batch — all related fields will be {{ reviewAction === 'approved' ? 'approved' : 'denied' }} together.
               </div>
               <div class="pt-1 text-xs">
-                <p style="color:#9CA3AF;">Reason from employee:</p>
+                <p style="color:#6B7A94;">Reason from employee:</p>
                 <p class="mt-1 font-medium" style="color:#374151;">{{ reviewTarget?.reason }}</p>
               </div>
             </div>
 
             <div>
-              <label class="modal-label">Reviewer Remarks <span style="color:#9CA3AF;">(optional)</span></label>
+              <label class="modal-label">Reviewer Remarks <span style="color:#6B7A94;">(optional)</span></label>
               <textarea
                 v-model="reviewRemarks"
                 rows="2"
@@ -584,7 +578,7 @@
               </p>
             </div>
             <div>
-              <label class="modal-label">Reviewer Remarks <span style="color:#9CA3AF;">(optional)</span></label>
+              <label class="modal-label">Reviewer Remarks <span style="color:#6B7A94;">(optional)</span></label>
               <textarea
                 v-model="batchRemarks"
                 rows="2"
@@ -880,7 +874,7 @@ onMounted(load);
   transition: border-color 0.15s, box-shadow 0.15s;
 }
 .modal-input:focus {
-  outline: none; border-color: #0E1EC0; box-shadow: 0 0 0 3px rgba(14,30,192,0.08);
+  outline: none; border-color: #2E4A8C; box-shadow: 0 0 0 3px rgba(46, 74, 140,0.08);
 }
 .modal-input-sm {
   padding: 4px 8px; font-size: 12px;
@@ -888,7 +882,7 @@ onMounted(load);
   color: #0F172A; background: #fff;
   transition: border-color 0.15s;
 }
-.modal-input-sm:focus { outline: none; border-color: #0E1EC0; }
+.modal-input-sm:focus { outline: none; border-color: #2E4A8C; }
 
 @media (max-width: 640px) {
   .grid.grid-cols-1.sm\\:grid-cols-3 { grid-template-columns: 1fr; }

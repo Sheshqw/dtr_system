@@ -31,7 +31,7 @@
           >{{ t.actionLabel }}</button>
 
           <!-- Close -->
-          <button class="flex-shrink-0 text-[#94A3B8] hover:text-[#0C1445] transition-colors mt-0.5">
+          <button class="flex-shrink-0 text-[#6B7A94] hover:text-[#0C1445] transition-colors mt-0.5">
             <XIcon class="w-4 h-4" />
           </button>
 

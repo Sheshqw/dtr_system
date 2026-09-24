@@ -17,7 +17,7 @@
               <button class="cd-btn cd-btn--cancel" @click="handleCancel">{{ options.cancelText }}</button>
               <button
                 class="cd-btn cd-btn--confirm"
-                :style="{ background: options.danger ? '#DC2626' : '#0E1EC0' }"
+                :style="{ background: options.danger ? '#DC2626' : '#2E4A8C' }"
                 @click="handleConfirm"
               >{{ options.confirmText }}</button>
             </div>

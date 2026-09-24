@@ -1,56 +1,24 @@
 {{-- Single CSC Form 48 copy — included twice (left and right) in form48.blade.php --}}
 
-{{-- ── Header: form number + title + photo ────────── --}}
-<table style="width:100%; border-collapse:collapse; margin-bottom:2pt;">
-  <tr>
-    <td style="vertical-align:top; padding-right:3pt;">
-      <div class="form-no">Civil Service Form No. 48</div>
-      <div class="form-title">Daily Time Record</div>
-    </td>
-    <td style="vertical-align:top; text-align:center; width:42pt; padding-left:3pt;">
-      @if(!empty($empPhoto))
-        <img src="{{ $empPhoto }}" style="width:38pt; height:48pt; object-fit:cover; border:1pt solid #666; display:block; margin:0 auto;" />
-        <div style="font-size:5pt; color:#555; margin-top:1pt;">PHOTO</div>
-      @else
-        <div style="width:38pt; height:48pt; border:1pt solid #999; display:flex; flex-direction:column; align-items:center; justify-content:center; font-size:5pt; color:#aaa; text-align:center; margin:0 auto;">
-          <div style="font-size:8pt; color:#ccc; margin-bottom:2pt;">&#128100;</div>
-          PHOTO
-        </div>
-      @endif
-    </td>
-  </tr>
-</table>
+{{-- ── Header ───────────────────────────────────── --}}
+<div class="form-no">Civil Service Form No. 48</div>
+<div class="form-title">Daily Time Record</div>
 
-{{-- ── Info fields ─────────────────────────────── --}}
+{{-- ── Name / Month ─────────────────────────────── --}}
 <table class="info-tbl">
   <tr>
-    <td style="width:58%">
-      <span class="lbl">Name:</span>
-      <span class="val val-lg">{{ $empName }}</span>
-    </td>
     <td>
-      <span class="lbl">For the Month</span>
+      <span class="lbl">Name:</span>
+      <span class="val val-name">{{ $empName }}</span>
     </td>
   </tr>
   <tr>
-    <td>&nbsp;</td>
+    <td><span class="lbl">For the Month</span></td>
+  </tr>
+  <tr>
     <td>
       <span class="lbl">of:</span>
-      <span class="val val-md">{{ strtoupper($monthLabel) }}</span>
-    </td>
-  </tr>
-</table>
-
-{{-- ── Position / Department ──────────────────────── --}}
-<table class="info-tbl" style="margin-top:-1pt;">
-  <tr>
-    <td style="width:58%">
-      <span class="lbl">Position:</span>
-      <span class="val val-lg">{{ $empPos }}</span>
-    </td>
-    <td>
-      <span class="lbl">Department:</span>
-      <span class="val val-md">{{ $empDept }}</span>
+      <span class="val val-month">{{ $monthYearLabel }}</span>
     </td>
   </tr>
 </table>
@@ -58,8 +26,8 @@
 {{-- ── Office hours ─────────────────────────────── --}}
 <table class="oh-tbl">
   <tr>
-    <td style="white-space:nowrap; font-size:7.5pt;">Office Hour:</td>
-    <td style="font-size:7.5pt; white-space:nowrap; padding-left:4pt;">
+    <td style="white-space:nowrap;">Office Hour:</td>
+    <td style="white-space:nowrap; padding-left:4pt;">
       In A.M.&nbsp;<strong>{{ $shiftMorIn }}</strong>
       &nbsp;&nbsp;&nbsp;
       P.M.&nbsp;<strong>{{ $shiftAftIn }}</strong>
@@ -67,7 +35,7 @@
   </tr>
   <tr>
     <td>&nbsp;</td>
-    <td style="font-size:7.5pt; white-space:nowrap; padding-left:4pt;">
+    <td style="white-space:nowrap; padding-left:4pt;">
       Out A.M.&nbsp;<strong>{{ $shiftMorOut }}</strong>
       &nbsp;&nbsp;&nbsp;
       P.M.&nbsp;<strong>{{ $shiftAftOut }}</strong>

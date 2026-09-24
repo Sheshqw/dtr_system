@@ -6,9 +6,9 @@
     <!-- Filters -->
     <div class="px-6 py-3 border-b border-[#E2E8F0] bg-white flex flex-wrap items-center gap-3">
       <div class="relative">
-        <SearchIcon class="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-[#94A3B8]" />
+        <SearchIcon class="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-[#6B7A94]" />
         <input v-model="filters.search" placeholder="Search name or ID…"
-          class="pl-9 pr-3 py-1.5 text-sm border border-[#E2E8F0] rounded-md w-52 focus:outline-none focus:ring-2 focus:ring-[#0E1EC0]" />
+          class="pl-9 pr-3 py-1.5 text-sm border border-[#E2E8F0] rounded-md w-52 focus:outline-none focus:ring-2 focus:ring-[#2E4A8C]" />
       </div>
       <select v-model="filters.campus" class="select-sm">
         <option value="">All Campuses</option>
@@ -21,21 +21,18 @@
         <option value="hr_officer">HR Officer</option>
         <option value="department_head">Department Head</option>
       </select>
-      <span class="ml-auto text-xs text-[#94A3B8]">{{ filtered.length }} account{{ filtered.length !== 1 ? 's' : '' }}</span>
+      <span class="ml-auto text-xs text-[#6B7A94]">{{ filtered.length }} account{{ filtered.length !== 1 ? 's' : '' }}</span>
     </div>
 
     <!-- Table -->
     <div class="flex-1 overflow-auto bg-[#F4F6FB] p-6">
-      <div class="bg-white border border-[#E4E9F2] rounded-xl overflow-hidden shadow-[0_2px_12px_rgba(8,14,128,0.07),0_1px_3px_rgba(8,14,128,0.04)]">
+      <div class="bg-white border border-[#E4E9F2] rounded-xl overflow-hidden shadow-[0_2px_12px_rgba(27, 42, 94,0.07),0_1px_3px_rgba(27, 42, 94,0.04)]">
 
-        <div v-if="loading" class="flex items-center justify-center h-40 text-[#94A3B8] text-sm gap-2">
+        <div v-if="loading" class="flex items-center justify-center h-40 text-[#6B7A94] text-sm gap-2">
           <Loader2Icon class="w-4 h-4 animate-spin" /> Loading…
         </div>
 
-        <div v-else-if="!filtered.length" class="flex flex-col items-center justify-center h-40 text-[#94A3B8]">
-          <ShieldCheckIcon class="w-8 h-8 mb-2 opacity-30" />
-          <p class="text-sm">No accounts found.</p>
-        </div>
+        <EmptyState v-else-if="!filtered.length" title="No accounts found" description="No privileged accounts match your current filters." />
 
         <table v-else class="w-full text-sm">
           <thead class="border-b border-[#EEF2FA] bg-[#F7F8FD]">
@@ -62,16 +59,16 @@
             <tr v-for="(acc, i) in sorted" :key="acc.id"
                 class="border-b border-[#E2E8F0] last:border-0 hover:bg-[#F8FAFC] transition-colors"
                 :class="{ 'opacity-50': !acc.is_active }">
-              <td class="td-cell text-center text-xs text-[#94A3B8] font-mono">{{ i + 1 }}</td>
+              <td class="td-cell text-center text-xs text-[#6B7A94] font-mono">{{ i + 1 }}</td>
               <td class="td-cell">
                 <div class="flex items-center gap-3">
                   <div class="w-8 h-8 rounded-full flex items-center justify-center flex-shrink-0 text-white text-xs font-semibold"
-                       style="background: linear-gradient(135deg, #0E1EC0, #1228CC);">
+                       :style="avatarStyle(acc.name)">
                     {{ initials(acc.name) }}
                   </div>
                   <div>
                     <p class="font-medium text-[#0F172A]">{{ acc.name }}</p>
-                    <p class="text-xs text-[#94A3B8] font-mono">{{ acc.employee_id }}</p>
+                    <p class="text-xs text-[#6B7A94] font-mono">{{ acc.employee_id }}</p>
                   </div>
                 </div>
               </td>
@@ -98,7 +95,9 @@
 import { ref, reactive, computed, onMounted } from 'vue';
 import axios from 'axios';
 import PageHeader from '@/components/PageHeader.vue';
+import { useAvatarColor } from '@/composables/useAvatarColor';
 import RoleBadge from '@/components/RoleBadge.vue';
+import EmptyState from '@/components/EmptyState.vue';
 import SortIcon from '@/components/SortIcon.vue';
 import { useToast } from '@/composables/useToast';
 import { useSortable } from '@/composables/useSortable';
@@ -110,6 +109,7 @@ import {
 } from 'lucide-vue-next';
 
 const { toast } = useToast();
+const { avatarStyle } = useAvatarColor();
 
 const accounts = ref([]);
 const campuses = ref([]);
@@ -174,7 +174,7 @@ onMounted(load);
   padding: 6px 12px; color: #0F172A; background: #fff;
   transition: border-color 0.15s, box-shadow 0.15s;
 }
-.select-sm:focus { outline: none; border-color: #0E1EC0; box-shadow: 0 0 0 3px rgba(14,30,192,0.08); }
+.select-sm:focus { outline: none; border-color: #2E4A8C; box-shadow: 0 0 0 3px rgba(46, 74, 140,0.08); }
 
 /* ── Table ────────────────────────────────────────── */
 .th-cell {
@@ -186,7 +186,7 @@ onMounted(load);
 
 /* ── Sortable column headers ────────────────────────────── */
 .th-sort { cursor: pointer; user-select: none; transition: color 0.12s; }
-.th-sort:hover { color: #0E1EC0; }
+.th-sort:hover { color: #2E4A8C; }
 
 tbody tr { border-bottom: 1px solid #F1F5F9; transition: background 0.12s; }
 tbody tr:last-child { border-bottom: none; }
@@ -199,7 +199,7 @@ tbody tr:hover { background: #F8FAFF; }
 /* ── Avatar ───────────────────────────────────────── */
 .admin-avatar {
   width: 34px; height: 34px; border-radius: 9px; flex-shrink: 0;
-  background: linear-gradient(135deg, #1228CC 0%, #080E80 100%);
+  background: linear-gradient(135deg, #3D5CA3 0%, #1B2A5E 100%);
   display: flex; align-items: center; justify-content: center;
 }
 

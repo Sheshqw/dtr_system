@@ -22,41 +22,35 @@
 
         <!-- Summary cards -->
         <div class="grid grid-cols-1 sm:grid-cols-3 gap-4">
-          <div class="bg-white rounded-xl px-5 py-4" style="border:1px solid #E5E7EB;">
-            <div class="flex items-center gap-3">
-              <div class="w-9 h-9 rounded-lg flex items-center justify-center flex-shrink-0" style="background:#EEF2FF;">
-                <ArchiveIcon class="w-4 h-4" style="color:#4338CA;" />
-              </div>
-              <div>
-                <p class="text-xs font-medium" style="color:#9CA3AF;">Total Backups</p>
-                <p class="text-xl font-bold" style="color:#0F172A;">{{ summary.total_files ?? 0 }}</p>
-              </div>
+          <div class="stat-tile" style="--stat-color:#4338CA;--stat-glow:rgba(67,56,202,0.28);">
+            <div class="stat-tile-icon">
+              <ArchiveIcon class="w-4 h-4" />
+            </div>
+            <div>
+              <p class="stat-tile-label" style="margin-top:0;">Total Backups</p>
+              <p class="stat-tile-value" style="font-size:20px;">{{ summary.total_files ?? 0 }}</p>
             </div>
           </div>
 
-          <div class="bg-white rounded-xl px-5 py-4" style="border:1px solid #E5E7EB;">
-            <div class="flex items-center gap-3">
-              <div class="w-9 h-9 rounded-lg flex items-center justify-center flex-shrink-0" style="background:#F0FDF4;">
-                <HardDriveIcon class="w-4 h-4" style="color:#15803D;" />
-              </div>
-              <div>
-                <p class="text-xs font-medium" style="color:#9CA3AF;">Storage Used</p>
-                <p class="text-xl font-bold" style="color:#0F172A;">{{ summary.total_size ?? '0 B' }}</p>
-              </div>
+          <div class="stat-tile" style="--stat-color:#15803D;--stat-glow:rgba(21,128,61,0.28);">
+            <div class="stat-tile-icon">
+              <HardDriveIcon class="w-4 h-4" />
+            </div>
+            <div>
+              <p class="stat-tile-label" style="margin-top:0;">Storage Used</p>
+              <p class="stat-tile-value" style="font-size:20px;">{{ summary.total_size ?? '0 B' }}</p>
             </div>
           </div>
 
-          <div class="bg-white rounded-xl px-5 py-4" style="border:1px solid #E5E7EB;">
-            <div class="flex items-center gap-3">
-              <div class="w-9 h-9 rounded-lg flex items-center justify-center flex-shrink-0" style="background:#FFF7ED;">
-                <ClockIcon class="w-4 h-4" style="color:#C2410C;" />
-              </div>
-              <div>
-                <p class="text-xs font-medium" style="color:#9CA3AF;">Last Backup</p>
-                <p class="text-sm font-semibold truncate" style="color:#0F172A;">
-                  {{ summary.last_backup ? formatRelative(summary.last_backup) : 'Never' }}
-                </p>
-              </div>
+          <div class="stat-tile" style="--stat-color:#C2410C;--stat-glow:rgba(194,65,12,0.28);">
+            <div class="stat-tile-icon">
+              <ClockIcon class="w-4 h-4" />
+            </div>
+            <div>
+              <p class="stat-tile-label" style="margin-top:0;">Last Backup</p>
+              <p class="text-sm font-semibold truncate" style="color:#0F172A;">
+                {{ summary.last_backup ? formatRelative(summary.last_backup) : 'Never' }}
+              </p>
             </div>
           </div>
         </div>
@@ -91,7 +85,7 @@
           <!-- Loading -->
           <div v-if="loading" class="p-10 text-center">
             <Loader2Icon class="w-7 h-7 mx-auto animate-spin mb-3" style="color:#C4B5FD;" />
-            <p class="text-sm" style="color:#9CA3AF;">Loading backups…</p>
+            <p class="text-sm" style="color:#6B7A94;">Loading backups…</p>
           </div>
 
           <!-- Empty -->
@@ -100,7 +94,7 @@
               <DatabaseIcon class="w-7 h-7 opacity-25" style="color:#64748B;" />
             </div>
             <p class="text-sm font-semibold mb-1" style="color:#374151;">No backups yet</p>
-            <p class="text-xs" style="color:#9CA3AF;">Click "Create Backup" above to generate your first backup.</p>
+            <p class="text-xs" style="color:#6B7A94;">Click "Create Backup" above to generate your first backup.</p>
           </div>
 
           <!-- Table -->
@@ -108,11 +102,11 @@
             <table class="w-full">
               <thead>
                 <tr style="background:#FAFAFA;border-bottom:1px solid #F1F5F9;">
-                  <th class="text-left px-5 py-3 text-[11px] font-semibold uppercase tracking-wider" style="color:#9CA3AF;">Backup File</th>
-                  <th class="text-left px-4 py-3 text-[11px] font-semibold uppercase tracking-wider" style="color:#9CA3AF;">Created By</th>
-                  <th class="text-center px-4 py-3 text-[11px] font-semibold uppercase tracking-wider" style="color:#9CA3AF;">Records</th>
-                  <th class="text-center px-4 py-3 text-[11px] font-semibold uppercase tracking-wider" style="color:#9CA3AF;">Size</th>
-                  <th class="text-center px-4 py-3 text-[11px] font-semibold uppercase tracking-wider" style="color:#9CA3AF;">Date</th>
+                  <th class="text-left px-5 py-3 text-[11px] font-semibold uppercase tracking-wider" style="color:#6B7A94;">Backup File</th>
+                  <th class="text-left px-4 py-3 text-[11px] font-semibold uppercase tracking-wider" style="color:#6B7A94;">Created By</th>
+                  <th class="text-center px-4 py-3 text-[11px] font-semibold uppercase tracking-wider" style="color:#6B7A94;">Records</th>
+                  <th class="text-center px-4 py-3 text-[11px] font-semibold uppercase tracking-wider" style="color:#6B7A94;">Size</th>
+                  <th class="text-center px-4 py-3 text-[11px] font-semibold uppercase tracking-wider" style="color:#6B7A94;">Date</th>
                   <th class="px-5 py-3"><span class="sr-only">Actions</span></th>
                 </tr>
               </thead>
@@ -160,7 +154,7 @@
                         <ChevronDownIcon
                           class="w-4 h-4 transition-transform duration-200 flex-shrink-0"
                           :class="expanded === backup.filename ? 'rotate-180' : ''"
-                          style="color:#9CA3AF;"
+                          style="color:#6B7A94;"
                         />
                         <button
                           @click.stop="download(backup.filename)"
@@ -202,7 +196,7 @@
                   <tr v-if="expanded === backup.filename" style="background:#F8FAFC;border-bottom:1px solid #F1F5F9;">
                     <td colspan="6" class="px-6 py-4">
                       <div v-if="Object.keys(backup.table_counts).length" class="space-y-2">
-                        <p class="text-[11px] font-semibold uppercase tracking-wider mb-3" style="color:#9CA3AF;">Records per table</p>
+                        <p class="text-[11px] font-semibold uppercase tracking-wider mb-3" style="color:#6B7A94;">Records per table</p>
                         <div class="grid grid-cols-2 sm:grid-cols-4 gap-2">
                           <div
                             v-for="(count, table) in backup.table_counts"
@@ -215,12 +209,12 @@
                               class="text-xs font-bold ml-2 px-1.5 py-0.5 rounded"
                               :style="count > 0
                                 ? 'background:#EEF2FF;color:#4338CA;'
-                                : 'background:#F9FAFB;color:#9CA3AF;'"
+                                : 'background:#F9FAFB;color:#6B7A94;'"
                             >{{ count.toLocaleString() }}</span>
                           </div>
                         </div>
                       </div>
-                      <div v-else class="text-xs" style="color:#9CA3AF;">
+                      <div v-else class="text-xs" style="color:#6B7A94;">
                         No table detail available — this backup was created before metadata tracking.
                       </div>
                     </td>
@@ -256,19 +250,19 @@
 
         <div class="rounded-xl px-4 py-3 space-y-1" style="background:#F8FAFC;border:1px solid #E5E7EB;">
           <div class="flex justify-between text-xs">
-            <span style="color:#9CA3AF;">File</span>
+            <span style="color:#6B7A94;">File</span>
             <span class="font-mono font-medium" style="color:#0F172A;">{{ restoreTarget?.filename }}</span>
           </div>
           <div class="flex justify-between text-xs">
-            <span style="color:#9CA3AF;">Campus</span>
+            <span style="color:#6B7A94;">Campus</span>
             <span class="font-medium" style="color:#0F172A;">{{ restoreTarget?.campus }}</span>
           </div>
           <div class="flex justify-between text-xs">
-            <span style="color:#9CA3AF;">Total Records</span>
+            <span style="color:#6B7A94;">Total Records</span>
             <span class="font-medium" style="color:#0F172A;">{{ restoreTarget?.total_records?.toLocaleString() ?? '—' }}</span>
           </div>
           <div class="flex justify-between text-xs">
-            <span style="color:#9CA3AF;">Created</span>
+            <span style="color:#6B7A94;">Created</span>
             <span class="font-mono" style="color:#0F172A;">{{ restoreTarget?.created_at }}</span>
           </div>
         </div>
@@ -442,7 +436,7 @@ onMounted(load);
 /* ── Summary cards ───────────────────────────────────── */
 .backup-stat-card {
   background: #fff; border: 1px solid #E4E9F2; border-radius: 12px;
-  padding: 16px 20px; box-shadow: 0 1px 4px rgba(8,14,128,0.05);
+  padding: 16px 20px; box-shadow: 0 1px 4px rgba(27, 42, 94,0.05);
 }
 .backup-stat-icon {
   width: 38px; height: 38px; border-radius: 10px; flex-shrink: 0;
@@ -452,10 +446,10 @@ onMounted(load);
 /* ── Backup list items ───────────────────────────────── */
 .backup-item {
   background: #fff; border: 1px solid #E4E9F2; border-radius: 12px;
-  overflow: hidden; box-shadow: 0 1px 4px rgba(8,14,128,0.04);
+  overflow: hidden; box-shadow: 0 1px 4px rgba(27, 42, 94,0.04);
   transition: box-shadow 0.15s;
 }
-.backup-item:hover { box-shadow: 0 4px 16px rgba(8,14,128,0.08); }
+.backup-item:hover { box-shadow: 0 4px 16px rgba(27, 42, 94,0.08); }
 
 .backup-item-head {
   display: flex; align-items: center; gap: 12px;
@@ -472,7 +466,7 @@ onMounted(load);
 /* ── Action buttons ──────────────────────────────────── */
 .btn-dl {
   display: inline-flex; align-items: center; gap: 6px;
-  padding: 6px 12px; background: #EEF2FF; color: #0E1EC0;
+  padding: 6px 12px; background: #EEF2FF; color: #2E4A8C;
   font-size: 12px; font-weight: 600; border-radius: 7px;
   border: none; cursor: pointer; transition: all 0.15s;
 }

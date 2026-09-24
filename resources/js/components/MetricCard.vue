@@ -11,7 +11,7 @@
     <div class="p-5">
       <!-- Label + percentage -->
       <div class="flex items-center justify-between mb-3">
-        <p class="text-xs font-semibold uppercase tracking-widest" style="color: #94A3B8;">
+        <p class="text-xs font-semibold uppercase tracking-widest" style="color: #6B7A94;">
           {{ label }}
         </p>
         <span
@@ -35,7 +35,7 @@
         </div>
       </div>
 
-      <p class="text-xs mt-1.5" style="color: #94A3B8;">employees today</p>
+      <p class="text-xs mt-1.5" style="color: #6B7A94;">employees today</p>
 
       <!-- Progress bar -->
       <div class="mt-4 h-1 rounded-full" style="background: #F1F5F9;">
