@@ -19,23 +19,46 @@ class BiometricController extends Controller
     ) {}
 
     /**
+     * Super Admin included alongside admin/hr_officer — this had been
+     * missing on every method here, which meant the one role with the
+     * most privilege everywhere else in the app was the one role locked
+     * out of the biometric device page.
+     */
+    private function assertCanManageBiometric(Request $request): void
+    {
+        if (! in_array($request->user()->role, ['super_admin', 'admin', 'hr_officer'])) {
+            abort(403, 'Unauthorized.');
+        }
+    }
+
+    /**
      * Return device reachability status.
      * GET /api/biometric/status
      */
     public function debug(Request $request): \Illuminate\Http\JsonResponse
     {
-        if (! in_array($request->user()->role, ['admin', 'hr_officer'])) {
-            abort(403, 'Unauthorized.');
-        }
+        $this->assertCanManageBiometric($request);
 
         return response()->json($this->zk->debugRawResponse());
     }
 
+    /**
+     * Step-by-step connection diagnostic — TCP reachability, then a full
+     * protocol handshake — surfaced in the UI as "Test Connection" so an
+     * admin setting up a real device gets a specific reason for failure
+     * instead of just "Offline / Unreachable".
+     * POST /api/biometric/test-connection
+     */
+    public function testConnection(Request $request): \Illuminate\Http\JsonResponse
+    {
+        $this->assertCanManageBiometric($request);
+
+        return response()->json($this->zk->testConnection());
+    }
+
     public function status(Request $request): \Illuminate\Http\JsonResponse
     {
-        if (! in_array($request->user()->role, ['admin', 'hr_officer'])) {
-            abort(403, 'Unauthorized.');
-        }
+        $this->assertCanManageBiometric($request);
 
         return response()->json([
             'ip'          => $this->zk->getIp(),
@@ -51,9 +74,7 @@ class BiometricController extends Controller
      */
     public function sync(Request $request): \Illuminate\Http\JsonResponse
     {
-        if (! in_array($request->user()->role, ['admin', 'hr_officer'])) {
-            abort(403, 'Unauthorized.');
-        }
+        $this->assertCanManageBiometric($request);
 
         set_time_limit(120); // allow up to 2 minutes for device communication
 
@@ -81,9 +102,7 @@ class BiometricController extends Controller
      */
     public function import(Request $request): \Illuminate\Http\JsonResponse
     {
-        if (! in_array($request->user()->role, ['admin', 'hr_officer'])) {
-            abort(403, 'Unauthorized.');
-        }
+        $this->assertCanManageBiometric($request);
 
         $request->validate([
             'file' => 'required|file|mimes:dat,csv,txt|max:10240',
@@ -229,14 +248,24 @@ class BiometricController extends Controller
                 continue;
             }
 
+            // The live-update side-channel must never take down attendance
+            // processing — if Reverb is unreachable, ShouldBroadcastNow throws
+            // synchronously and would otherwise abort this whole request mid-
+            // loop, silently skipping recordPunchIfNotDuplicate() and
+            // computeDailyDtr() for every remaining record in the batch even
+            // though their AttendanceLog rows were already written.
             if ($punchTime->isToday()) {
-                broadcast(new AttendancePunched(
-                    name:        $employee->full_name,
-                    employee_id: $employee->employee_id,
-                    punch_type:  $punchType,
-                    time:        $punchTime->format('h:i A'),
-                    campus_code: $employee->campus?->code,
-                ));
+                try {
+                    broadcast(new AttendancePunched(
+                        name:        $employee->full_name,
+                        employee_id: $employee->employee_id,
+                        punch_type:  $punchType,
+                        time:        $punchTime->format('h:i A'),
+                        campus_code: $employee->campus?->code,
+                    ));
+                } catch (\Throwable $e) {
+                    \Illuminate\Support\Facades\Log::warning('Live-update broadcast failed (attendance was still recorded): ' . $e->getMessage());
+                }
             }
 
             $affected[$employee->id][$workDate] = $employee;

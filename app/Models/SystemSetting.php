@@ -9,7 +9,18 @@ class SystemSetting extends Model
 {
     protected $fillable = [
         'system_name', 'short_name', 'tagline', 'logo_path', 'updated_by',
+        'session_timeout_minutes', 'password_min_length',
+        'password_require_number', 'password_require_symbol',
+        'max_login_attempts', 'lockout_duration_minutes',
     ];
+
+    protected function casts(): array
+    {
+        return [
+            'password_require_number' => 'boolean',
+            'password_require_symbol' => 'boolean',
+        ];
+    }
 
     public function updatedBy()
     {
@@ -28,6 +39,12 @@ class SystemSetting extends Model
             'system_name' => 'NEMSU',
             'short_name'  => 'UDTRMS',
             'tagline'     => 'University Daily Time Record Monitoring System',
+            'session_timeout_minutes'  => 1440,
+            'password_min_length'      => 8,
+            'password_require_number'  => true,
+            'password_require_symbol'  => false,
+            'max_login_attempts'       => 5,
+            'lockout_duration_minutes' => 30,
         ]);
     }
 

@@ -3,7 +3,9 @@
 namespace App\Http\Controllers;
 
 use App\Models\AuditLog;
+use App\Models\SystemSetting;
 use App\Models\User;
+use App\Services\FeaturePermissionService;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\Hash;
@@ -12,6 +14,10 @@ use Illuminate\Validation\ValidationException;
 
 class AuthController extends Controller
 {
+    public function __construct(private FeaturePermissionService $permissions)
+    {
+    }
+
     // Deliberately identical whether the email doesn't exist, the account
     // is inactive, or the password is wrong — telling those apart lets an
     // attacker enumerate valid staff emails one probe at a time.
@@ -45,19 +51,23 @@ class AuthController extends Controller
         }
 
         if (! Hash::check($request->password, $employee->password)) {
+            $policy       = SystemSetting::current();
+            $maxAttempts  = $policy->max_login_attempts;
+            $lockoutMins  = $policy->lockout_duration_minutes;
+
             $attempts = $employee->failed_login_attempts + 1;
             $employee->failed_login_attempts = $attempts;
 
-            $justLocked = $attempts >= 5;
+            $justLocked = $attempts >= $maxAttempts;
             if ($justLocked) {
-                $employee->locked_until = now()->addMinutes(30);
+                $employee->locked_until = now()->addMinutes($lockoutMins);
             }
 
             $employee->save();
 
-            AuditLog::record('LOGIN_FAILED', 'employees', $employee->id, null, null, "Wrong password (attempt {$attempts}/5).", $employee->id);
+            AuditLog::record('LOGIN_FAILED', 'employees', $employee->id, null, null, "Wrong password (attempt {$attempts}/{$maxAttempts}).", $employee->id);
             if ($justLocked) {
-                AuditLog::record('ACCOUNT_LOCKED', 'employees', $employee->id, null, null, 'Locked for 30 minutes after 5 failed attempts.', $employee->id);
+                AuditLog::record('ACCOUNT_LOCKED', 'employees', $employee->id, null, null, "Locked for {$lockoutMins} minutes after {$maxAttempts} failed attempts.", $employee->id);
             }
 
             throw ValidationException::withMessages([
@@ -86,6 +96,7 @@ class AuthController extends Controller
                 'position'    => $employee->position,
                 'campus_id'   => $employee->campus_id,
                 'campus'      => $employee->campus?->only('id', 'name', 'code'),
+                'feature_permissions' => $this->permissions->effectiveFor($employee),
             ],
         ]);
     }
@@ -230,6 +241,7 @@ class AuthController extends Controller
             'campus'      => $employee->campus?->only('id', 'name', 'code'),
             'department'  => $employee->department?->only('id', 'name', 'code'),
             'shift'       => $employee->shift?->only('id', 'name', 'morning_in', 'afternoon_out'),
+            'feature_permissions' => $this->permissions->effectiveFor($employee),
         ]);
     }
 }

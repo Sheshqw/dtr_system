@@ -2,6 +2,7 @@
 
 namespace App\Http\Controllers;
 
+use App\Events\AttendancePunched;
 use App\Models\AttendanceLog;
 use App\Models\User;
 use App\Services\WorkingHoursService;
@@ -156,6 +157,22 @@ class BiometricPushController extends Controller
             ]);
 
             if (! $created) { $skipped++; continue; }
+
+            // Must never take down attendance processing — see the identical
+            // guard in BiometricController::processLogs() for why.
+            if ($punchTime->isToday()) {
+                try {
+                    broadcast(new AttendancePunched(
+                        name:        $employee->full_name,
+                        employee_id: $employee->employee_id,
+                        punch_type:  $punchType,
+                        time:        $punchTime->format('h:i A'),
+                        campus_code: $employee->campus?->code,
+                    ));
+                } catch (\Throwable $e) {
+                    Log::warning('Live-update broadcast failed (attendance was still recorded): ' . $e->getMessage());
+                }
+            }
 
             $affected[$employee->id][$workDate] = $employee;
             $imported++;

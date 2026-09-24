@@ -43,6 +43,12 @@ return [
             ],
             'client_options' => [
                 // Guzzle client options: https://docs.guzzlephp.org/en/stable/request-options.html
+                // Keeps a broadcast failure (Reverb down/unreachable) fast — this
+                // fires synchronously on every "today" attendance punch, and the
+                // library default (~10s) meant one bad broadcast could stall an
+                // entire device sync/import batch by 10+ seconds per record.
+                'connect_timeout' => 2,
+                'timeout'         => 3,
             ],
         ],
 

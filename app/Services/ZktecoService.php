@@ -87,6 +87,49 @@ class ZktecoService
     }
 
     /**
+     * Step-by-step connection diagnostic for the "Test Connection" button —
+     * deliberately separate from getAttendanceLogs(): it stops after the
+     * handshake (never requests attendance data), so it's safe and fast to
+     * run just to confirm wiring/IP/comm-key are correct before a real sync.
+     */
+    public function testConnection(): array
+    {
+        $steps = [];
+
+        $sock = @fsockopen($this->ip, $this->port, $errno, $errstr, 5);
+        if (! $sock) {
+            $steps[] = [
+                'label' => 'TCP connection',
+                'ok'    => false,
+                'detail' => "Could not reach {$this->ip}:{$this->port} ({$errstr}, errno {$errno}). " .
+                    'Check the device is powered on, the Ethernet cable is connected, and it\'s on the same network as this server.',
+            ];
+            return ['success' => false, 'steps' => $steps];
+        }
+        fclose($sock);
+        $steps[] = ['label' => 'TCP connection', 'ok' => true, 'detail' => "Reached {$this->ip}:{$this->port}."];
+
+        try {
+            $this->openSocket();
+            try {
+                $this->handshake();
+                $steps[] = [
+                    'label'  => 'Device handshake',
+                    'ok'     => true,
+                    'detail' => "Session established (id {$this->sessionId}). The device accepted the connection.",
+                ];
+            } finally {
+                $this->closeSocket();
+            }
+        } catch (\Throwable $e) {
+            $steps[] = ['label' => 'Device handshake', 'ok' => false, 'detail' => $e->getMessage()];
+            return ['success' => false, 'steps' => $steps];
+        }
+
+        return ['success' => true, 'steps' => $steps];
+    }
+
+    /**
      * Pull all attendance logs from the device.
      *
      * @throws \RuntimeException

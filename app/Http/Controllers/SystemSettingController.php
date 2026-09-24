@@ -11,11 +11,21 @@ class SystemSettingController extends Controller
     /**
      * Public — the login page needs the current branding before anyone
      * is authenticated, so this intentionally has no auth middleware.
-     * Nothing sensitive is exposed here (name/tagline/logo URL only).
+     * Security-policy fields (lockout threshold, session timeout, etc.) would
+     * hand an attacker exactly what they need to time around them, so those
+     * are only included when the caller is a signed-in Super Admin/Admin —
+     * resolved manually here since there's no auth middleware to do it.
      */
-    public function show()
+    public function show(Request $request)
     {
-        return response()->json($this->format(SystemSetting::current()));
+        $settings = SystemSetting::current();
+        $employee = auth('sanctum')->user();
+
+        if ($employee && in_array($employee->role, ['super_admin', 'admin'])) {
+            return response()->json($this->format($settings));
+        }
+
+        return response()->json($this->formatPublic($settings));
     }
 
     public function update(Request $request)
@@ -27,6 +37,15 @@ class SystemSettingController extends Controller
             'short_name'  => 'required|string|max:30',
             'tagline'     => 'required|string|max:150',
             'logo'        => 'nullable|image|mimes:jpeg,png,jpg,webp|max:2048',
+
+            // Security & session policy — 15 min .. 30 days for the session
+            // timeout, generous bounds elsewhere just to keep the values sane.
+            'session_timeout_minutes'  => 'required|integer|min:15|max:43200',
+            'password_min_length'      => 'required|integer|min:6|max:32',
+            'password_require_number'  => 'required|boolean',
+            'password_require_symbol'  => 'required|boolean',
+            'max_login_attempts'       => 'required|integer|min:3|max:20',
+            'lockout_duration_minutes' => 'required|integer|min:1|max:1440',
         ]);
 
         $settings = SystemSetting::current();
@@ -71,15 +90,28 @@ class SystemSettingController extends Controller
         }
     }
 
-    private function format(SystemSetting $s): array
+    private function formatPublic(SystemSetting $s): array
     {
         return [
             'system_name' => $s->system_name,
             'short_name'  => $s->short_name,
             'tagline'     => $s->tagline,
             'logo_url'    => $s->logo_url,
-            'updated_at'  => $s->updated_at?->format('M j, Y h:i A'),
-            'updated_by'  => $s->updatedBy?->full_name,
         ];
+    }
+
+    private function format(SystemSetting $s): array
+    {
+        return array_merge($this->formatPublic($s), [
+            'updated_at' => $s->updated_at?->format('M j, Y h:i A'),
+            'updated_by' => $s->updatedBy?->full_name,
+
+            'session_timeout_minutes'  => $s->session_timeout_minutes,
+            'password_min_length'      => $s->password_min_length,
+            'password_require_number'  => $s->password_require_number,
+            'password_require_symbol'  => $s->password_require_symbol,
+            'max_login_attempts'       => $s->max_login_attempts,
+            'lockout_duration_minutes' => $s->lockout_duration_minutes,
+        ]);
     }
 }

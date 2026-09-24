@@ -35,7 +35,7 @@ class DtrCorrection extends Model
     public function dailyDtr()
     {
         return $this->hasOne(DailyDtr::class, 'employee_id', 'employee_id')
-            ->where('work_date', $this->work_date);
+            ->whereDate('work_date', $this->work_date);
     }
 
     public function getFieldLabelAttribute(): string
