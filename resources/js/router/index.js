@@ -1,6 +1,7 @@
 import { createRouter, createWebHistory } from 'vue-router';
 import { useAuthStore } from '@/stores/auth';
 import { useSettingsStore } from '@/stores/settings';
+import { usePermissionsStore } from '@/stores/permissions';
 
 const routes = [
     {
@@ -16,18 +17,19 @@ const routes = [
         children: [
             { path: '', name: 'dashboard', component: () => import('@/views/DashboardView.vue'), meta: { title: 'Dashboard' } },
             { path: 'attendance',    name: 'attendance',    component: () => import('@/views/AttendanceView.vue'),    meta: { title: 'Attendance' } },
-            { path: 'employees',     name: 'employees',     component: () => import('@/views/EmployeesView.vue'),     meta: { title: 'Employees' } },
+            { path: 'employees',     name: 'employees',     component: () => import('@/views/EmployeesView.vue'),     meta: { title: 'Employee Logs', requiresFeature: 'dtr_records.view_all' } },
             { path: 'tracking',      name: 'tracking',      component: () => import('@/views/TrackingView.vue'),      meta: { title: 'Tracking' } },
             { path: 'reports',       name: 'reports',       component: () => import('@/views/ReportsView.vue'),       meta: { title: 'Reports' } },
-            { path: 'holidays',      name: 'holidays',      component: () => import('@/views/HolidayView.vue'),       meta: { title: 'Holidays' } },
-            { path: 'shifts',        name: 'shifts',        component: () => import('@/views/ShiftsView.vue'),        meta: { title: 'Shifts' } },
+            { path: 'holidays',      name: 'holidays',      component: () => import('@/views/HolidayView.vue'),       meta: { title: 'Holidays', requiresFeature: 'holiday_calendar' } },
+            { path: 'shifts',        name: 'shifts',        component: () => import('@/views/ShiftsView.vue'),        meta: { title: 'Shifts', requiresFeature: 'shift_management' } },
             { path: 'departments',   name: 'departments',   component: () => import('@/views/DepartmentsView.vue'),   meta: { title: 'Departments' } },
             { path: 'campuses',      name: 'campuses',      component: () => import('@/views/CampusView.vue'),        meta: { title: 'Campuses' } },
             { path: 'admin-accounts',name: 'admin-accounts',component: () => import('@/views/AdminAccountsView.vue'), meta: { title: 'Admin Accounts' } },
             { path: 'corrections',   name: 'corrections',   component: () => import('@/views/DtrCorrectionView.vue'), meta: { title: 'DTR Corrections' } },
             { path: 'backup',        name: 'backup',        component: () => import('@/views/BackupView.vue'),        meta: { title: 'Backup' } },
             { path: 'audit',         name: 'audit',         component: () => import('@/views/AuditView.vue'),         meta: { title: 'Audit Trail' } },
-            { path: 'system-health', name: 'system-health', component: () => import('@/views/SystemHealthView.vue'), meta: { title: 'System Health' } },
+            { path: 'system-health', name: 'system-health', component: () => import('@/views/SystemHealthView.vue'), meta: { title: 'System Health', requiresFeature: 'system_health' } },
+            { path: 'access-control', name: 'access-control', component: () => import('@/views/AccessControlView.vue'), meta: { title: 'Access Control' } },
             { path: 'settings',      name: 'settings',      component: () => import('@/views/SystemSettingsView.vue'), meta: { title: 'System Settings' } },
             { path: 'biometric',     name: 'biometric',     component: () => import('@/views/BiometricView.vue'),     meta: { title: 'Biometric' } },
             { path: ':pathMatch(.*)*', name: 'not-found', redirect: { name: 'dashboard' } },
@@ -49,6 +51,13 @@ router.beforeEach((to) => {
 
     if (to.meta.guest && auth.token) {
         return { name: 'dashboard' };
+    }
+
+    if (to.meta.requiresFeature) {
+        const permissions = usePermissionsStore();
+        if (!permissions.can(to.meta.requiresFeature)) {
+            return { name: 'dashboard' };
+        }
     }
 });
 

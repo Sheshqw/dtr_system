@@ -14,7 +14,8 @@ return Application::configure(basePath: dirname(__DIR__))
     )
     ->withMiddleware(function (Middleware $middleware): void {
         $middleware->alias([
-            'lan' => \App\Http\Middleware\RequireLanAccess::class,
+            'lan'     => \App\Http\Middleware\RequireLanAccess::class,
+            'feature' => \App\Http\Middleware\CheckFeatureAccess::class,
         ]);
         // All routes are API / SPA — never redirect to route('login'), return 401 JSON instead
         $middleware->redirectGuestsTo(fn() => null);
@@ -33,16 +34,6 @@ return Application::configure(basePath: dirname(__DIR__))
         ) {
             return response()->json(['message' => 'Unauthenticated.'], 401);
         });
-
-        // A locked-month refusal is expected, routine control flow (like a
-        // validation failure), not a crash — implementing HttpExceptionInterface
-        // already keeps it out of System Health (see the reportable() check
-        // below), but Laravel's own default log-on-report is class-based, not
-        // interface-based, so it still needs to be named here explicitly or
-        // every refusal would write a full stack trace to storage/logs.
-        $exceptions->dontReport([
-            \App\Exceptions\DtrMonthLockedException::class,
-        ]);
 
         // Record genuine server-side failures into System Health. Skip normal
         // control-flow exceptions (validation, auth, 4xx) so the page only

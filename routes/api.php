@@ -7,7 +7,6 @@ use App\Http\Controllers\BiometricController;
 use App\Http\Controllers\BiometricPushController;
 use App\Http\Controllers\CampusController;
 use App\Http\Controllers\DtrCorrectionController;
-use App\Http\Controllers\DtrLockController;
 use App\Http\Controllers\EmployeeController;
 use App\Http\Controllers\ReportController;
 use App\Http\Controllers\TrackingController;
@@ -19,6 +18,7 @@ use App\Http\Controllers\AnalyticsController;
 use App\Http\Controllers\SystemHealthController;
 use App\Http\Controllers\AlertController;
 use App\Http\Controllers\SystemSettingController;
+use App\Http\Controllers\FeaturePermissionController;
 use Illuminate\Support\Facades\Route;
 
 // Public — rate-limited to 10 attempts per minute to prevent brute-force
@@ -73,18 +73,29 @@ Route::middleware('auth:sanctum')->group(function () {
     Route::delete('/attendance/logs/{log}',      [AttendanceController::class, 'destroyLog']);
     Route::get('/attendance/daily',              [AttendanceController::class, 'daily']);
 
-    // Employees
-    Route::get('/employees',                         [EmployeeController::class, 'index']);
+    // Employees — viewing the full roster is a distinct, revocable permission
+    // from managing it (store/update/destroy already require Super Admin,
+    // Admin, or HR Officer via requirePrivileged() below).
+    Route::middleware('feature:dtr_records.view_all')->group(function () {
+        Route::get('/employees',               [EmployeeController::class, 'index']);
+        Route::get('/employees/export/excel',  [EmployeeController::class, 'exportExcel']);
+        Route::get('/employees/export/pdf',    [EmployeeController::class, 'exportPdf']);
+    });
+    Route::get('/employees/import/template',          [EmployeeController::class, 'importTemplate']);
+    Route::post('/employees/import/preview',          [EmployeeController::class, 'importPreview']);
+    Route::post('/employees/import',                  [EmployeeController::class, 'import']);
     Route::post('/employees',                        [EmployeeController::class, 'store']);
     Route::put('/employees/{employee}',              [EmployeeController::class, 'update']);
     Route::delete('/employees/{employee}',           [EmployeeController::class, 'destroy']);
     Route::post('/employees/{employee}/photo',       [EmployeeController::class, 'uploadPhoto']);
 
     // Shifts — GET lists for dropdowns; POST/PUT/DELETE for CRUD management
-    Route::get('/shifts',            [EmployeeController::class, 'shifts']);
-    Route::post('/shifts',           [ShiftController::class, 'store']);
-    Route::put('/shifts/{shift}',    [ShiftController::class, 'update']);
-    Route::delete('/shifts/{shift}', [ShiftController::class, 'destroy']);
+    Route::get('/shifts', [EmployeeController::class, 'shifts']);
+    Route::middleware('feature:shift_management')->group(function () {
+        Route::post('/shifts',           [ShiftController::class, 'store']);
+        Route::put('/shifts/{shift}',    [ShiftController::class, 'update']);
+        Route::delete('/shifts/{shift}', [ShiftController::class, 'destroy']);
+    });
 
     // Departments — full CRUD
     Route::get('/departments',                 [DepartmentController::class, 'index']);
@@ -99,17 +110,21 @@ Route::middleware('auth:sanctum')->group(function () {
     Route::delete('/campuses/{campus}',  [CampusController::class, 'destroy']);
 
     // Holidays
-    Route::get('/holidays',              [HolidayController::class, 'index']);
-    Route::post('/holidays',             [HolidayController::class, 'store']);
-    Route::put('/holidays/{holiday}',    [HolidayController::class, 'update']);
-    Route::delete('/holidays/{holiday}', [HolidayController::class, 'destroy']);
+    Route::get('/holidays', [HolidayController::class, 'index']);
+    Route::middleware('feature:holiday_calendar')->group(function () {
+        Route::post('/holidays',             [HolidayController::class, 'store']);
+        Route::put('/holidays/{holiday}',    [HolidayController::class, 'update']);
+        Route::delete('/holidays/{holiday}', [HolidayController::class, 'destroy']);
+    });
 
     // Reports
     Route::get('/reports/form48/{employee}',   [ReportController::class, 'form48']);
     Route::get('/reports/preview/{employee}',  [ReportController::class, 'preview']);
     Route::get('/reports/export/{employee}',   [ReportController::class, 'exportCsv']);
-    Route::get('/reports/export-bulk',         [ReportController::class, 'exportBulk']);
-    Route::get('/reports/deductions',          [ReportController::class, 'exportDeductions']);
+    Route::middleware('feature:dtr_generation.export')->group(function () {
+        Route::get('/reports/export-bulk', [ReportController::class, 'exportBulk']);
+        Route::get('/reports/deductions',  [ReportController::class, 'exportDeductions']);
+    });
 
     // Tracking
     Route::get('/tracking/tardiness',       [TrackingController::class, 'tardiness']);
@@ -127,23 +142,29 @@ Route::middleware('auth:sanctum')->group(function () {
     Route::post('/dtr-corrections/batch-review',      [DtrCorrectionController::class, 'batchReview']);
     Route::patch('/dtr-corrections/{correction}',     [DtrCorrectionController::class, 'review']);
 
-    // DTR Month Lock — finalize a campus's month so it can no longer be edited
-    Route::get('/dtr-locks',            [DtrLockController::class, 'index']);
-    Route::post('/dtr-locks',           [DtrLockController::class, 'lock']);
-    Route::delete('/dtr-locks/{lock}',  [DtrLockController::class, 'unlock']);
-
     // Header notification bell — aggregated "needs attention" feed
     Route::get('/alerts', [AlertController::class, 'index']);
 
     // Audit Trail
     Route::get('/audit-logs', [AuditController::class, 'index']);
 
+    // Feature Permissions — Super Admin: per-employee overrides of role-level feature access
+    Route::get('/feature-permissions/catalog',                 [FeaturePermissionController::class, 'catalog']);
+    // Bulk (all-employees) routes registered before the {user} wildcard below,
+    // since routes match in order and "bulk" would otherwise be swallowed as
+    // a {user} id/slug.
+    Route::post('/feature-permissions/bulk',                   [FeaturePermissionController::class, 'bulkUpdate']);
+    Route::delete('/feature-permissions/bulk/{featureKey}',    [FeaturePermissionController::class, 'bulkReset']);
+    Route::get('/feature-permissions/{user}',                  [FeaturePermissionController::class, 'show']);
+    Route::post('/feature-permissions',                        [FeaturePermissionController::class, 'update']);
+    Route::delete('/feature-permissions/{user}/{featureKey}',  [FeaturePermissionController::class, 'reset']);
+
     // System Settings (branding) — Super Admin & Admin can update
     Route::post('/system-settings',            [SystemSettingController::class, 'update']);
     Route::post('/system-settings/reset-logo', [SystemSettingController::class, 'resetLogo']);
 
     // System Health — Super Admin only
-    Route::prefix('system-health')->group(function () {
+    Route::prefix('system-health')->middleware('feature:system_health')->group(function () {
         Route::get('/',                    [SystemHealthController::class, 'index']);
         Route::post('/scan',               [SystemHealthController::class, 'scan']);
         Route::post('/clear-resolved',     [SystemHealthController::class, 'clearResolved']);
@@ -163,9 +184,10 @@ Route::middleware('auth:sanctum')->group(function () {
 
     // Biometric device — admin & HR only
     Route::prefix('biometric')->group(function () {
-        Route::get('/status',  [BiometricController::class, 'status']);
-        Route::post('/sync',   [BiometricController::class, 'sync']);
-        Route::post('/import', [BiometricController::class, 'import']);
-        Route::get('/debug',   [BiometricController::class, 'debug']);
+        Route::get('/status',           [BiometricController::class, 'status']);
+        Route::post('/test-connection', [BiometricController::class, 'testConnection']);
+        Route::post('/sync',            [BiometricController::class, 'sync']);
+        Route::post('/import',          [BiometricController::class, 'import']);
+        Route::get('/debug',            [BiometricController::class, 'debug']);
     });
 });

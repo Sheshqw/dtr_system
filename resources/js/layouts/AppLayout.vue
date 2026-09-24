@@ -4,7 +4,7 @@
     <!-- ── Mobile top bar (hidden on desktop) ───────────────────── -->
     <header
       class="lg:hidden fixed top-0 left-0 right-0 z-30 flex items-center gap-3 px-4 h-14"
-      style="background: linear-gradient(135deg, #080E80, #1020C4); border-bottom: 1px solid rgba(255,255,255,0.08);"
+      style="background: linear-gradient(135deg, #1B2A5E, #2A3C76); border-bottom: 1px solid rgba(255,255,255,0.08);"
     >
       <button
         @click="sidebarOpen = true"
@@ -17,7 +17,7 @@
 
       <div class="flex items-center gap-2.5 flex-1">
         <img :src="settings.logoUrl" :alt="settings.systemName" class="w-7 h-7 rounded-full object-cover flex-shrink-0"
-          style="box-shadow: 0 0 0 1.5px rgba(201,162,39,0.6);" />
+          style="box-shadow: 0 0 0 1.5px rgba(201, 162, 39,0.6);" />
         <div class="leading-tight">
           <p class="text-white text-xs font-bold tracking-wide">{{ settings.systemName }}</p>
           <p class="text-[9px] font-semibold tracking-widest uppercase" style="color: #C9A227;">{{ settings.shortName }}</p>
@@ -27,7 +27,7 @@
       <!-- Mobile user avatar -->
       <div
         class="w-8 h-8 rounded-full flex items-center justify-center flex-shrink-0 text-white text-xs font-bold"
-        style="background: linear-gradient(135deg, #C9A227, #9A7A1A);"
+        style="background: linear-gradient(135deg, #C9A227, #B8911F);"
         aria-hidden="true"
       >{{ initials }}</div>
     </header>
@@ -46,7 +46,7 @@
     <aside
       class="fixed lg:relative inset-y-0 left-0 z-50 w-64 flex-shrink-0 flex flex-col transition-transform duration-300 ease-in-out lg:translate-x-0"
       :class="sidebarOpen ? 'translate-x-0' : '-translate-x-full'"
-      style="background: linear-gradient(180deg, #080E80 0%, #0A16A0 45%, #1020C4 100%); box-shadow: 4px 0 28px rgba(8,14,128,0.28), 1px 0 0 rgba(8,14,128,0.06);"
+      style="background: linear-gradient(180deg, #1B2A5E 0%, #24356F 45%, #2A3C76 100%); box-shadow: 4px 0 28px rgba(27, 42, 94,0.28), 1px 0 0 rgba(27, 42, 94,0.06);"
       aria-label="Main navigation"
     >
       <!-- Dot-grid texture -->
@@ -83,7 +83,10 @@
               class="text-[11px] font-semibold tracking-widest uppercase leading-tight transition-colors duration-300"
               :style="{ color: campus.heroBand }"
             >{{ campusName }}</p>
-            <p class="text-[9px] leading-tight mt-0.5" style="color: rgba(157,173,216,0.6);">{{ settings.shortName }} v1.0</p>
+            <div class="flex items-center gap-1.5 mt-1">
+              <span class="text-[9px] leading-tight" style="color: rgba(157, 173, 216,0.6);">{{ settings.shortName }}</span>
+              <span class="version-chip">v1.0</span>
+            </div>
           </div>
         </div>
 
@@ -91,7 +94,7 @@
         <button
           @click="sidebarOpen = false"
           class="lg:hidden p-1.5 rounded-lg transition-colors flex-shrink-0"
-          style="color: rgba(157,173,216,0.7);"
+          style="color: rgba(157, 173, 216,0.7);"
           aria-label="Close navigation"
         >
           <XIcon class="w-4 h-4" />
@@ -114,7 +117,7 @@
         <p class="nav-section-label">Main</p>
 
         <RouterLink
-          v-for="item in navItems"
+          v-for="item in visibleNavItems"
           :key="item.name"
           :to="item.to"
           class="nav-link group"
@@ -122,7 +125,7 @@
           @click="sidebarOpen = false"
         >
           <span class="nav-icon-wrap" :class="$route.name === item.name ? 'nav-icon-active' : 'nav-icon-idle'">
-            <component :is="item.icon" class="w-3.5 h-3.5" />
+            <component :is="item.icon" class="w-5 h-5" />
           </span>
           <span class="nav-label">{{ item.label }}</span>
           <span
@@ -145,7 +148,7 @@
             @click="sidebarOpen = false"
           >
             <span class="nav-icon-wrap" :class="$route.name === item.name ? 'nav-icon-active' : 'nav-icon-idle'">
-              <component :is="item.icon" class="w-3.5 h-3.5" />
+              <component :is="item.icon" class="w-5 h-5" />
             </span>
             <span class="nav-label">{{ item.label }}</span>
             <span v-if="$route.name === item.name" class="nav-pip" />
@@ -162,7 +165,7 @@
               @click="sidebarOpen = false"
             >
               <span class="nav-icon-wrap" :class="$route.name === item.name ? 'nav-icon-active' : 'nav-icon-idle'">
-                <component :is="item.icon" class="w-3.5 h-3.5" />
+                <component :is="item.icon" class="w-5 h-5" />
               </span>
               <span class="nav-label">{{ item.label }}</span>
               <span v-if="$route.name === item.name" class="nav-pip" />
@@ -170,7 +173,7 @@
           </template>
 
           <template v-if="isSuperAdmin">
-            <p class="nav-section-label" style="margin-top: 18px; color: rgba(201,162,39,0.55);">Super Admin</p>
+            <p class="nav-section-label" style="margin-top: 18px; color: rgba(201, 162, 39,0.55);">Super Admin</p>
             <RouterLink
               v-for="item in superAdminItems"
               :key="item.name"
@@ -180,7 +183,7 @@
               @click="sidebarOpen = false"
             >
               <span class="nav-icon-wrap" :class="$route.name === item.name ? 'nav-icon-active' : 'nav-icon-gold'">
-                <component :is="item.icon" class="w-3.5 h-3.5" />
+                <component :is="item.icon" class="w-5 h-5" />
               </span>
               <span class="nav-label">{{ item.label }}</span>
               <span v-if="$route.name === item.name" class="nav-pip" />
@@ -190,10 +193,10 @@
       </nav>
 
       <!-- Gold divider -->
-      <div class="relative mx-4 h-px" style="background: linear-gradient(90deg, transparent, rgba(201,162,39,0.35), transparent);"></div>
+      <div class="relative mx-4 h-px" style="background: linear-gradient(90deg, transparent, rgba(201, 162, 39,0.35), transparent);"></div>
 
       <!-- Theme mode selector -->
-      <div class="relative px-4 py-3">
+      <div class="relative px-4 py-2.5">
         <p class="theme-seg-label-header">Appearance</p>
         <div class="theme-seg" role="group" aria-label="Theme mode">
           <button
@@ -208,7 +211,29 @@
             :aria-pressed="theme.mode === opt.mode"
             :title="opt.label"
           >
-            <component :is="opt.icon" class="w-3.5 h-3.5" />
+            <component :is="opt.icon" class="w-3 h-3" />
+            <span class="theme-seg-text">{{ opt.label }}</span>
+          </button>
+        </div>
+      </div>
+
+      <!-- Text size selector — helps users who find the default UI text
+           small (presbyopia becomes common from the 40s onward, and this
+           system's users range 22–60). Applies a whole-page zoom so every
+           screen scales together, including modals teleported to <body>. -->
+      <div class="relative px-4 pb-2.5">
+        <p class="theme-seg-label-header">Text Size</p>
+        <div class="theme-seg" role="group" aria-label="Text size">
+          <button
+            v-for="opt in textSizeOptions"
+            :key="opt.level"
+            @click="textSize.setLevel(opt.level)"
+            class="theme-seg-btn"
+            :class="textSize.level === opt.level ? 'theme-seg-btn--active theme-seg-btn--active-size' : ''"
+            :aria-pressed="textSize.level === opt.level"
+            :title="opt.title"
+          >
+            <span class="text-size-glyph" :style="{ fontSize: opt.glyph }">A</span>
             <span class="theme-seg-text">{{ opt.label }}</span>
           </button>
         </div>
@@ -222,7 +247,7 @@
         >
           <div
             class="w-8 h-8 rounded-full flex items-center justify-center flex-shrink-0 shadow-md"
-            style="background: linear-gradient(135deg, #C9A227, #9A7A1A);"
+            style="background: linear-gradient(135deg, #C9A227, #B8911F);"
           >
             <span class="text-white text-xs font-bold">{{ initials }}</span>
           </div>
@@ -270,13 +295,13 @@
       <div class="relative bg-white rounded-2xl shadow-2xl w-full max-w-sm">
         <div class="px-6 py-5 border-b border-[#E2E8F0] flex items-center gap-3">
           <div class="w-9 h-9 rounded-lg bg-[#EEF1FF] flex items-center justify-center flex-shrink-0">
-            <KeyIcon class="w-5 h-5 text-[#0E1EC0]" />
+            <KeyIcon class="w-5 h-5 text-[#2E4A8C]" />
           </div>
           <div class="flex-1">
             <h2 class="font-semibold text-[#0F172A]">Change Password</h2>
             <p class="text-xs text-[#64748B]">Update your account password</p>
           </div>
-          <button @click="closePwdModal" class="text-[#94A3B8] hover:text-[#0F172A] transition-colors" aria-label="Close">
+          <button @click="closePwdModal" class="text-[#6B7A94] hover:text-[#0F172A] transition-colors" aria-label="Close">
             <XIcon class="w-5 h-5" />
           </button>
         </div>
@@ -284,18 +309,18 @@
           <div>
             <label class="block text-sm font-medium text-[#0F172A] mb-1.5">Current Password</label>
             <input v-model="pwdForm.current_password" type="password" required placeholder="Enter current password"
-              class="w-full px-3 py-2 text-sm border border-[#E2E8F0] rounded-lg text-[#0F172A] focus:outline-none focus:ring-2 focus:ring-[#0E1EC0] bg-white" />
+              class="w-full px-3 py-2 text-sm border border-[#E2E8F0] rounded-lg text-[#0F172A] focus:outline-none focus:ring-2 focus:ring-[#2E4A8C] bg-white" />
           </div>
           <div>
             <label class="block text-sm font-medium text-[#0F172A] mb-1.5">New Password</label>
             <input v-model="pwdForm.password" type="password" required minlength="8" placeholder="8+ characters, with letters and numbers"
-              class="w-full px-3 py-2 text-sm border border-[#E2E8F0] rounded-lg text-[#0F172A] focus:outline-none focus:ring-2 focus:ring-[#0E1EC0] bg-white" />
-            <p class="text-xs mt-1" style="color:#94A3B8;">Must include at least one letter and one number.</p>
+              class="w-full px-3 py-2 text-sm border border-[#E2E8F0] rounded-lg text-[#0F172A] focus:outline-none focus:ring-2 focus:ring-[#2E4A8C] bg-white" />
+            <p class="text-xs mt-1" style="color:#6B7A94;">Must include at least one letter and one number.</p>
           </div>
           <div>
             <label class="block text-sm font-medium text-[#0F172A] mb-1.5">Confirm New Password</label>
             <input v-model="pwdForm.password_confirmation" type="password" required placeholder="Repeat new password"
-              class="w-full px-3 py-2 text-sm border border-[#E2E8F0] rounded-lg text-[#0F172A] focus:outline-none focus:ring-2 focus:ring-[#0E1EC0] bg-white" />
+              class="w-full px-3 py-2 text-sm border border-[#E2E8F0] rounded-lg text-[#0F172A] focus:outline-none focus:ring-2 focus:ring-[#2E4A8C] bg-white" />
           </div>
           <div v-if="pwdError" class="text-sm text-[#EF4444] bg-red-50 border border-red-100 rounded-lg px-3 py-2">
             {{ pwdError }}
@@ -306,7 +331,7 @@
               Cancel
             </button>
             <button type="submit" :disabled="pwdSaving"
-              class="flex-1 inline-flex items-center justify-center gap-2 px-4 py-2 bg-[#0E1EC0] hover:bg-[#1228CC] text-white text-sm font-medium rounded-lg disabled:opacity-60 transition-colors">
+              class="flex-1 inline-flex items-center justify-center gap-2 px-4 py-2 bg-[#2E4A8C] hover:bg-[#3D5CA3] text-white text-sm font-medium rounded-lg disabled:opacity-60 transition-colors">
               <Loader2Icon v-if="pwdSaving" class="w-4 h-4 animate-spin" />
               Save Password
             </button>
@@ -323,20 +348,20 @@
       <div class="relative bg-white rounded-2xl shadow-2xl w-full max-w-sm">
         <div class="px-6 py-5 border-b border-[#E2E8F0] flex items-center gap-3">
           <div class="w-9 h-9 rounded-lg bg-[#EEF1FF] flex items-center justify-center flex-shrink-0">
-            <MonitorSmartphoneIcon class="w-5 h-5 text-[#0E1EC0]" />
+            <MonitorSmartphoneIcon class="w-5 h-5 text-[#2E4A8C]" />
           </div>
           <div class="flex-1">
             <h2 class="font-semibold text-[#0F172A]">Active Sessions</h2>
             <p class="text-xs text-[#64748B]">Devices currently signed in to your account</p>
           </div>
-          <button @click="sessionsModal = false" class="text-[#94A3B8] hover:text-[#0F172A] transition-colors" aria-label="Close">
+          <button @click="sessionsModal = false" class="text-[#6B7A94] hover:text-[#0F172A] transition-colors" aria-label="Close">
             <XIcon class="w-5 h-5" />
           </button>
         </div>
 
         <div class="px-6 py-4 max-h-80 overflow-y-auto space-y-2">
           <div v-if="sessionsLoading" class="py-10 text-center">
-            <Loader2Icon class="w-5 h-5 animate-spin mx-auto" style="color:#94A3B8;" />
+            <Loader2Icon class="w-5 h-5 animate-spin mx-auto" style="color:#6B7A94;" />
           </div>
           <div
             v-else
@@ -350,7 +375,7 @@
             </div>
             <div class="flex-1 min-w-0">
               <p class="text-sm font-medium text-[#0F172A] truncate">{{ s.name || 'Unknown device' }}</p>
-              <p class="text-xs" :style="s.is_current ? 'color:#059669;font-weight:600;' : 'color:#94A3B8;'">
+              <p class="text-xs" :style="s.is_current ? 'color:#059669;font-weight:600;' : 'color:#6B7A94;'">
                 {{ s.is_current ? 'This device' : `Active ${s.last_used_at ?? 'recently'}` }}
               </p>
             </div>
@@ -375,7 +400,7 @@
           >
             Sign out all other devices
           </button>
-          <p v-else-if="!sessionsLoading" class="text-xs text-center" style="color:#94A3B8;">
+          <p v-else-if="!sessionsLoading" class="text-xs text-center" style="color:#6B7A94;">
             No other active sessions — you're only signed in here.
           </p>
         </div>
@@ -418,10 +443,13 @@ import {
   Search         as SearchIcon,
   MonitorSmartphone as MonitorSmartphoneIcon,
   Settings       as SettingsIcon,
+  Lock           as LockIcon,
 } from 'lucide-vue-next';
 import { useAuthStore } from '@/stores/auth';
 import { useThemeStore } from '@/stores/theme';
+import { useTextSizeStore } from '@/stores/textSize';
 import { useSettingsStore } from '@/stores/settings';
+import { usePermissionsStore } from '@/stores/permissions';
 import { useToast } from '@/composables/useToast';
 import { useCampusIdentity } from '@/composables/useCampusIdentity';
 import ToastContainer from '@/components/ToastContainer.vue';
@@ -429,14 +457,22 @@ import CommandPalette from '@/components/CommandPalette.vue';
 import ConfirmDialog from '@/components/ConfirmDialog.vue';
 import { useCommandPalette } from '@/composables/useCommandPalette';
 
-const auth    = useAuthStore();
-const theme   = useThemeStore();
-const palette = useCommandPalette();
+const auth     = useAuthStore();
+const theme    = useThemeStore();
+const textSize = useTextSizeStore();
+const perms    = usePermissionsStore();
+const palette  = useCommandPalette();
 
 const themeOptions = [
   { mode: 'light',  label: 'Light',  icon: SunIcon     },
   { mode: 'system', label: 'System', icon: MonitorIcon  },
   { mode: 'dark',   label: 'Dark',   icon: MoonIcon     },
+];
+
+const textSizeOptions = [
+  { level: 'sm', label: 'Small',  glyph: '10px', title: 'Smaller text' },
+  { level: 'md', label: 'Normal', glyph: '12px', title: 'Default text size' },
+  { level: 'lg', label: 'Large',  glyph: '15px', title: 'Larger text — easier to read' },
 ];
 const router = useRouter();
 const settings = useSettingsStore();
@@ -533,14 +569,20 @@ function roleLabel(role) {
 }
 
 // ── Nav items ─────────────────────────────────────────────────────
+// 'requiresFeature' mirrors the router's own meta.requiresFeature guard
+// (resources/js/router/index.js) — without this, a plain employee would
+// still see the link even though clicking it just bounces them back.
 const navItems = [
   { name: 'dashboard',   label: 'Dashboard',    to: { name: 'dashboard'   }, icon: LayoutDashboardIcon },
   { name: 'attendance',  label: 'Attendance',   to: { name: 'attendance'  }, icon: ClockIcon           },
-  { name: 'employees',   label: 'Employees',    to: { name: 'employees'   }, icon: UsersIcon           },
+  { name: 'employees',   label: 'Employee Logs', to: { name: 'employees'   }, icon: UsersIcon, requiresFeature: 'dtr_records.view_all' },
   { name: 'tracking',    label: 'Tracking',     to: { name: 'tracking'    }, icon: BarChart2Icon       },
   { name: 'reports',     label: 'Reports',      to: { name: 'reports'     }, icon: FileTextIcon        },
   { name: 'corrections', label: 'Corrections',  to: { name: 'corrections' }, icon: ClipboardEditIcon  },
 ];
+const visibleNavItems = computed(() =>
+  navItems.filter(item => !item.requiresFeature || perms.can(item.requiresFeature))
+);
 
 const hrItems = [
   { name: 'holidays',  label: 'Holidays',    to: { name: 'holidays'  }, icon: CalendarIcon    },
@@ -558,6 +600,7 @@ const adminOnlyItems = [
 const superAdminItems = [
   { name: 'campuses',       label: 'Campuses',       to: { name: 'campuses'       }, icon: MapPinIcon      },
   { name: 'admin-accounts', label: 'Admin Accounts', to: { name: 'admin-accounts' }, icon: ShieldCheckIcon },
+  { name: 'access-control', label: 'Access Control', to: { name: 'access-control' }, icon: LockIcon        },
   { name: 'backup',         label: 'Backup',         to: { name: 'backup'         }, icon: DatabaseIcon    },
   { name: 'system-health',  label: 'System Health',  to: { name: 'system-health'  }, icon: HeartPulseIcon  },
 ];
@@ -638,12 +681,25 @@ onBeforeUnmount(() => {
 }
 .quick-search-btn span { flex: 1; text-align: left; }
 .quick-search-kbd {
-  font-family: inherit; font-size: 9.5px; font-weight: 700;
-  color: rgba(157,173,216,0.7);
+  font-family: var(--font-mono); font-size: 9.5px; font-weight: 600;
+  color: rgba(157, 173, 216,0.7);
   background: rgba(0,0,0,0.25);
   border: 1px solid rgba(255,255,255,0.1);
+  border-bottom-width: 2px;
   border-radius: 4px; padding: 2px 6px;
   flex-shrink: 0;
+}
+
+/* ── Version chip — a git-tag-style badge rather than a plain label ─── */
+.version-chip {
+  font-family: var(--font-mono);
+  font-size: 8.5px; font-weight: 700; letter-spacing: 0.02em;
+  color: #E8C040;
+  background: rgba(201, 162, 39,0.14);
+  border: 1px solid rgba(201, 162, 39,0.3);
+  border-radius: 4px;
+  padding: 1px 5px;
+  line-height: 1.4;
 }
 
 /* ── Section labels ──────────────────────────────── */
@@ -652,7 +708,7 @@ onBeforeUnmount(() => {
   font-weight: 700;
   letter-spacing: 0.13em;
   text-transform: uppercase;
-  color: rgba(157,173,216,0.38);
+  color: rgba(157, 173, 216,0.38);
   padding: 0 12px 6px;
   margin-top: 4px;
 }
@@ -662,10 +718,10 @@ onBeforeUnmount(() => {
   display: flex;
   align-items: center;
   gap: 10px;
-  padding: 6px 10px 6px 8px;
+  padding: 8px 10px 8px 8px;
   border-radius: 10px;
-  font-size: 13px;
-  font-weight: 500;
+  font-size: 15px;
+  font-weight: 600;
   transition: all 0.18s ease;
   position: relative;
   margin-bottom: 2px;
@@ -674,9 +730,9 @@ onBeforeUnmount(() => {
 
 /* ── Icon wrapper ────────────────────────────────── */
 .nav-icon-wrap {
-  width: 30px;
-  height: 30px;
-  border-radius: 8px;
+  width: 36px;
+  height: 36px;
+  border-radius: 9px;
   display: flex;
   align-items: center;
   justify-content: center;
@@ -689,22 +745,22 @@ onBeforeUnmount(() => {
   border: 1px solid rgba(255,255,255,0.07);
 }
 .nav-icon-active {
-  background: linear-gradient(135deg, #C9A227, #A07A18);
+  background: linear-gradient(135deg, #C9A227, #B8911F);
   color: #fff;
   border: none;
-  box-shadow: 0 2px 8px rgba(201,162,39,0.35);
+  box-shadow: 0 2px 8px rgba(201, 162, 39,0.35);
 }
 .nav-icon-gold {
-  background: rgba(201,162,39,0.12);
+  background: rgba(201, 162, 39,0.12);
   color: #C9A227;
-  border: 1px solid rgba(201,162,39,0.2);
+  border: 1px solid rgba(201, 162, 39,0.2);
 }
 
 /* ── Active state ────────────────────────────────── */
 .nav-active {
-  background: linear-gradient(90deg, rgba(201,162,39,0.15) 0%, rgba(201,162,39,0.04) 100%);
+  background: linear-gradient(90deg, rgba(201, 162, 39,0.15) 0%, rgba(201, 162, 39,0.04) 100%);
   color: #F0D060;
-  font-weight: 600;
+  font-weight: 700;
   animation: navActiveIn 0.25s ease;
 }
 @keyframes navActiveIn {
@@ -722,7 +778,7 @@ onBeforeUnmount(() => {
   height: 18px;
   border-radius: 0 3px 3px 0;
   background: linear-gradient(180deg, #E8C040, #C9A227);
-  box-shadow: 0 0 8px rgba(201,162,39,0.6);
+  box-shadow: 0 0 8px rgba(201, 162, 39,0.6);
   animation: pipIn 0.32s cubic-bezier(0.34, 1.56, 0.64, 1);
 }
 @keyframes pipIn {
@@ -744,7 +800,7 @@ onBeforeUnmount(() => {
   border-color: rgba(255,255,255,0.12);
 }
 .nav-idle:hover .nav-icon-gold {
-  background: rgba(201,162,39,0.2);
+  background: rgba(201, 162, 39,0.2);
   color: #E8C040;
 }
 
@@ -779,20 +835,20 @@ onBeforeUnmount(() => {
 
 /* ── Three-mode theme selector ───────────────────── */
 .theme-seg-label-header {
-  font-size: 9px;
+  font-size: 8px;
   font-weight: 700;
   letter-spacing: 0.08em;
   text-transform: uppercase;
-  color: rgba(157,173,216,0.4);
-  margin: 0 0 8px 2px;
+  color: rgba(157, 173, 216,0.4);
+  margin: 0 0 6px 2px;
 }
 .theme-seg {
   display: flex;
-  gap: 3px;
+  gap: 2px;
   background: rgba(0,0,0,0.28);
   border: 1px solid rgba(255,255,255,0.07);
-  border-radius: 13px;
-  padding: 4px;
+  border-radius: 11px;
+  padding: 3px;
 }
 .theme-seg-btn {
   flex: 1;
@@ -800,12 +856,12 @@ onBeforeUnmount(() => {
   flex-direction: column;
   align-items: center;
   justify-content: center;
-  gap: 4px;
-  padding: 8px 6px;
-  border-radius: 9px;
+  gap: 3px;
+  padding: 6px 5px;
+  border-radius: 7px;
   border: none;
   background: transparent;
-  color: rgba(157,173,216,0.45);
+  color: rgba(157, 173, 216,0.45);
   cursor: pointer;
   transition: color 0.18s ease, background 0.18s ease;
 }
@@ -814,15 +870,15 @@ onBeforeUnmount(() => {
   background: rgba(255,255,255,0.07);
 }
 .theme-seg-text {
-  font-size: 9px;
+  font-size: 8px;
   font-weight: 600;
   letter-spacing: 0.04em;
   line-height: 1;
 }
 /* Active states — each mode has its own clearly distinct accent */
 .theme-seg-btn--active-light {
-  background: rgba(201,162,39,0.20);
-  color: #D4A930;
+  background: rgba(201, 162, 39,0.20);
+  color: #B8911F;
   box-shadow: 0 1px 4px rgba(0,0,0,0.25);
 }
 .theme-seg-btn--active-system {
@@ -835,13 +891,29 @@ onBeforeUnmount(() => {
   color: #818CF8;
   box-shadow: 0 1px 4px rgba(0,0,0,0.25);
 }
+.theme-seg-btn--active-size {
+  background: rgba(56,189,248,0.20);
+  color: #7DD3FC;
+  box-shadow: 0 1px 4px rgba(0,0,0,0.25);
+}
 .theme-seg-btn--active:hover {
   filter: brightness(1.12);
 }
 
+/* ── Text size glyph — the "A" itself grows across the three buttons,
+     so the option reads as self-explanatory without needing to study
+     the small caption underneath it. ─────────────────────────────── */
+.text-size-glyph {
+  line-height: 1;
+  font-weight: 800;
+  height: 17px;
+  display: flex;
+  align-items: flex-end;
+}
+
 /* ── User card buttons ───────────────────────────── */
 .logout-btn,
-.changepwd-btn { color: rgba(157,173,216,0.7); background: transparent; }
+.changepwd-btn { color: rgba(157, 173, 216,0.7); background: transparent; }
 .logout-btn:hover,
 .changepwd-btn:hover { color: #C9A227; background: rgba(255,255,255,0.08); }
 </style>
