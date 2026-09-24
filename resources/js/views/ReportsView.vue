@@ -7,19 +7,22 @@
       <div class="mx-auto space-y-5" :class="previewData ? 'max-w-5xl' : 'max-w-3xl'">
 
         <!-- ── Generator card ─────────────────────────────────────────── -->
-        <div class="bg-white border border-[#E2E8F0] rounded-xl shadow-[0_1px_3px_rgba(0,0,0,0.06)] overflow-hidden">
+        <div class="rounded-xl shadow-[0_2px_8px_rgba(0,0,0,0.08)] overflow-hidden border border-[#E2E8F0]">
 
-          <div class="px-6 py-4 border-b border-[#E2E8F0] flex items-center gap-3">
-            <div class="w-9 h-9 rounded-lg flex items-center justify-center" style="background:#EEF2FF;">
-              <FileTextIcon class="w-5 h-5 text-[#0E1EC0]" />
+          <!-- Gradient header — matches the visual tier of Bulk Export and
+               Month Lock below it; this is the primary card on the page,
+               so it shouldn't look plainer than the secondary ones. -->
+          <div class="bg-gradient-to-r from-[#1B2A5E] to-[#2E4A8C] px-6 py-4 flex items-center gap-3">
+            <div class="w-10 h-10 rounded-xl bg-white/15 border border-white/20 flex items-center justify-center flex-shrink-0">
+              <FileTextIcon class="w-5 h-5 text-white" />
             </div>
             <div>
-              <h2 class="font-semibold text-[#0F172A]">CSC Form 48 — Daily Time Record</h2>
-              <p class="text-xs text-[#64748B]">Official government-mandated DTR for SUC employees</p>
+              <h2 class="text-white font-semibold text-sm">CSC Form 48 — Daily Time Record</h2>
+              <p class="text-white/60 text-xs mt-0.5">Official government-mandated DTR for SUC employees</p>
             </div>
           </div>
 
-          <div class="px-6 py-5 space-y-4">
+          <div class="bg-white px-6 py-5 space-y-4">
 
             <!-- Admin/HR: employee picker -->
             <template v-if="canSelectEmployee">
@@ -41,7 +44,7 @@
                 <!-- Real input once loaded -->
                 <template v-else>
                   <div class="relative">
-                    <SearchIcon class="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-[#94A3B8]" />
+                    <SearchIcon class="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-[#6B7A94]" />
                     <input
                       v-model="empSearch"
                       @focus="showDropdown = true"
@@ -61,26 +64,26 @@
                         @mousedown.prevent="selectEmp(emp)"
                         class="w-full text-left px-4 py-2.5 hover:bg-[#F8FAFC] flex items-center gap-3"
                       >
-                        <div class="w-7 h-7 rounded-full bg-gradient-to-br from-[#0E1EC0] to-[#1228CC] flex items-center justify-center flex-shrink-0">
+                        <div class="w-7 h-7 rounded-full bg-gradient-to-br from-[#2E4A8C] to-[#3D5CA3] flex items-center justify-center flex-shrink-0">
                           <span class="text-white text-xs font-semibold">{{ initials(emp.name) }}</span>
                         </div>
                         <div>
                           <p class="text-sm font-medium text-[#0F172A]">{{ emp.name }}</p>
-                          <p class="text-xs text-[#94A3B8]">{{ emp.employee_id }} · {{ emp.department ?? '—' }}</p>
+                          <p class="text-xs text-[#6B7A94]">{{ emp.employee_id }} · {{ emp.department ?? '—' }}</p>
                         </div>
                       </button>
                     </div>
                   </div>
                   <!-- Selected pill -->
                   <div v-if="selected" class="mt-2 flex items-center gap-2 px-3 py-2 rounded-lg" style="background:#EEF2FF; border:1px solid #C7D2F6;">
-                    <div class="w-7 h-7 rounded-full bg-gradient-to-br from-[#0E1EC0] to-[#1228CC] flex items-center justify-center flex-shrink-0">
+                    <div class="w-7 h-7 rounded-full bg-gradient-to-br from-[#2E4A8C] to-[#3D5CA3] flex items-center justify-center flex-shrink-0">
                       <span class="text-white text-xs font-semibold">{{ initials(selected.name) }}</span>
                     </div>
                     <div class="flex-1 min-w-0">
                       <p class="text-sm font-medium text-[#0F172A]">{{ selected.name }}</p>
                       <p class="text-xs text-[#64748B]">{{ selected.position }} · {{ selected.department }}</p>
                     </div>
-                    <button @click="selected = null; empSearch = ''; previewData = null" class="text-[#94A3B8] hover:text-[#EF4444]">
+                    <button @click="selected = null; empSearch = ''; previewData = null" class="text-[#6B7A94] hover:text-[#EF4444]">
                       <XIcon class="w-4 h-4" />
                     </button>
                   </div>
@@ -91,16 +94,16 @@
             <!-- Regular employee: own account -->
             <template v-else>
               <div class="flex items-center gap-3 px-4 py-3 rounded-lg border border-[#C7D2F6]" style="background:#EEF2FF;">
-                <div class="w-9 h-9 rounded-full bg-gradient-to-br from-[#0E1EC0] to-[#1228CC] flex items-center justify-center flex-shrink-0">
+                <div class="w-9 h-9 rounded-full bg-gradient-to-br from-[#2E4A8C] to-[#3D5CA3] flex items-center justify-center flex-shrink-0">
                   <span class="text-white text-sm font-bold">{{ initials(auth.employee?.name ?? '') }}</span>
                 </div>
                 <div class="flex-1 min-w-0">
                   <p class="text-sm font-semibold text-[#0F172A]">{{ auth.employee?.name }}</p>
                   <p class="text-xs text-[#64748B]">{{ auth.employee?.position ?? 'Employee' }} · Generating your personal DTR</p>
                 </div>
-                <LockIcon class="w-4 h-4 text-[#0E1EC0] flex-shrink-0" />
+                <LockIcon class="w-4 h-4 text-[#2E4A8C] flex-shrink-0" />
               </div>
-              <p class="text-xs text-[#94A3B8] -mt-1">You can only generate and print your own DTR. Contact HR or Admin to access other records.</p>
+              <p class="text-xs text-[#6B7A94] -mt-1">You can only generate and print your own DTR. Contact HR or Admin to access other records.</p>
             </template>
 
             <!-- Month / Year -->
@@ -190,14 +193,14 @@
                 </select>
               </div>
               <div>
-                <label class="bulk-label">Department <span class="text-[#94A3B8] font-normal">(optional)</span></label>
+                <label class="bulk-label">Department <span class="text-[#6B7A94] font-normal">(optional)</span></label>
                 <select v-model="bulkDepartment" class="form-input">
                   <option value="">All Departments</option>
                   <option v-for="d in departments" :key="d.id" :value="d.id">{{ d.name }}</option>
                 </select>
               </div>
               <div>
-                <label class="bulk-label">Staff Type <span class="text-[#94A3B8] font-normal">(optional)</span></label>
+                <label class="bulk-label">Staff Type <span class="text-[#6B7A94] font-normal">(optional)</span></label>
                 <select v-model="bulkStaffType" class="form-input">
                   <option value="">All Staff Types</option>
                   <option value="faculty">Faculty / Instructor</option>
@@ -214,7 +217,7 @@
 
             <!-- What's included — 3 sections -->
             <div class="rounded-lg border border-[#E2E8F0] bg-[#F8FAFC] px-4 py-3 space-y-3">
-              <p class="text-[10px] font-bold uppercase tracking-widest text-[#94A3B8]">Report sections included in CSV</p>
+              <p class="text-[10px] font-bold uppercase tracking-widest text-[#6B7A94]">Report sections included in CSV</p>
               <div class="grid grid-cols-3 gap-2">
                 <!-- Section 1 -->
                 <div class="rounded-md border border-emerald-100 bg-emerald-50 p-2.5">
@@ -272,102 +275,11 @@
           </div>
         </div>
 
-        <!-- ── Month Lock card ─────────────────────────────────────────── -->
-        <div v-if="canSelectEmployee" class="rounded-xl shadow-[0_2px_8px_rgba(0,0,0,0.08)] overflow-hidden border border-[#E2E8F0]">
-
-          <!-- Gradient header -->
-          <div class="bg-gradient-to-r from-[#7C2D12] to-[#B45309] px-6 py-4 flex items-center gap-3">
-            <div class="w-10 h-10 rounded-xl bg-white/15 border border-white/20 flex items-center justify-center flex-shrink-0">
-              <LockIcon class="w-5 h-5 text-white" />
-            </div>
-            <div>
-              <h2 class="text-white font-semibold text-sm">DTR Month Lock</h2>
-              <p class="text-white/60 text-xs mt-0.5">Finalize a month so its records can no longer be edited</p>
-            </div>
-          </div>
-
-          <div class="bg-white px-6 py-5 space-y-4">
-
-            <div class="grid gap-3" :class="isSuperAdmin ? 'grid-cols-3' : 'grid-cols-2'">
-              <div>
-                <label class="bulk-label">Month</label>
-                <select v-model="lockMonth" class="form-input">
-                  <option v-for="m in months" :key="m.value" :value="m.value">{{ m.label }}</option>
-                </select>
-              </div>
-              <div>
-                <label class="bulk-label">Year</label>
-                <select v-model="lockYear" class="form-input">
-                  <option v-for="y in years" :key="y" :value="y">{{ y }}</option>
-                </select>
-              </div>
-              <div v-if="isSuperAdmin">
-                <label class="bulk-label">Campus</label>
-                <select v-model="lockCampusId" class="form-input">
-                  <option value="">— Select —</option>
-                  <option v-for="c in campuses" :key="c.id" :value="c.id">{{ c.name }}</option>
-                </select>
-              </div>
-            </div>
-
-            <!-- Status -->
-            <div
-              class="flex items-center gap-3 px-4 py-3 rounded-lg"
-              :style="currentLock
-                ? 'background:#FEF2F2;border:1px solid #FECACA;'
-                : 'background:#F0FDF4;border:1px solid #BBF7D0;'"
-            >
-              <LockIcon v-if="currentLock" class="w-4 h-4 flex-shrink-0" style="color:#DC2626;" />
-              <UnlockIcon v-else class="w-4 h-4 flex-shrink-0" style="color:#15803D;" />
-              <div class="flex-1 min-w-0 text-sm">
-                <template v-if="currentLock">
-                  <span class="font-semibold" style="color:#991B1B;">Locked</span>
-                  <span style="color:#7F1D1D;"> by {{ currentLock.locked_by }} on {{ formatLockDate(currentLock.locked_at) }}</span>
-                </template>
-                <template v-else>
-                  <span class="font-semibold" style="color:#15803D;">Open</span>
-                  <span style="color:#166534;"> — {{ months.find(m => m.value === lockMonth)?.label }} {{ lockYear }} can still be edited.</span>
-                </template>
-              </div>
-            </div>
-
-            <div class="flex items-center gap-3">
-              <button
-                v-if="!currentLock"
-                @click="lockMonthNow"
-                :disabled="lockingBusy || (isSuperAdmin && !lockCampusId)"
-                class="inline-flex items-center gap-2 px-4 py-2 text-sm font-semibold rounded-lg text-white transition-colors disabled:opacity-50"
-                style="background:#B45309;"
-              >
-                <Loader2Icon v-if="lockingBusy" class="w-4 h-4 animate-spin" />
-                <LockIcon v-else class="w-4 h-4" />
-                Lock This Month
-              </button>
-              <button
-                v-else-if="canUnlock"
-                @click="unlockMonthNow"
-                :disabled="lockingBusy"
-                class="inline-flex items-center gap-2 px-4 py-2 text-sm font-semibold rounded-lg border transition-colors disabled:opacity-50"
-                style="border-color:#FECACA;color:#B91C1C;"
-              >
-                <Loader2Icon v-if="lockingBusy" class="w-4 h-4 animate-spin" />
-                <UnlockIcon v-else class="w-4 h-4" />
-                Unlock
-              </button>
-              <p v-else class="text-xs text-[#94A3B8]">Only an Admin or Super Admin can unlock a finalized month.</p>
-            </div>
-
-            <p class="text-xs text-[#94A3B8]">
-              Once locked, manual punch entry, punch deletion, and DTR correction approvals for this campus and month are refused until it's unlocked.
-            </p>
-          </div>
-        </div>
-
         <!-- ── Preview skeleton (while loading) ─────────────────────── -->
         <div v-if="previewing" class="bg-white border border-[#E2E8F0] rounded-xl shadow-[0_1px_4px_rgba(0,0,0,0.08)] overflow-hidden">
 
           <!-- Header skeleton — mimics the dark gradient header -->
-          <div class="bg-gradient-to-r from-[#080E80] to-[#0E1EC0] px-5 py-4 flex items-center justify-between">
+          <div class="bg-gradient-to-r from-[#1B2A5E] to-[#2E4A8C] px-5 py-4 flex items-center justify-between">
             <div class="flex items-center gap-3">
               <div class="sk-dark w-11 h-11 rounded-xl"></div>
               <div class="space-y-2">
@@ -473,7 +385,7 @@
             <span class="legend-item"><span class="legend-dot" style="background:#15803D;"></span>Present</span>
             <span class="legend-item"><span class="legend-dot" style="background:#D97706;"></span>Late</span>
             <span class="legend-item"><span class="legend-dot" style="background:#DC2626;"></span>Absent</span>
-            <span class="legend-item"><span class="legend-dot" style="background:#1228CC;"></span>On Leave</span>
+            <span class="legend-item"><span class="legend-dot" style="background:#3D5CA3;"></span>On Leave</span>
             <span class="legend-item"><span class="legend-dot" style="background:#0284C7;"></span>Holiday</span>
             <span class="legend-item"><span class="legend-dot" style="background:#CBD5E1;"></span>Weekend</span>
           </div>
@@ -592,7 +504,6 @@ import { useRoute } from 'vue-router';
 import axios from 'axios';
 import { useAuthStore } from '@/stores/auth';
 import { useToast } from '@/composables/useToast';
-import { useConfirm } from '@/composables/useConfirm';
 import { extractErrorMessage } from '@/composables/useApiError';
 import StatusBadge from '@/components/StatusBadge.vue';
 import PageHeader from '@/components/PageHeader.vue';
@@ -604,7 +515,6 @@ import {
   Download      as DownloadIcon,
   Loader2       as Loader2Icon,
   Lock          as LockIcon,
-  Unlock        as UnlockIcon,
   Table2        as TableIcon,
   Printer       as PrinterIcon,
   CheckCircle2  as CheckCircle2Icon,
@@ -621,10 +531,8 @@ import {
 const auth = useAuthStore();
 const route = useRoute();
 const { toast } = useToast();
-const { confirm } = useConfirm();
 
 const isSuperAdmin = computed(() => auth.employee?.role === 'super_admin');
-const canUnlock    = computed(() => ['admin', 'super_admin'].includes(auth.employee?.role));
 
 const canSelectEmployee = computed(() =>
   ['admin', 'hr_officer', 'super_admin'].includes(auth.employee?.role)
@@ -657,83 +565,6 @@ const bulkYear       = ref(now.getFullYear());
 const bulkDepartment = ref('');
 const bulkStaffType  = ref('');
 const departments    = ref([]);
-
-// ── Month Lock ──────────────────────────────────────────────────────
-const lockMonth    = ref(now.getMonth() + 1);
-const lockYear     = ref(now.getFullYear());
-const lockCampusId = ref('');
-const campuses     = ref([]);
-const locks        = ref([]);
-const lockingBusy  = ref(false);
-
-const currentLock = computed(() => {
-  const campusId = isSuperAdmin.value ? lockCampusId.value : auth.employee?.campus_id;
-  if (!campusId) return null;
-  return locks.value.find(l =>
-    String(l.campus_id) === String(campusId) && l.year === lockYear.value && l.month === lockMonth.value
-  ) ?? null;
-});
-
-function formatLockDate(dt) {
-  return new Date(dt.replace(' ', 'T')).toLocaleDateString('en-PH', { month: 'short', day: 'numeric', year: 'numeric' });
-}
-
-async function loadLocks() {
-  try {
-    const { data } = await axios.get('/api/dtr-locks');
-    locks.value = data;
-  } catch { /* non-critical widget — fails quietly, Lock button still guards server-side */ }
-}
-
-async function lockMonthNow() {
-  const campusId = isSuperAdmin.value ? lockCampusId.value : auth.employee?.campus_id;
-  if (!campusId) return;
-
-  const label = `${months.find(m => m.value === lockMonth.value)?.label} ${lockYear.value}`;
-  const ok = await confirm({
-    title:       `Lock ${label}?`,
-    message:     `Once locked, no one can add, edit, or delete punches — or approve DTR corrections — for this month until an Admin or Super Admin unlocks it.`,
-    confirmText: 'Lock Month',
-    danger:      false,
-  });
-  if (!ok) return;
-
-  lockingBusy.value = true;
-  try {
-    const { data } = await axios.post('/api/dtr-locks', { campus_id: campusId, year: lockYear.value, month: lockMonth.value });
-    locks.value.push(data);
-    toast(`${label} locked.`, 'success');
-  } catch (e) {
-    toast(e.response?.data?.message ?? 'Failed to lock this month.', 'error');
-  } finally {
-    lockingBusy.value = false;
-  }
-}
-
-async function unlockMonthNow() {
-  const lock = currentLock.value;
-  if (!lock) return;
-
-  const label = `${months.find(m => m.value === lock.month)?.label} ${lock.year}`;
-  const ok = await confirm({
-    title:       `Unlock ${label}?`,
-    message:     `This reopens the month for edits. Only do this if you need to correct something after it was finalized.`,
-    confirmText: 'Unlock',
-    danger:      true,
-  });
-  if (!ok) return;
-
-  lockingBusy.value = true;
-  try {
-    await axios.delete(`/api/dtr-locks/${lock.id}`);
-    locks.value = locks.value.filter(l => l.id !== lock.id);
-    toast(`${label} unlocked.`, 'warning');
-  } catch (e) {
-    toast(e.response?.data?.message ?? 'Failed to unlock this month.', 'error');
-  } finally {
-    lockingBusy.value = false;
-  }
-}
 
 
 const bulkEmployeeCount = computed(() => {
@@ -805,10 +636,10 @@ const previewStats = computed(() => {
   return [
     { label: 'Days Present',   value: t.days_present,             color: '#15803D', iconBg: '#F0FDF4', iconColor: '#15803D', icon: CalendarDaysIcon },
     { label: 'Absent Days',    value: Math.max(0, absent),        color: '#DC2626', iconBg: '#FEF2F2', iconColor: '#DC2626', icon: AlertCircleIcon  },
-    { label: 'Leave Days',     value: t.leave_days ?? 0,          color: '#1228CC', iconBg: '#EEF2FF', iconColor: '#1228CC', icon: BookOpenIcon     },
+    { label: 'Leave Days',     value: t.leave_days ?? 0,          color: '#3D5CA3', iconBg: '#EEF2FF', iconColor: '#3D5CA3', icon: BookOpenIcon     },
     { label: 'Tardiness (min)',value: t.tardiness_minutes,        color: '#D97706', iconBg: '#FFFBEB', iconColor: '#D97706', icon: TrendingDownIcon },
     { label: 'Overtime (min)', value: t.overtime_minutes,         color: '#0284C7', iconBg: '#F0F9FF', iconColor: '#0284C7', icon: TrendingUpIcon   },
-    { label: 'Hours Rendered', value: t.hours_rendered + 'h',     color: '#0E1EC0', iconBg: '#EEF2FF', iconColor: '#0E1EC0', icon: ClockIcon        },
+    { label: 'Hours Rendered', value: t.hours_rendered + 'h',     color: '#2E4A8C', iconBg: '#EEF2FF', iconColor: '#2E4A8C', icon: ClockIcon        },
   ];
 });
 
@@ -891,6 +722,11 @@ async function exportCsv() {
       params: { month: month.value, year: year.value },
       responseType: 'blob',
     });
+    const contentType = res.headers?.['content-type'] ?? '';
+    if (!contentType.includes('csv')) {
+      toast(await extractErrorMessage({ response: { data: res.data } }, 'Failed to export CSV.'), 'error');
+      return;
+    }
     const url  = window.URL.createObjectURL(new Blob([res.data], { type: 'text/csv' }));
     const link = document.createElement('a');
     link.href  = url;
@@ -914,6 +750,11 @@ async function exportBulk() {
     if (bulkDepartment.value) params.department_id = bulkDepartment.value;
     if (bulkStaffType.value)  params.staff_type    = bulkStaffType.value;
     const res = await axios.get('/api/reports/export-bulk', { params, responseType: 'blob' });
+    const contentType = res.headers?.['content-type'] ?? '';
+    if (!contentType.includes('csv')) {
+      toast(await extractErrorMessage({ response: { data: res.data } }, 'Failed to export bulk CSV.'), 'error');
+      return;
+    }
     const url  = window.URL.createObjectURL(new Blob([res.data], { type: 'text/csv' }));
     const link = document.createElement('a');
     link.href  = url;
@@ -945,11 +786,11 @@ function printDtr() {
     present:  'background:#15803D',
     late:     'background:#D97706',
     absent:   'background:#DC2626',
-    on_leave: 'background:#1228CC',
+    on_leave: 'background:#3D5CA3',
     holiday:  'background:#0284C7',
   })[s] ?? '';
   const rowStyle = (r) => {
-    if (r.isWeekend)             return 'background:#F5F7FA; color:#94A3B8;';
+    if (r.isWeekend)             return 'background:#F5F7FA; color:#6B7A94;';
     if (r.status === 'absent')   return 'background:#FEF2F2;';
     if (r.status === 'late')     return 'background:#FFFBEB;';
     if (r.status === 'holiday')  return 'background:#F0F9FF;';
@@ -1014,15 +855,15 @@ function printDtr() {
       align-items: center;
       justify-content: space-between;
       padding-bottom: 10px;
-      border-bottom: 2.5pt solid #0A16A0;
+      border-bottom: 2.5pt solid #24356F;
       margin-bottom: 10px;
     }
     .gh-center { text-align: center; flex: 1; }
     .gh-republic { font-size: 8pt; letter-spacing: .12em; text-transform: uppercase; color: #475569; }
-    .gh-uni { font-size: 13pt; font-weight: 700; color: #0A16A0; margin: 2px 0; letter-spacing: .01em; }
+    .gh-uni { font-size: 13pt; font-weight: 700; color: #24356F; margin: 2px 0; letter-spacing: .01em; }
     .gh-campus { font-size: 9pt; color: #475569; }
     .gh-badge {
-      background: #0A16A0;
+      background: #24356F;
       color: #C9A227;
       font-size: 7.5pt;
       font-weight: 700;
@@ -1039,7 +880,7 @@ function printDtr() {
       text-align: center;
       margin-bottom: 10px;
     }
-    .title-bar h1 { font-size: 13pt; font-weight: 700; letter-spacing: .08em; text-transform: uppercase; color: #0A16A0; }
+    .title-bar h1 { font-size: 13pt; font-weight: 700; letter-spacing: .08em; text-transform: uppercase; color: #24356F; }
     .title-bar p { font-size: 8pt; color: #64748B; margin-top: 2px; }
 
     /* ── Employee info ────────────────── */
@@ -1049,7 +890,7 @@ function printDtr() {
       gap: 4px 28px;
       padding: 9px 12px;
       border: 1pt solid #CBD5E1;
-      border-left: 3pt solid #0A16A0;
+      border-left: 3pt solid #24356F;
       background: #F8FAFC;
       margin-bottom: 10px;
     }
@@ -1071,7 +912,7 @@ function printDtr() {
     /* ── Attendance table ─────────────── */
     table { width: 100%; border-collapse: collapse; font-size: 9.5pt; margin-bottom: 10px; }
     thead th {
-      background: #0A16A0;
+      background: #24356F;
       color: #fff;
       padding: 5px 5px;
       font-size: 8pt;
@@ -1091,7 +932,7 @@ function printDtr() {
     }
     td:first-child { border-left: .5pt solid #E2E8F0; }
     .td-day { text-align: left; font-weight: 700; white-space: nowrap; padding-left: 7px; }
-    .dn { font-size: 7.5pt; font-weight: 400; color: #94A3B8; margin-left: 4px; }
+    .dn { font-size: 7.5pt; font-weight: 400; color: #6B7A94; margin-left: 4px; }
     .num { font-family: 'Courier New', monospace; font-size: 9pt; }
     .red  { color: #DC2626; }
     .blue { color: #0284C7; }
@@ -1128,7 +969,7 @@ function printDtr() {
       display: flex;
       justify-content: space-between;
       font-size: 7.5pt;
-      color: #94A3B8;
+      color: #6B7A94;
     }
 
     /* ── Screen-only print button ─────── */
@@ -1136,7 +977,7 @@ function printDtr() {
       display: block;
       margin: 20px auto 0;
       padding: 10px 28px;
-      background: #0A16A0;
+      background: #24356F;
       color: #fff;
       font-size: 11pt;
       font-weight: 700;
@@ -1180,10 +1021,10 @@ function printDtr() {
   <div class="stats">
     <div class="stat"><div class="sv" style="color:#15803D">${t.days_present}</div><div class="sl">Days Present</div></div>
     <div class="stat"><div class="sv" style="color:#DC2626">${absents}</div><div class="sl">Absent Days</div></div>
-    <div class="stat"><div class="sv" style="color:#1228CC">${t.leave_days ?? 0}</div><div class="sl">Leave Days</div></div>
+    <div class="stat"><div class="sv" style="color:#3D5CA3">${t.leave_days ?? 0}</div><div class="sl">Leave Days</div></div>
     <div class="stat"><div class="sv" style="color:#D97706">${t.tardiness_minutes}</div><div class="sl">Tardy (min)</div></div>
     <div class="stat"><div class="sv" style="color:#0284C7">${t.overtime_minutes}</div><div class="sl">OT (min)</div></div>
-    <div class="stat"><div class="sv" style="color:#0A16A0">${parseFloat(t.hours_rendered).toFixed(1)}</div><div class="sl">Hours</div></div>
+    <div class="stat"><div class="sv" style="color:#24356F">${parseFloat(t.hours_rendered).toFixed(1)}</div><div class="sl">Hours</div></div>
   </div>
 
   <!-- Attendance table -->
@@ -1286,14 +1127,6 @@ onMounted(async () => {
     } catch { /* ignore */ } finally {
       loadingEmployees.value = false;
     }
-
-    loadLocks();
-    if (isSuperAdmin.value) {
-      try {
-        const { data } = await axios.get('/api/campuses');
-        campuses.value = data;
-      } catch { /* ignore */ }
-    }
   }
 });
 </script>
@@ -1302,8 +1135,8 @@ onMounted(async () => {
 @reference "../css/app.css";
 
 .form-label { @apply block text-sm font-medium text-[#0F172A] mb-1.5; }
-.form-input  { @apply w-full px-3 py-2 text-sm border border-[#E2E8F0] rounded-md text-[#0F172A] focus:outline-none focus:ring-2 focus:ring-[#0E1EC0] bg-white; }
-.btn-primary { @apply px-4 py-2 bg-[#0E1EC0] text-white text-sm font-medium rounded-lg hover:bg-[#1228CC] disabled:opacity-60 transition-colors; }
+.form-input  { @apply w-full px-3 py-2 text-sm border border-[#E2E8F0] rounded-md text-[#0F172A] focus:outline-none focus:ring-2 focus:ring-[#2E4A8C] bg-white; }
+.btn-primary { @apply px-4 py-2 bg-[#2E4A8C] text-white text-sm font-medium rounded-lg hover:bg-[#3D5CA3] disabled:opacity-60 transition-colors; }
 .btn-outline  { @apply px-4 py-2 text-sm font-medium border border-[#E2E8F0] rounded-lg text-[#374151] hover:bg-[#F0F4FF] transition-colors disabled:opacity-60; }
 .bulk-label  { @apply block text-xs font-semibold text-[#374151] mb-1.5 uppercase tracking-wide; }
 
@@ -1314,14 +1147,14 @@ onMounted(async () => {
   justify-content: space-between;
   padding: 16px 20px;
   border-bottom: 1px solid #F4F6FB;
-  background: linear-gradient(135deg, #080E80 0%, #0E1EC0 100%);
+  background: linear-gradient(135deg, #1B2A5E 0%, #2E4A8C 100%);
   gap: 12px;
 }
 .preview-head-inner { display: flex; align-items: center; justify-content: space-between; flex: 1; gap: 16px; flex-wrap: wrap; }
 .ph-brand    { display: flex; align-items: center; gap: 12px; }
 .ph-initials {
   width: 44px; height: 44px; border-radius: 10px;
-  background: rgba(201,162,39,0.2); border: 1.5px solid rgba(201,162,39,0.5);
+  background: rgba(201, 162, 39,0.2); border: 1.5px solid rgba(201, 162, 39,0.5);
   color: #C9A227; font-size: 14px; font-weight: 800;
   display: flex; align-items: center; justify-content: center; flex-shrink: 0;
 }
@@ -1353,7 +1186,7 @@ onMounted(async () => {
   display: flex; align-items: center; justify-content: center; flex-shrink: 0;
 }
 .stat-val { font-size: 17px; font-weight: 700; line-height: 1; }
-.stat-lbl { font-size: 9px; font-weight: 600; text-transform: uppercase; letter-spacing: 0.08em; color: #94A3B8; margin-top: 2px; }
+.stat-lbl { font-size: 9px; font-weight: 600; text-transform: uppercase; letter-spacing: 0.08em; color: #6B7A94; margin-top: 2px; }
 
 /* ── Legend ──────────────────────────────────────── */
 .legend-row {
@@ -1402,14 +1235,14 @@ onMounted(async () => {
 .dtr-td-mono { font-family: 'Courier New', monospace; font-size: 11px; }
 
 .day-num  { font-size: 12px; font-weight: 700; color: #0F172A; width: 22px; text-align: right; flex-shrink: 0; }
-.day-name { font-size: 9.5px; color: #94A3B8; font-weight: 500; }
-.dtr-row--weekend .day-num  { color: #94A3B8; }
+.day-name { font-size: 9.5px; color: #6B7A94; font-weight: 500; }
+.dtr-row--weekend .day-num  { color: #6B7A94; }
 
 .hrs-val   { font-weight: 600; color: #0F172A; }
-.hrs-nil   { color: #CBD5E1; }
+.hrs-nil   { color: #94A3B8; }
 .tardy-val { font-weight: 600; color: #D97706; }
 .ot-val    { font-weight: 600; color: #0284C7; }
-.wknd-label { font-size: 9px; font-weight: 700; color: #CBD5E1; letter-spacing: 0.05em; }
+.wknd-label { font-size: 9px; font-weight: 700; color: #94A3B8; letter-spacing: 0.05em; }
 
 /* ── Totals footer ───────────────────────────────── */
 .totals-footer {
@@ -1424,12 +1257,12 @@ onMounted(async () => {
 }
 .tf-group { display: flex; flex-direction: column; gap: 1px; }
 .tf-sep   { width: 1px; height: 28px; background: #DDE4EE; flex-shrink: 0; }
-.tf-label { font-size: 9.5px; font-weight: 600; text-transform: uppercase; letter-spacing: 0.08em; color: #94A3B8; }
+.tf-label { font-size: 9.5px; font-weight: 600; text-transform: uppercase; letter-spacing: 0.08em; color: #6B7A94; }
 .tf-val   { font-size: 16px; font-weight: 700; line-height: 1; }
 .tf-green  { color: #15803D; }
-.tf-blue   { color: #0E1EC0; }
+.tf-blue   { color: #2E4A8C; }
 .tf-amber  { color: #D97706; }
-.tf-indigo { color: #1228CC; }
+.tf-indigo { color: #3D5CA3; }
 
 /* ── Action footer ───────────────────────────────── */
 .action-footer {

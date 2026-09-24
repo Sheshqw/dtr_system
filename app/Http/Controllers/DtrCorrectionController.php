@@ -2,11 +2,9 @@
 
 namespace App\Http\Controllers;
 
-use App\Exceptions\DtrMonthLockedException;
 use App\Http\Traits\ScopesByCampus;
 use App\Models\DailyDtr;
 use App\Models\DtrCorrection;
-use App\Models\DtrLock;
 use App\Models\User;
 use App\Notifications\CorrectionReviewed;
 use Carbon\Carbon;
@@ -99,7 +97,7 @@ class DtrCorrectionController extends Controller
         // Check for duplicate pending per field
         foreach ($validated['fields'] as $fd) {
             $exists = DtrCorrection::where('employee_id', $user->id)
-                ->where('work_date', $workDate)
+                ->whereDate('work_date', $workDate)
                 ->where('field', $fd['field'])
                 ->where('status', 'pending')
                 ->exists();
@@ -112,7 +110,7 @@ class DtrCorrectionController extends Controller
             }
         }
 
-        $dtr     = DailyDtr::where('employee_id', $user->id)->where('work_date', $workDate)->first();
+        $dtr     = DailyDtr::where('employee_id', $user->id)->whereDate('work_date', $workDate)->first();
         $groupId = count($validated['fields']) > 1 ? (string) Str::uuid() : null;
         $created = [];
 
@@ -159,11 +157,6 @@ class DtrCorrectionController extends Controller
 
         if ($correction->status !== 'pending') {
             return response()->json(['message' => 'This request has already been reviewed.'], 422);
-        }
-
-        if (DtrLock::isLocked($correction->employee?->campus_id, $correction->work_date)) {
-            $d = Carbon::parse($correction->work_date);
-            throw new DtrMonthLockedException($d->year, $d->month);
         }
 
         $validated = $request->validate([
@@ -233,15 +226,7 @@ class DtrCorrectionController extends Controller
             ? DtrCorrection::whereIn('group_id', $groupIds)->where('status', 'pending')->get()
             : collect();
 
-        $merged = $corrections->merge($groupSiblings)->unique('id');
-
-        // A batch can span several months — one locked among many shouldn't
-        // abort the rest, so locked items are set aside and reported back
-        // as skipped rather than thrown as an error.
-        $allToReview = $merged->reject(
-            fn($c) => DtrLock::isLocked($c->employee?->campus_id, $c->work_date)
-        );
-        $skippedLocked = $merged->count() - $allToReview->count();
+        $allToReview = $corrections->merge($groupSiblings)->unique('id');
 
         foreach ($allToReview as $c) {
             $this->applyReview($c, $validated, $user);
@@ -260,14 +245,10 @@ class DtrCorrectionController extends Controller
         $processed = $allToReview->count();
         $label     = $validated['status'] === 'approved' ? 'approved' : 'denied';
         $message   = "{$processed} correction " . ($processed === 1 ? 'request' : 'requests') . " {$label}.";
-        if ($skippedLocked > 0) {
-            $message .= " {$skippedLocked} skipped — that month has already been locked.";
-        }
 
         return response()->json([
-            'message'        => $message,
-            'processed'      => $processed,
-            'skipped_locked' => $skippedLocked,
+            'message'   => $message,
+            'processed' => $processed,
         ]);
     }
 

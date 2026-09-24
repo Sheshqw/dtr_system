@@ -3,11 +3,9 @@
 namespace App\Http\Controllers;
 
 use App\Events\AttendancePunched;
-use App\Exceptions\DtrMonthLockedException;
 use App\Http\Traits\ScopesByCampus;
 use App\Models\AttendanceLog;
 use App\Models\DailyDtr;
-use App\Models\DtrLock;
 use App\Models\Holiday;
 use App\Models\User;
 use App\Services\WorkingHoursService;
@@ -89,7 +87,7 @@ class AttendanceController extends Controller
     {
         $date = $request->get('date', today()->toDateString());
 
-        $query = User::with(['department', 'dailyDtr' => fn($q) => $q->where('work_date', $date)])
+        $query = User::with(['department', 'dailyDtr' => fn($q) => $q->whereDate('work_date', $date)])
             ->where('is_active', true);
 
         $this->campusScope($request, $query);
@@ -99,7 +97,7 @@ class AttendanceController extends Controller
         }
 
         if ($request->filled('status')) {
-            $query->whereHas('dailyDtr', fn($q) => $q->where('work_date', $date)->where('status', $request->status));
+            $query->whereHas('dailyDtr', fn($q) => $q->whereDate('work_date', $date)->where('status', $request->status));
         }
 
         if ($request->filled('search')) {
@@ -296,11 +294,6 @@ class AttendanceController extends Controller
         $employee  = User::find($data['employee_id']);
         $workDate  = $this->workingHours->resolveWorkDate($employee, $punchTime);
 
-        if (DtrLock::isLocked($employee->campus_id, $workDate)) {
-            $d = Carbon::parse($workDate);
-            throw new DtrMonthLockedException($d->year, $d->month);
-        }
-
         $log = AttendanceLog::create([
             'employee_id' => $data['employee_id'],
             'punch_time'  => $punchTime,
@@ -326,11 +319,6 @@ class AttendanceController extends Controller
 
         $employee = $log->employee;
         $workDate = $this->workingHours->resolveWorkDate($employee, $log->punch_time);
-
-        if (DtrLock::isLocked($employee->campus_id, $workDate)) {
-            $d = Carbon::parse($workDate);
-            throw new DtrMonthLockedException($d->year, $d->month);
-        }
 
         $log->delete();
 
