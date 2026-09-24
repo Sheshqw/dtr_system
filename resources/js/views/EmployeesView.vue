@@ -1,7 +1,24 @@
 <template>
   <div class="flex flex-col h-full">
 
-    <PageHeader title="Employees" subtitle="Manage faculty and staff accounts" :icon="UsersIcon">
+    <PageHeader title="Employee Logs" subtitle="Manage faculty and staff accounts" :icon="UsersIcon">
+      <div v-if="canManage" class="relative">
+        <button
+          ref="exportBtnRef"
+          @click="toggleExportMenu"
+          class="inline-flex items-center gap-2 px-3.5 py-2 text-sm font-medium rounded-lg transition-colors"
+        >
+          <DownloadIcon class="w-4 h-4" />
+          Export
+          <ChevronDownIcon class="w-3.5 h-3.5" />
+        </button>
+      </div>
+
+      <button v-if="canManage" @click="openImport" class="inline-flex items-center gap-2 px-3.5 py-2 text-sm font-medium rounded-lg transition-colors">
+        <UploadIcon class="w-4 h-4" />
+        Import
+      </button>
+
       <button
         v-if="auth.isAdmin || auth.isHrOfficer"
         @click="openAdd"
@@ -12,14 +29,27 @@
       </button>
     </PageHeader>
 
+    <!-- Summary strip -->
+    <div v-if="employees.length" class="grid grid-cols-2 sm:grid-cols-4 gap-3 px-6 pt-4 pb-1 bg-[#F4F6FB]">
+      <div v-for="s in empStats" :key="s.label" class="stat-tile" :style="statVars(s.color)">
+        <div class="stat-tile-icon">
+          <component :is="s.icon" class="w-4 h-4" />
+        </div>
+        <div>
+          <p class="stat-tile-value" style="font-size:20px;">{{ s.value }}</p>
+          <p class="stat-tile-label">{{ s.label }}</p>
+        </div>
+      </div>
+    </div>
+
     <!-- Filters -->
     <div class="px-6 py-3 bg-white border-b border-[#E2E8F0] flex items-center gap-3 flex-wrap">
       <div class="relative">
-        <SearchIcon class="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-[#94A3B8]" />
+        <SearchIcon class="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-[#6B7A94]" />
         <input
           v-model="filters.search"
           placeholder="Search name, ID, position…"
-          class="pl-9 pr-3 py-1.5 text-sm border border-[#E2E8F0] rounded-md w-56 focus:outline-none focus:ring-2 focus:ring-[#0E1EC0] text-[#0F172A] placeholder:text-[#94A3B8]"
+          class="pl-9 pr-3 py-1.5 text-sm border border-[#E2E8F0] rounded-md w-56 focus:outline-none focus:ring-2 focus:ring-[#2E4A8C] text-[#0F172A] placeholder:text-[#6B7A94]"
         />
       </div>
       <select v-model="filters.department_id" class="select-sm">
@@ -53,7 +83,7 @@
         <option value="active">Active</option>
         <option value="inactive">Inactive</option>
       </select>
-      <span class="ml-auto text-xs text-[#94A3B8]">{{ filtered.length }} record{{ filtered.length !== 1 ? 's' : '' }}</span>
+      <span class="ml-auto text-xs text-[#6B7A94]">{{ filtered.length }} record{{ filtered.length !== 1 ? 's' : '' }}</span>
       <span v-if="filtered.length > perPage" class="text-xs text-[#64748B]">
         — page {{ currentPage }} of {{ totalPages }}
       </span>
@@ -61,8 +91,8 @@
 
     <!-- Bulk action bar -->
     <div v-if="canManage && selected.size" class="px-6 py-2.5 bg-[#EEF2FF] border-b border-[#D4DEFF] flex items-center gap-3">
-      <span class="text-xs font-semibold text-[#0E1EC0]">{{ selected.size }} selected</span>
-      <button @click="bulkActivate" class="inline-flex items-center gap-1.5 px-2.5 py-1 text-xs font-medium rounded-md border border-[#C7D2F6] text-[#0E1EC0] bg-white hover:bg-[#F4F6FF] transition-colors">
+      <span class="text-xs font-semibold text-[#2E4A8C]">{{ selected.size }} selected</span>
+      <button @click="bulkActivate" class="inline-flex items-center gap-1.5 px-2.5 py-1 text-xs font-medium rounded-md border border-[#C7D2F6] text-[#2E4A8C] bg-white hover:bg-[#F4F6FF] transition-colors">
         <UserCheckIcon class="w-3.5 h-3.5" /> Activate
       </button>
       <button @click="bulkDeactivate" class="inline-flex items-center gap-1.5 px-2.5 py-1 text-xs font-medium rounded-md border border-[#F3C7C7] text-[#DC2626] bg-white hover:bg-[#FEF2F2] transition-colors">
@@ -73,7 +103,7 @@
 
     <!-- Table -->
     <div class="flex-1 overflow-auto bg-[#F4F6FB] p-6">
-      <div class="bg-white border border-[#E4E9F2] rounded-xl shadow-[0_2px_12px_rgba(8,14,128,0.07),0_1px_3px_rgba(8,14,128,0.04)]">
+      <div class="bg-white border border-[#E4E9F2] rounded-xl shadow-[0_2px_12px_rgba(27, 42, 94,0.07),0_1px_3px_rgba(27, 42, 94,0.04)]">
         <div class="overflow-x-auto rounded-xl">
         <table class="w-full text-sm emp-table">
           <thead class="sticky top-0 bg-white border-b border-[#E2E8F0] z-10">
@@ -143,7 +173,7 @@
               <td v-if="canManage" class="td-cell text-center">
                 <input type="checkbox" :checked="selected.has(emp.id)" @change="toggleSelect(emp.id)" class="rounded border-[#CBD5E1]" />
               </td>
-              <td class="td-cell text-center text-[#94A3B8] font-mono text-xs">{{ (currentPage - 1) * perPage + i + 1 }}</td>
+              <td class="td-cell text-center text-[#6B7A94] font-mono text-xs">{{ (currentPage - 1) * perPage + i + 1 }}</td>
               <td class="td-cell">
                 <div class="flex items-center gap-3">
                   <div class="w-8 h-8 rounded-full overflow-hidden flex-shrink-0 border border-[#E2E8F0]">
@@ -154,7 +184,7 @@
                   </div>
                   <div>
                     <p class="font-medium text-[#0F172A]">{{ emp.name }}</p>
-                    <p class="text-xs text-[#94A3B8] font-mono">{{ emp.employee_id }}</p>
+                    <p class="text-xs text-[#6B7A94] font-mono">{{ emp.employee_id }}</p>
                     <p v-if="emp.fingerprint_id" class="text-[10px] text-[#0284C7] font-mono mt-0.5">
                       <span class="opacity-60">FP:</span> {{ emp.fingerprint_id }}
                     </p>
@@ -163,7 +193,7 @@
               </td>
               <td class="td-cell">
                 <StaffTypeBadge v-if="emp.staff_type" :type="emp.staff_type" />
-                <span v-else class="text-xs text-[#94A3B8]">—</span>
+                <span v-else class="text-xs text-[#6B7A94]">—</span>
               </td>
               <td class="td-cell text-[#64748B]">{{ emp.department ?? '—' }}</td>
               <td class="td-cell text-[#64748B]">{{ emp.position ?? '—' }}</td>
@@ -223,6 +253,26 @@
   </div>
 
   <!-- ═══════════════════════════════════════════════════════════════
+       Export Dropdown — teleported so PageHeader's `overflow: hidden`
+       (needed to contain its decorative shimmer stripe) can't clip it.
+  ═══════════════════════════════════════════════════════════════ -->
+  <Teleport to="body">
+    <div v-if="showExportMenu" class="fixed inset-0 z-40" @click="showExportMenu = false" />
+    <div
+      v-if="showExportMenu"
+      class="fixed z-50 w-56 bg-white rounded-lg shadow-xl border border-[#E2E8F0] py-1 text-[#0F172A]"
+      :style="{ top: exportMenuPos.top + 'px', left: exportMenuPos.left + 'px' }"
+    >
+      <button @click="exportAs('excel')" class="w-full text-left px-3.5 py-2.5 text-sm hover:bg-[#F4F6FB] flex items-center gap-2.5">
+        <FileSpreadsheetIcon class="w-4 h-4 text-[#059669]" /> Download as Excel (.xlsx)
+      </button>
+      <button @click="exportAs('pdf')" class="w-full text-left px-3.5 py-2.5 text-sm hover:bg-[#F4F6FB] flex items-center gap-2.5">
+        <FileTextIcon class="w-4 h-4 text-[#DC2626]" /> Download as PDF
+      </button>
+    </div>
+  </Teleport>
+
+  <!-- ═══════════════════════════════════════════════════════════════
        Add / Edit Modal
   ═══════════════════════════════════════════════════════════════ -->
   <Teleport to="body">
@@ -231,7 +281,7 @@
       <div class="relative bg-white rounded-2xl shadow-2xl w-full max-w-4xl max-h-[92vh] flex flex-col overflow-hidden">
 
         <!-- ── Gradient Header ── -->
-        <div class="flex-shrink-0 bg-gradient-to-r from-[#0A1540] via-[#0F1F5C] to-[#0E1EC0] px-6 py-5 flex items-center justify-between">
+        <div class="flex-shrink-0 bg-gradient-to-r from-[#182140] via-[#22305C] to-[#2E4A8C] px-6 py-5 flex items-center justify-between">
           <div class="flex items-center gap-4">
             <!-- Live avatar -->
             <div class="w-12 h-12 rounded-xl overflow-hidden border-2 border-white/20 flex-shrink-0">
@@ -270,23 +320,23 @@
               @click="scrollToSection(sec.id)"
               class="group w-full flex items-center gap-2.5 px-3 py-2.5 text-left transition-all relative"
               :class="activeSection === sec.id
-                ? 'bg-white text-[#0E1EC0] after:absolute after:right-0 after:top-1 after:bottom-1 after:w-0.5 after:bg-[#0E1EC0] after:rounded-l'
+                ? 'bg-white text-[#2E4A8C] after:absolute after:right-0 after:top-1 after:bottom-1 after:w-0.5 after:bg-[#2E4A8C] after:rounded-l'
                 : 'text-[#64748B] hover:bg-white/70 hover:text-[#0F172A]'"
             >
               <span
                 class="w-6 h-6 rounded-lg flex items-center justify-center flex-shrink-0 text-xs font-bold transition-all"
                 :class="activeSection === sec.id
-                  ? 'bg-[#0E1EC0] text-white shadow-sm'
+                  ? 'bg-[#2E4A8C] text-white shadow-sm'
                   : sectionDone(sec.id)
                     ? 'bg-emerald-100 text-emerald-600'
-                    : 'bg-[#E8EDF5] text-[#94A3B8] group-hover:bg-[#D8E0F5] group-hover:text-[#0E1EC0]'"
+                    : 'bg-[#E8EDF5] text-[#6B7A94] group-hover:bg-[#D8E0F5] group-hover:text-[#2E4A8C]'"
               >
                 <CheckIcon v-if="sectionDone(sec.id) && activeSection !== sec.id" class="w-3 h-3" />
                 <span v-else>{{ sec.num }}</span>
               </span>
               <div class="flex-1 min-w-0">
                 <p class="text-xs font-semibold leading-tight truncate">{{ sec.label }}</p>
-                <p class="text-[10px] mt-0.5 truncate" :class="sectionDone(sec.id) ? 'text-emerald-500' : 'text-[#94A3B8]'">
+                <p class="text-[10px] mt-0.5 truncate" :class="sectionDone(sec.id) ? 'text-emerald-500' : 'text-[#6B7A94]'">
                   {{ sectionDone(sec.id) ? 'Complete' : sec.hint }}
                 </p>
               </div>
@@ -295,11 +345,11 @@
             <!-- Progress bar at bottom of sidebar -->
             <div class="mt-auto mx-3 pt-3 border-t border-[#E2E8F0]">
               <div class="flex items-center justify-between mb-1">
-                <span class="text-[10px] text-[#94A3B8] font-medium">Progress</span>
-                <span class="text-[10px] font-bold text-[#0E1EC0]">{{ completedSections }}/{{ formSections.length }}</span>
+                <span class="text-[10px] text-[#6B7A94] font-medium">Progress</span>
+                <span class="text-[10px] font-bold text-[#2E4A8C]">{{ completedSections }}/{{ formSections.length }}</span>
               </div>
               <div class="h-1.5 bg-[#E2E8F0] rounded-full overflow-hidden">
-                <div class="h-full bg-gradient-to-r from-[#0E1EC0] to-[#4F6EF7] rounded-full transition-all duration-500"
+                <div class="h-full bg-gradient-to-r from-[#2E4A8C] to-[#4F6EF7] rounded-full transition-all duration-500"
                   :style="{ width: (completedSections / formSections.length * 100) + '%' }"></div>
               </div>
             </div>
@@ -313,11 +363,11 @@
               <section id="sec-account" class="px-6 pt-6 pb-4">
                 <div class="flex items-center gap-3 mb-5">
                   <div class="w-9 h-9 rounded-xl bg-[#EEF2FF] flex items-center justify-center flex-shrink-0">
-                    <KeyRoundIcon class="w-4.5 h-4.5 text-[#0E1EC0]" />
+                    <KeyRoundIcon class="w-4.5 h-4.5 text-[#2E4A8C]" />
                   </div>
                   <div>
                     <p class="text-sm font-semibold text-[#0F172A]">Account Information</p>
-                    <p class="text-xs text-[#94A3B8] mt-0.5">Login credentials and system access level</p>
+                    <p class="text-xs text-[#6B7A94] mt-0.5">Login credentials and system access level</p>
                   </div>
                 </div>
 
@@ -340,7 +390,7 @@
                     <label class="form-label">
                       {{ modal.editing ? 'New Password' : 'Password' }}
                       <span v-if="!modal.editing" class="req">*</span>
-                      <span v-else class="text-[#94A3B8] font-normal text-xs ml-1">(leave blank to keep current)</span>
+                      <span v-else class="text-[#6B7A94] font-normal text-xs ml-1">(leave blank to keep current)</span>
                     </label>
                     <div class="relative">
                       <input
@@ -351,7 +401,7 @@
                         placeholder="8+ characters, with letters and numbers"
                       />
                       <button type="button" @click="showPassword = !showPassword"
-                        class="absolute right-3 top-1/2 -translate-y-1/2 text-[#94A3B8] hover:text-[#0F172A] transition-colors">
+                        class="absolute right-3 top-1/2 -translate-y-1/2 text-[#6B7A94] hover:text-[#0F172A] transition-colors">
                         <EyeOffIcon v-if="showPassword" class="w-4 h-4" />
                         <EyeIcon v-else class="w-4 h-4" />
                       </button>
@@ -380,7 +430,7 @@
                   </div>
                   <div>
                     <p class="text-sm font-semibold text-[#0F172A]">Personal Information</p>
-                    <p class="text-xs text-[#94A3B8] mt-0.5">Full name, contact details and demographics</p>
+                    <p class="text-xs text-[#6B7A94] mt-0.5">Full name, contact details and demographics</p>
                   </div>
                 </div>
 
@@ -391,7 +441,7 @@
                       :src="photoPreview || `/storage/${editingEmp?.photo_path}`"
                       class="w-full h-full object-cover" alt="Photo preview" />
                     <div v-else class="w-full h-full flex items-center justify-center">
-                      <UserCircleIcon class="w-8 h-8 text-[#CBD5E1]" />
+                      <UserCircleIcon class="w-8 h-8 text-[#94A3B8]" />
                     </div>
                   </div>
                   <div class="flex flex-col gap-1.5">
@@ -401,7 +451,7 @@
                       {{ photoFile ? photoFile.name : 'Choose Photo' }}
                       <input type="file" accept="image/jpeg,image/png,image/webp" class="sr-only" @change="onPhotoChange" />
                     </label>
-                    <p class="text-[10px] text-[#94A3B8]">JPG, PNG or WebP · max 2 MB · saved when you submit</p>
+                    <p class="text-[10px] text-[#6B7A94]">JPG, PNG or WebP · max 2 MB · saved when you submit</p>
                   </div>
                 </div>
 
@@ -438,7 +488,7 @@
                         @click="form.gender = form.gender === g.v ? '' : g.v"
                         class="flex-1 py-2 text-xs font-medium rounded-lg border transition-all"
                         :class="form.gender === g.v
-                          ? 'border-[#0E1EC0] bg-[#EEF2FF] text-[#0E1EC0]'
+                          ? 'border-[#2E4A8C] bg-[#EEF2FF] text-[#2E4A8C]'
                           : 'border-[#E2E8F0] text-[#64748B] hover:border-[#C7D2F6] hover:bg-[#F8FAFF]'"
                       >{{ g.l }}</button>
                     </div>
@@ -478,7 +528,7 @@
                   </div>
                   <div>
                     <p class="text-sm font-semibold text-[#0F172A]">Employment Details</p>
-                    <p class="text-xs text-[#94A3B8] mt-0.5">Staff type, department, shift and hire date</p>
+                    <p class="text-xs text-[#6B7A94] mt-0.5">Staff type, department, shift and hire date</p>
                   </div>
                 </div>
 
@@ -493,7 +543,7 @@
                       @click="form.staff_type = form.staff_type === st.value ? '' : st.value"
                       class="flex flex-col items-center gap-1.5 px-2 py-3 rounded-xl border text-xs font-medium transition-all"
                       :class="form.staff_type === st.value
-                        ? 'border-[#0E1EC0] bg-[#EEF2FF] text-[#0E1EC0] shadow-sm ring-1 ring-[#0E1EC0]/20'
+                        ? 'border-[#2E4A8C] bg-[#EEF2FF] text-[#2E4A8C] shadow-sm ring-1 ring-[#2E4A8C]/20'
                         : 'border-[#E2E8F0] text-[#64748B] hover:border-[#C7D2F6] hover:bg-[#F8FAFF] hover:text-[#0F172A]'"
                     >
                       <component :is="st.icon" class="w-5 h-5" />
@@ -568,7 +618,7 @@
                           No {{ selectedStaffTypeLabel }} shifts found.
                         </span>
                         <button type="button" @click="openQuickShift"
-                          class="flex-shrink-0 flex items-center gap-1 font-semibold text-[#0E1EC0] hover:underline">
+                          class="flex-shrink-0 flex items-center gap-1 font-semibold text-[#2E4A8C] hover:underline">
                           <PlusIcon class="w-3 h-3" /> Create Shift
                         </button>
                       </div>
@@ -590,7 +640,7 @@
                         <div class="flex justify-end gap-2 pt-0.5">
                           <button type="button" @click="quickShift.open = false" class="px-3 py-1.5 text-xs border border-[#E2E8F0] rounded-md text-[#64748B] hover:bg-white transition-colors">Cancel</button>
                           <button type="button" @click="saveQuickShift" :disabled="quickShift.saving || !quickShift.name"
-                            class="px-3 py-1.5 text-xs font-medium bg-[#0E1EC0] text-white rounded-md hover:bg-[#1228CC] disabled:opacity-60 transition-colors">
+                            class="px-3 py-1.5 text-xs font-medium bg-[#2E4A8C] text-white rounded-md hover:bg-[#3D5CA3] disabled:opacity-60 transition-colors">
                             {{ quickShift.saving ? 'Saving…' : 'Save Shift' }}
                           </button>
                         </div>
@@ -599,11 +649,11 @@
 
                     <!-- Selected shift preview -->
                     <div v-if="selectedShift" class="mt-1.5 flex items-center flex-wrap gap-x-2.5 gap-y-1 bg-[#F8FAFC] border border-[#E2E8F0] rounded-md px-3 py-1.5 text-xs text-[#64748B]">
-                      <ClockIcon class="w-3.5 h-3.5 text-[#94A3B8] flex-shrink-0" />
+                      <ClockIcon class="w-3.5 h-3.5 text-[#6B7A94] flex-shrink-0" />
                       <span>A.M. <span class="font-mono font-medium text-[#0F172A]">{{ selectedShift.morning_in?.slice(0,5) }}–{{ selectedShift.morning_out?.slice(0,5) }}</span></span>
-                      <span class="text-[#CBD5E1]">|</span>
+                      <span class="text-[#94A3B8]">|</span>
                       <span>P.M. <span class="font-mono font-medium text-[#0F172A]">{{ selectedShift.afternoon_in?.slice(0,5) }}–{{ selectedShift.afternoon_out?.slice(0,5) }}</span></span>
-                      <span class="text-[#CBD5E1]">|</span>
+                      <span class="text-[#94A3B8]">|</span>
                       <span>Grace <span class="font-medium text-[#0F172A]">{{ selectedShift.grace_period_minutes }}m</span></span>
                     </div>
                   </div>
@@ -625,7 +675,7 @@
                   </div>
                   <div>
                     <p class="text-sm font-semibold text-[#0F172A]">Government ID Numbers</p>
-                    <p class="text-xs text-[#94A3B8] mt-0.5">Required for official records and CSC Form 48</p>
+                    <p class="text-xs text-[#6B7A94] mt-0.5">Required for official records and CSC Form 48</p>
                   </div>
                 </div>
                 <div class="grid grid-cols-2 gap-4">
@@ -658,7 +708,7 @@
                   </div>
                   <div>
                     <p class="text-sm font-semibold text-[#0F172A]">Biometric Device</p>
-                    <p class="text-xs text-[#94A3B8] mt-0.5">ZKTeco / GRANDING fingerprint terminal enrollment</p>
+                    <p class="text-xs text-[#6B7A94] mt-0.5">ZKTeco / GRANDING fingerprint terminal enrollment</p>
                   </div>
                 </div>
                 <div class="grid grid-cols-2 gap-4">
@@ -679,7 +729,7 @@
           <p v-if="error" class="text-sm text-red-600 flex items-center gap-1.5">
             <AlertCircleIcon class="w-4 h-4 flex-shrink-0" />{{ error }}
           </p>
-          <p v-else class="text-xs text-[#94A3B8]">Fields marked <span class="text-red-500 font-bold">*</span> are required</p>
+          <p v-else class="text-xs text-[#6B7A94]">Fields marked <span class="text-red-500 font-bold">*</span> are required</p>
           <div class="flex gap-3">
             <button type="button" @click="requestCloseModal" class="btn-outline">Cancel</button>
             <button type="submit" form="emp-form" :disabled="saving" class="btn-primary">
@@ -692,14 +742,232 @@
       </div>
     </div>
   </Teleport>
+
+  <!-- ═══════════════════════════════════════════════════════════════
+       Import Modal
+  ═══════════════════════════════════════════════════════════════ -->
+  <Teleport to="body">
+    <div v-if="importModal.open" class="fixed inset-0 z-50 flex items-center justify-center p-4">
+      <div class="absolute inset-0 bg-black/50 backdrop-blur-sm" @click="closeImport" />
+      <div
+        class="relative bg-white rounded-2xl shadow-2xl w-full max-h-[90vh] flex flex-col overflow-hidden transition-[max-width] duration-200"
+        :class="importStep === 'select' ? 'max-w-lg' : 'max-w-2xl'"
+      >
+
+        <!-- ── Header ── -->
+        <div class="flex-shrink-0 bg-gradient-to-r from-[#182140] via-[#22305C] to-[#2E4A8C] px-6 py-5 flex items-center justify-between">
+          <div class="flex items-center gap-3">
+            <div class="w-9 h-9 rounded-lg bg-white/10 border border-white/20 flex items-center justify-center">
+              <UploadIcon class="w-4.5 h-4.5 text-white" />
+            </div>
+            <div>
+              <h2 class="text-white font-semibold text-sm">Import Employees</h2>
+              <p class="text-white/60 text-xs mt-0.5">
+                {{ { select: 'Bulk-add accounts from an Excel file', preview: 'Review before committing', result: 'Import complete' }[importStep] }}
+              </p>
+            </div>
+          </div>
+          <button @click="closeImport" class="text-white/70 hover:text-white p-1">
+            <XIcon class="w-5 h-5" />
+          </button>
+        </div>
+
+        <!-- ── Step indicator ── -->
+        <div class="flex-shrink-0 flex items-center gap-2 px-6 pt-4">
+          <div v-for="(s, i) in ['select', 'preview', 'result']" :key="s" class="flex items-center gap-2 flex-1">
+            <div
+              class="w-6 h-6 rounded-full flex items-center justify-center text-[11px] font-bold flex-shrink-0 transition-colors"
+              :class="importStepIndex >= i ? 'bg-[#2E4A8C] text-white' : 'bg-[#F1F5F9] text-[#94A3B8]'"
+            >
+              <CheckIcon v-if="importStepIndex > i" class="w-3.5 h-3.5" />
+              <span v-else>{{ i + 1 }}</span>
+            </div>
+            <div v-if="i < 2" class="h-0.5 flex-1 rounded" :class="importStepIndex > i ? 'bg-[#2E4A8C]' : 'bg-[#F1F5F9]'" />
+          </div>
+        </div>
+        <div class="flex-shrink-0 flex text-[10px] font-semibold uppercase tracking-wide text-[#94A3B8] px-6 pt-1.5">
+          <span class="flex-1" :class="importStep === 'select' && 'text-[#2E4A8C]'">Upload</span>
+          <span class="flex-1 text-center" :class="importStep === 'preview' && 'text-[#2E4A8C]'">Review</span>
+          <span class="flex-1 text-right" :class="importStep === 'result' && 'text-[#2E4A8C]'">Done</span>
+        </div>
+
+        <div class="flex-1 overflow-y-auto px-6 py-5 space-y-4">
+
+          <!-- ══ Step 1: Select file ══ -->
+          <template v-if="importStep === 'select'">
+            <div class="flex items-start gap-3 p-3 rounded-lg bg-[#EEF2FF] border border-[#D4DEFF]">
+              <FileSpreadsheetIcon class="w-5 h-5 text-[#2E4A8C] flex-shrink-0 mt-0.5" />
+              <div class="text-xs text-[#2E4A8C] leading-relaxed">
+                Don't have the file yet? Start from the template — it has the exact column headers this
+                importer expects (Employee ID, Last Name, First Name, Email, Role, Campus, Department, etc.).
+                <button @click="downloadTemplate" class="font-semibold underline underline-offset-2 hover:no-underline block mt-1.5">
+                  Download template (.xlsx)
+                </button>
+              </div>
+            </div>
+
+            <div>
+              <label class="block text-xs font-semibold text-[#374151] mb-1.5">Excel / CSV file</label>
+              <input
+                ref="importFileInput"
+                type="file"
+                accept=".xlsx,.xls,.csv"
+                @change="onImportFileChange"
+                class="block w-full text-sm text-[#0F172A] file:mr-3 file:py-1.5 file:px-3 file:rounded-md file:border-0 file:text-xs file:font-semibold file:bg-[#EEF2FF] file:text-[#2E4A8C] hover:file:bg-[#DCE3FA] border border-[#E4E9F2] rounded-lg py-1.5 px-1.5"
+              />
+            </div>
+          </template>
+
+          <!-- ══ Step 2: Preview ══ -->
+          <template v-if="importStep === 'preview' && importPreview">
+            <div class="flex gap-3">
+              <div class="flex-1 rounded-lg border border-[#E4E9F2] bg-[#F7F8FD] px-3 py-2.5 text-center">
+                <p class="text-lg font-bold text-[#0F172A]">{{ importPreview.total }}</p>
+                <p class="text-[11px] text-[#64748B]">Rows found</p>
+              </div>
+              <div class="flex-1 rounded-lg border border-[#BBF7D0] bg-[#F0FDF4] px-3 py-2.5 text-center">
+                <p class="text-lg font-bold text-[#15803D]">{{ importPreview.valid_count }}</p>
+                <p class="text-[11px] text-[#15803D]/80">Will import</p>
+              </div>
+              <div class="flex-1 rounded-lg border border-[#FECACA] bg-[#FEF2F2] px-3 py-2.5 text-center">
+                <p class="text-lg font-bold text-[#B91C1C]">{{ importPreview.invalid_count }}</p>
+                <p class="text-[11px] text-[#B91C1C]/80">Will skip</p>
+              </div>
+            </div>
+
+            <div class="border border-[#E4E9F2] rounded-lg overflow-hidden">
+              <div class="max-h-64 overflow-y-auto">
+                <table class="w-full text-xs">
+                  <thead class="sticky top-0 bg-[#F7F8FD] border-b border-[#E4E9F2]">
+                    <tr>
+                      <th class="text-left font-semibold text-[#64748B] px-3 py-2">Row</th>
+                      <th class="text-left font-semibold text-[#64748B] px-3 py-2">Employee</th>
+                      <th class="text-left font-semibold text-[#64748B] px-3 py-2">Role / Campus</th>
+                      <th class="text-left font-semibold text-[#64748B] px-3 py-2">Status</th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    <tr
+                      v-for="r in importPreview.rows"
+                      :key="r.row"
+                      :class="r.valid ? 'bg-white' : 'bg-[#FEF2F2]/50'"
+                      class="border-b border-[#F1F5F9] last:border-0"
+                    >
+                      <td class="px-3 py-2 text-[#94A3B8]">{{ r.row }}</td>
+                      <td class="px-3 py-2">
+                        <p class="font-medium text-[#0F172A]">{{ r.name ?? '—' }}</p>
+                        <p class="text-[#94A3B8]">{{ r.employee_id || '(missing ID)' }}</p>
+                      </td>
+                      <td class="px-3 py-2 text-[#64748B]">
+                        <span v-if="r.role">{{ r.role }}</span>
+                        <span v-if="r.campus"> · {{ r.campus }}</span>
+                        <span v-if="!r.role && !r.campus">—</span>
+                      </td>
+                      <td class="px-3 py-2">
+                        <span v-if="r.valid" class="inline-flex items-center gap-1 text-[#15803D] font-medium">
+                          <CheckCircle2Icon class="w-3.5 h-3.5" /> Will import
+                        </span>
+                        <span v-else class="inline-flex items-center gap-1 text-[#B91C1C] font-medium" :title="r.error">
+                          <XCircleIcon class="w-3.5 h-3.5" /> {{ r.error }}
+                        </span>
+                      </td>
+                    </tr>
+                  </tbody>
+                </table>
+              </div>
+            </div>
+
+            <p v-if="importPreview.valid_count === 0" class="text-xs text-[#B91C1C] flex items-center gap-1.5">
+              <AlertCircleIcon class="w-3.5 h-3.5 flex-shrink-0" /> No rows are valid — fix the file and upload again.
+            </p>
+          </template>
+
+          <!-- ══ Step 3: Result ══ -->
+          <template v-if="importStep === 'result' && importResult">
+            <div class="flex gap-3">
+              <div class="flex-1 rounded-lg border border-[#BBF7D0] bg-[#F0FDF4] px-3 py-2.5 text-center">
+                <p class="text-lg font-bold text-[#15803D]">{{ importResult.imported }}</p>
+                <p class="text-[11px] text-[#15803D]/80">Imported</p>
+              </div>
+              <div class="flex-1 rounded-lg border border-[#FECACA] bg-[#FEF2F2] px-3 py-2.5 text-center">
+                <p class="text-lg font-bold text-[#B91C1C]">{{ importResult.failed }}</p>
+                <p class="text-[11px] text-[#B91C1C]/80">Skipped</p>
+              </div>
+            </div>
+
+            <div v-if="importResult.errors?.length" class="rounded-lg border border-[#FECACA] bg-[#FEF2F2] p-3">
+              <p class="text-xs font-semibold text-[#B91C1C] mb-1.5">Skipped rows</p>
+              <ul class="text-xs text-[#B91C1C]/90 space-y-1 max-h-32 overflow-y-auto">
+                <li v-for="(msg, i) in importResult.errors" :key="i">{{ msg }}</li>
+              </ul>
+            </div>
+
+            <div v-if="importResult.generated_passwords?.length" class="rounded-lg border border-[#FDE68A] bg-[#FFFBEB] p-3">
+              <p class="text-xs font-semibold text-[#92400E] mb-1.5">
+                Temporary passwords generated — save these now, they won't be shown again
+              </p>
+              <ul class="text-xs text-[#92400E]/90 space-y-1 max-h-32 overflow-y-auto font-mono">
+                <li v-for="g in importResult.generated_passwords" :key="g.employee_id">
+                  {{ g.employee_id }} ({{ g.name }}) — {{ g.password }}
+                </li>
+              </ul>
+            </div>
+          </template>
+
+        </div>
+
+        <!-- ── Footer ── -->
+        <div class="flex-shrink-0 px-6 py-4 border-t border-[#E2E8F0] bg-[#F9FAFC] flex items-center justify-between gap-3">
+          <button
+            v-if="importStep === 'preview'"
+            type="button"
+            @click="backToSelect"
+            class="inline-flex items-center gap-1.5 text-xs font-medium text-[#64748B] hover:text-[#0F172A]"
+          >
+            <ArrowLeftIcon class="w-3.5 h-3.5" /> Choose a different file
+          </button>
+          <div v-else />
+
+          <div class="flex gap-3">
+            <button type="button" @click="closeImport" class="btn-outline">
+              {{ importStep === 'result' ? 'Close' : 'Cancel' }}
+            </button>
+            <button
+              v-if="importStep === 'select'"
+              type="button"
+              :disabled="!importFile || previewing"
+              @click="previewImport"
+              class="btn-primary"
+            >
+              <Loader2Icon v-if="previewing" class="w-4 h-4 animate-spin" />
+              <EyeIcon v-else class="w-4 h-4" />
+              Preview
+            </button>
+            <button
+              v-if="importStep === 'preview'"
+              type="button"
+              :disabled="!importPreview?.valid_count || importing"
+              @click="submitImport"
+              class="btn-primary"
+            >
+              <Loader2Icon v-if="importing" class="w-4 h-4 animate-spin" />
+              Confirm Import ({{ importPreview?.valid_count ?? 0 }})
+            </button>
+          </div>
+        </div>
+
+      </div>
+    </div>
+  </Teleport>
 </template>
 
 <script setup>
-import { ref, reactive, computed, watch, onMounted } from 'vue';
+import { ref, reactive, computed, watch, onMounted, onUnmounted } from 'vue';
 import { useRouter, useRoute } from 'vue-router';
 import axios from 'axios';
 import { useAuthStore } from '@/stores/auth';
 import { useToast } from '@/composables/useToast';
+import { extractErrorMessage } from '@/composables/useApiError';
 import { useUnsavedGuard } from '@/composables/useUnsavedGuard';
 import { useSortable } from '@/composables/useSortable';
 import { usePersistedFilters } from '@/composables/usePersistedFilters';
@@ -711,7 +979,7 @@ import EmptyState from '@/components/EmptyState.vue';
 import SortIcon from '@/components/SortIcon.vue';
 import {
   Plus as PlusIcon, Search as SearchIcon, Pencil as PencilIcon, Users as UsersIcon,
-  UserX as UserXIcon, UserCheck as UserCheckIcon,
+  UserX as UserXIcon, UserCheck as UserCheckIcon, Building2 as Building2Icon,
   X as XIcon, Loader2 as Loader2Icon, Check as CheckIcon,
   FileText as FileTextIcon,
   GraduationCap as GraduationCapIcon,
@@ -731,6 +999,13 @@ import {
   CreditCard as CreditCardIcon,
   Fingerprint as FingerprintIcon,
   Camera as CameraIcon,
+  Download as DownloadIcon,
+  ChevronDown as ChevronDownIcon,
+  Upload as UploadIcon,
+  FileSpreadsheet as FileSpreadsheetIcon,
+  CheckCircle2 as CheckCircle2Icon,
+  XCircle as XCircleIcon,
+  ArrowLeft as ArrowLeftIcon,
 } from 'lucide-vue-next';
 
 const auth        = useAuthStore();
@@ -755,6 +1030,19 @@ const formBody      = ref(null);
 const activeSection = ref('account');
 
 const filters     = reactive({ search: route.query.q ?? '', department_id: '', staff_type: '', role: '', status: '' });
+
+const empStats = computed(() => {
+  const active = employees.value.filter(e => e.is_active).length;
+  return [
+    { label: 'Total Employees', value: employees.value.length, icon: UsersIcon,      color: '#2E4A8C' },
+    { label: 'Active',          value: active,                 icon: UserCheckIcon,  color: '#059669' },
+    { label: 'Inactive',        value: employees.value.length - active, icon: UserXIcon, color: '#DC2626' },
+    { label: 'Departments',     value: departments.value.length, icon: Building2Icon, color: '#7C3AED' },
+  ];
+});
+function statVars(hex) {
+  return { '--stat-color': hex, '--stat-glow': hex + '30' };
+}
 usePersistedFilters('employees-filters', filters, ['search']);
 
 // A department deep-link (e.g. clicking a row in the Dashboard's department
@@ -765,6 +1053,143 @@ if (route.query.department) {
 const currentPage = ref(1);
 const perPage     = 20;
 const selected    = ref(new Set());
+
+// ── Export ──────────────────────────────────────────────────────────
+const showExportMenu = ref(false);
+const exportBtnRef   = ref(null);
+const exportMenuPos  = reactive({ top: 0, left: 0 });
+const EXPORT_MENU_WIDTH = 224; // w-56
+
+function toggleExportMenu() {
+  if (!showExportMenu.value && exportBtnRef.value) {
+    const rect = exportBtnRef.value.getBoundingClientRect();
+    exportMenuPos.top  = rect.bottom + 8;
+    exportMenuPos.left = Math.max(8, rect.right - EXPORT_MENU_WIDTH);
+  }
+  showExportMenu.value = !showExportMenu.value;
+}
+
+function closeExportMenu() {
+  showExportMenu.value = false;
+}
+onMounted(() => window.addEventListener('scroll', closeExportMenu, true));
+onUnmounted(() => window.removeEventListener('scroll', closeExportMenu, true));
+
+function currentFilterParams() {
+  const params = {};
+  if (filters.search)        params.search = filters.search;
+  if (filters.department_id) params.department_id = filters.department_id;
+  if (filters.staff_type)    params.staff_type = filters.staff_type;
+  if (filters.role)          params.role = filters.role;
+  if (filters.status)        params.status = filters.status;
+  return params;
+}
+
+function downloadBlob(blob, filename) {
+  const url = URL.createObjectURL(blob);
+  const a = document.createElement('a');
+  a.href = url;
+  a.download = filename;
+  document.body.appendChild(a);
+  a.click();
+  a.remove();
+  URL.revokeObjectURL(url);
+}
+
+async function exportAs(type) {
+  showExportMenu.value = false;
+  const stamp = new Date().toISOString().slice(0, 10);
+  try {
+    const res = await axios.get(`/api/employees/export/${type}`, {
+      params: currentFilterParams(),
+      responseType: 'blob',
+    });
+    const ext = type === 'excel' ? 'xlsx' : 'pdf';
+    downloadBlob(new Blob([res.data]), `employees_${stamp}.${ext}`);
+  } catch (err) {
+    toast(await extractErrorMessage(err, 'Export failed. Please try again.'), 'error');
+  }
+}
+
+// ── Import (3-step wizard: select file → preview → result) ───────────
+const importModal      = reactive({ open: false });
+const importFile       = ref(null);
+const importFileInput  = ref(null);
+const importStep       = ref('select'); // 'select' | 'preview' | 'result'
+const previewing       = ref(false);
+const importPreview    = ref(null);
+const importing        = ref(false);
+const importResult     = ref(null);
+
+const importStepIndex = computed(() => ({ select: 0, preview: 1, result: 2 }[importStep.value]));
+
+function openImport() {
+  importFile.value     = null;
+  importPreview.value  = null;
+  importResult.value   = null;
+  importStep.value     = 'select';
+  importModal.open     = true;
+}
+
+function closeImport() {
+  importModal.open = false;
+  if (importResult.value) load(); // pick up newly imported employees
+}
+
+function onImportFileChange(e) {
+  importFile.value = e.target.files?.[0] ?? null;
+}
+
+async function downloadTemplate() {
+  try {
+    const res = await axios.get('/api/employees/import/template', { responseType: 'blob' });
+    downloadBlob(new Blob([res.data]), 'employee_import_template.xlsx');
+  } catch (err) {
+    toast(await extractErrorMessage(err, 'Could not download the template. Please try again.'), 'error');
+  }
+}
+
+async function previewImport() {
+  if (!importFile.value) return;
+  previewing.value = true;
+  try {
+    const fd = new FormData();
+    fd.append('file', importFile.value);
+    const res = await axios.post('/api/employees/import/preview', fd);
+    importPreview.value = res.data;
+    importStep.value = 'preview';
+  } catch (err) {
+    toast(await extractErrorMessage(err, 'Could not read that file. Please check its format and try again.'), 'error');
+  } finally {
+    previewing.value = false;
+  }
+}
+
+function backToSelect() {
+  importStep.value    = 'select';
+  importPreview.value = null;
+  importFile.value    = null;
+  if (importFileInput.value) importFileInput.value.value = '';
+}
+
+async function submitImport() {
+  if (!importFile.value) return;
+  importing.value = true;
+  try {
+    const fd = new FormData();
+    fd.append('file', importFile.value);
+    const res = await axios.post('/api/employees/import', fd);
+    importResult.value = res.data;
+    importStep.value = 'result';
+    if (res.data.imported > 0) {
+      toast(`Imported ${res.data.imported} employee${res.data.imported === 1 ? '' : 's'}.`, 'success');
+    }
+  } catch (err) {
+    toast(await extractErrorMessage(err, 'Import failed. Please check the file and try again.'), 'error');
+  } finally {
+    importing.value = false;
+  }
+}
 
 const staffTypes = [
   { value: 'faculty',        label: 'Faculty / Instructor', icon: GraduationCapIcon  },
@@ -1258,7 +1683,7 @@ onMounted(load);
   padding: 6px 12px; color: #0F172A; background: #fff;
   transition: border-color 0.15s, box-shadow 0.15s;
 }
-.select-sm:focus { outline: none; border-color: #0E1EC0; box-shadow: 0 0 0 3px rgba(14,30,192,0.08); }
+.select-sm:focus { outline: none; border-color: #2E4A8C; box-shadow: 0 0 0 3px rgba(46, 74, 140,0.08); }
 
 /* ── Table ─────────────────────────────────────────────── */
 .th-cell {
@@ -1270,7 +1695,7 @@ onMounted(load);
 
 /* ── Sortable column headers ────────────────────────────── */
 .th-sort { cursor: pointer; user-select: none; transition: color 0.12s; }
-.th-sort:hover { color: #0E1EC0; }
+.th-sort:hover { color: #2E4A8C; }
 
 /* ── Table row hover ───────────────────────────────────── */
 tbody tr { border-bottom: 1px solid #F1F5F9; transition: background 0.12s; }
@@ -1278,8 +1703,8 @@ tbody tr:last-child { border-bottom: none; }
 tbody tr:hover { background: #F8FAFF; }
 
 /* ── Action icons ──────────────────────────────────────── */
-.btn-icon { padding: 6px; border-radius: 7px; color: #94A3B8; transition: all 0.12s; }
-.btn-icon:hover { background: #EEF2FF; color: #0E1EC0; }
+.btn-icon { padding: 6px; border-radius: 7px; color: #6B7A94; transition: all 0.12s; }
+.btn-icon:hover { background: #EEF2FF; color: #2E4A8C; }
 
 /* ── Status badges ─────────────────────────────────────── */
 .badge-green { display: inline-flex; padding: 2px 8px; font-size: 11px; font-weight: 600; border-radius: 5px; background: #ECFDF5; color: #059669; }
@@ -1288,7 +1713,7 @@ tbody tr:hover { background: #F8FAFF; }
 /* ── Avatar gradient ───────────────────────────────────── */
 .emp-avatar {
   width: 34px; height: 34px; border-radius: 9px; flex-shrink: 0;
-  background: linear-gradient(135deg, #1228CC 0%, #0E1EC0 100%);
+  background: linear-gradient(135deg, #3D5CA3 0%, #2E4A8C 100%);
   display: flex; align-items: center; justify-content: center;
 }
 
@@ -1299,16 +1724,16 @@ tbody tr:hover { background: #F8FAFF; }
   border: 1px solid #E4E9F2; border-radius: 8px; color: #0F172A;
   background: #fff; transition: border-color 0.15s, box-shadow 0.15s;
 }
-.form-input:focus { outline: none; border-color: #0E1EC0; box-shadow: 0 0 0 3px rgba(14,30,192,0.08); }
-.field-hint  { font-size: 11px; color: #94A3B8; margin-top: 4px; }
+.form-input:focus { outline: none; border-color: #2E4A8C; box-shadow: 0 0 0 3px rgba(46, 74, 140,0.08); }
+.field-hint  { font-size: 11px; color: #6B7A94; margin-top: 4px; }
 .req         { color: #EF4444; }
 .btn-primary {
   display: inline-flex; align-items: center; gap: 7px;
-  padding: 8px 18px; background: #0E1EC0; color: #fff;
+  padding: 8px 18px; background: #2E4A8C; color: #fff;
   font-size: 13px; font-weight: 600; border-radius: 8px;
   border: none; cursor: pointer; transition: background 0.15s;
 }
-.btn-primary:hover:not(:disabled) { background: #1228CC; }
+.btn-primary:hover:not(:disabled) { background: #3D5CA3; }
 .btn-primary:disabled { opacity: 0.55; cursor: not-allowed; }
 .btn-outline {
   padding: 8px 16px; font-size: 13px; font-weight: 500;

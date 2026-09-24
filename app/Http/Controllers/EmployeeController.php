@@ -4,20 +4,26 @@ namespace App\Http\Controllers;
 
 use App\Http\Traits\ScopesByCampus;
 use App\Models\AuditLog;
+use App\Models\Campus;
 use App\Models\Department;
 use App\Models\Shift;
+use App\Models\SystemSetting;
 use App\Models\User;
+use Barryvdh\DomPDF\Facade\Pdf;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Hash;
 use Illuminate\Support\Facades\Storage;
+use Illuminate\Support\Facades\Validator;
+use Illuminate\Support\Str;
 use Illuminate\Validation\Rule;
 use Illuminate\Validation\Rules\Password;
+use Rap2hpoutre\FastExcel\FastExcel;
 
 class EmployeeController extends Controller
 {
     use ScopesByCampus;
 
-    public function index(Request $request)
+    private function filteredQuery(Request $request)
     {
         $query = User::with('department', 'shift', 'campus')
             ->orderBy('last_name');
@@ -38,6 +44,10 @@ class EmployeeController extends Controller
             $query->where('department_id', $request->department_id);
         }
 
+        if ($request->filled('staff_type')) {
+            $query->where('staff_type', $request->staff_type);
+        }
+
         if ($request->filled('role')) {
             $query->where('role', $request->role);
         }
@@ -45,6 +55,13 @@ class EmployeeController extends Controller
         if ($request->filled('status')) {
             $query->where('is_active', $request->status === 'active');
         }
+
+        return $query;
+    }
+
+    public function index(Request $request)
+    {
+        $query = $this->filteredQuery($request);
 
         // Paginated response when ?page= is present; plain array otherwise (backwards-compat)
         if ($request->has('page')) {
@@ -221,6 +238,352 @@ class EmployeeController extends Controller
             'photo_path' => $path,
             'photo_url'  => Storage::url($path),
         ]);
+    }
+
+    /**
+     * Export the current filtered employee list as a real .xlsx workbook.
+     * GET /api/employees/export/excel
+     */
+    public function exportExcel(Request $request)
+    {
+        $rows = $this->filteredQuery($request)->get()->map(fn(User $e) => [
+            'Employee ID'       => $e->employee_id,
+            'Last Name'         => $e->last_name,
+            'First Name'        => $e->first_name,
+            'Middle Name'       => $e->middle_name,
+            'Email'             => $e->email,
+            'Role'              => $e->role,
+            'Campus'            => $e->campus?->name,
+            'Department'        => $e->department?->name,
+            'Position'          => $e->position,
+            'Staff Type'        => $e->staff_type,
+            'Employment Status' => $e->employment_status,
+            'Date Hired'        => $e->date_hired?->format('Y-m-d'),
+            'Status'            => $e->is_active ? 'Active' : 'Inactive',
+        ]);
+
+        return (new FastExcel($rows))->download('employees_' . now()->format('Ymd_His') . '.xlsx');
+    }
+
+    /**
+     * Export the current filtered employee list as a printable PDF.
+     * GET /api/employees/export/pdf
+     */
+    public function exportPdf(Request $request)
+    {
+        $employees = $this->filteredQuery($request)->get();
+
+        $pdf = Pdf::loadView('reports.employees_list', [
+            'employees'  => $employees,
+            'generated'  => now()->format('F j, Y g:i A'),
+        ])->setPaper('a4', 'landscape');
+
+        return $pdf->download('employees_' . now()->format('Ymd_His') . '.pdf');
+    }
+
+    /**
+     * Blank starter workbook for bulk-import, headers only + one example row.
+     * GET /api/employees/import/template
+     */
+    public function importTemplate(Request $request)
+    {
+        $this->requirePrivileged($request);
+
+        $rows = collect([[
+            'Employee ID'       => 'EMP-2026-001',
+            'Last Name'         => 'Dela Cruz',
+            'First Name'        => 'Juan',
+            'Middle Name'       => 'Santos',
+            'Email'             => 'jdelacruz@nemsu.edu.ph',
+            'Password'          => '',
+            'Role'              => 'employee',
+            'Campus'            => 'Cantilan Campus',
+            'Department'        => 'Department of Computer Studies',
+            'Position'          => 'Instructor I',
+            'Staff Type'        => 'faculty',
+            'Employment Status' => 'permanent',
+            'Date Hired'        => '2026-01-01',
+        ]]);
+
+        return (new FastExcel($rows))->download('employee_import_template.xlsx');
+    }
+
+    /**
+     * Dry-run an uploaded import file: resolve every row the same way
+     * import() would, but write nothing. Lets the admin review exactly
+     * what will happen — who gets created and why any row would be
+     * skipped — before committing.
+     * POST /api/employees/import/preview
+     */
+    public function importPreview(Request $request)
+    {
+        $this->requirePrivileged($request);
+
+        $request->validate([
+            'file' => 'required|file|mimes:xlsx,xls,csv|max:5120',
+        ]);
+
+        [$rows, $ctx] = $this->prepareImport($request);
+
+        $preview    = [];
+        $seenIds    = [];
+        $seenEmails = [];
+
+        foreach ($rows as $i => $row) {
+            $resolved = $this->resolveImportRow($row, $ctx, false, $seenIds, $seenEmails);
+
+            $preview[] = [
+                'row'         => $i + 2, // header occupies row 1
+                'employee_id' => $resolved['employee_id'],
+                'name'        => $resolved['name'] !== '' ? $resolved['name'] : null,
+                'role'        => $resolved['role'],
+                'campus'      => $resolved['campus'],
+                'department'  => $resolved['department'],
+                'valid'       => $resolved['ok'],
+                'error'       => $resolved['error'],
+            ];
+        }
+
+        $validCount = count(array_filter($preview, fn($r) => $r['valid']));
+
+        return response()->json([
+            'rows'          => $preview,
+            'total'         => count($preview),
+            'valid_count'   => $validCount,
+            'invalid_count' => count($preview) - $validCount,
+        ]);
+    }
+
+    /**
+     * Bulk-create employees from an uploaded .xlsx/.csv built on the template
+     * above. Bad rows are skipped and reported rather than failing the whole
+     * batch — a typo in row 40 shouldn't cost the 39 good rows before it.
+     * Row-by-row logic is identical to importPreview() (both call
+     * resolveImportRow()) so what the admin previewed is exactly what happens.
+     * POST /api/employees/import
+     */
+    public function import(Request $request)
+    {
+        $this->requirePrivileged($request);
+
+        $request->validate([
+            'file' => 'required|file|mimes:xlsx,xls,csv|max:5120',
+        ]);
+
+        [$rows, $ctx] = $this->prepareImport($request);
+
+        $imported           = 0;
+        $errors             = [];
+        $generatedPasswords = [];
+        $seenIds            = [];
+        $seenEmails         = [];
+
+        foreach ($rows as $i => $row) {
+            $rowNum   = $i + 2; // header occupies row 1
+            $resolved = $this->resolveImportRow($row, $ctx, true, $seenIds, $seenEmails);
+
+            if (! $resolved['ok']) {
+                $errors[] = "Row {$rowNum}: {$resolved['error']}";
+                continue;
+            }
+
+            try {
+                $data = $resolved['data'];
+                $data['password'] = Hash::make($resolved['plain_password']);
+
+                $employee = User::create($data);
+
+                AuditLog::record('CREATE', 'employees', $employee->id, null, $employee->toArray());
+                $imported++;
+
+                if ($resolved['auto_generated']) {
+                    $generatedPasswords[] = [
+                        'employee_id' => $resolved['employee_id'],
+                        'name'        => $resolved['name'],
+                        'password'    => $resolved['plain_password'],
+                    ];
+                }
+            } catch (\Throwable $e) {
+                $errors[] = "Row {$rowNum}: " . $e->getMessage();
+            }
+        }
+
+        return response()->json([
+            'imported'            => $imported,
+            'failed'              => count($errors),
+            'errors'              => $errors,
+            'generated_passwords' => $generatedPasswords,
+        ]);
+    }
+
+    /**
+     * Parse the uploaded workbook and build the lookup context shared by
+     * importPreview() and import() — computed once per request rather than
+     * once per row.
+     */
+    private function prepareImport(Request $request): array
+    {
+        $isSuperAdmin   = $this->isSuperAdmin($request);
+        $lockedCampusId = $isSuperAdmin ? null : $request->user()->campus_id;
+
+        $ctx = [
+            'allowedRoles'            => $this->assignableRoles($request),
+            'allowedStaffTypes'       => ['faculty', 'administrative', 'security', 'custodial', 'maintenance', 'laboratory', 'driver', 'other'],
+            'allowedEmploymentStatus' => ['permanent', 'casual', 'contractual', 'part-time'],
+            'lockedCampusId'          => $lockedCampusId,
+            'lockedCampusName'        => $lockedCampusId ? Campus::find($lockedCampusId)?->name : null,
+            'isSuperAdmin'            => $isSuperAdmin,
+            'minPasswordLength'       => max(12, SystemSetting::current()->password_min_length),
+        ];
+
+        $rows = (new FastExcel)->import($request->file('file')->getRealPath());
+
+        return [$rows, $ctx];
+    }
+
+    /**
+     * Validate and resolve a single import row into either a ready-to-create
+     * User payload or an error message. $seenIds/$seenEmails are accumulated
+     * across the whole file (by reference) so two rows sharing the same
+     * Employee ID or email within one upload catch each other, not just
+     * collisions against employees that already existed before the upload.
+     *
+     * $generatePassword controls whether a blank Password cell actually
+     * generates+validates a real password (import()) or is left as a
+     * "will be generated" placeholder (importPreview() — no need to burn
+     * a random password just to show a preview row).
+     */
+    private function resolveImportRow(array $row, array $ctx, bool $generatePassword, array &$seenIds, array &$seenEmails): array
+    {
+        $employeeId = trim((string) ($row['Employee ID'] ?? ''));
+        $lastName   = trim((string) ($row['Last Name'] ?? ''));
+        $firstName  = trim((string) ($row['First Name'] ?? ''));
+        $name       = trim("{$firstName} {$lastName}");
+
+        $fail = fn(string $msg) => [
+            'ok' => false, 'error' => $msg, 'employee_id' => $employeeId, 'name' => $name,
+            'role' => null, 'campus' => null, 'department' => null,
+        ];
+
+        if ($employeeId === '' || $lastName === '' || $firstName === '') {
+            return $fail('Employee ID, Last Name, and First Name are required.');
+        }
+
+        if (isset($seenIds[$employeeId]) || User::where('employee_id', $employeeId)->exists()) {
+            return $fail("Employee ID '{$employeeId}' already exists.");
+        }
+
+        $email = trim((string) ($row['Email'] ?? '')) ?: null;
+        if ($email) {
+            if (! filter_var($email, FILTER_VALIDATE_EMAIL)) {
+                return $fail("'{$email}' is not a valid email.");
+            }
+            if (isset($seenEmails[$email]) || User::where('email', $email)->exists()) {
+                return $fail("Email '{$email}' already exists.");
+            }
+        }
+
+        $role = trim((string) ($row['Role'] ?? '')) ?: 'employee';
+        if (! in_array($role, $ctx['allowedRoles'], true)) {
+            return $fail("Role '{$role}' is not allowed for your account.");
+        }
+
+        $campusId      = $ctx['lockedCampusId'];
+        $campusDisplay = $ctx['lockedCampusName'];
+        $campusName    = trim((string) ($row['Campus'] ?? ''));
+        if ($ctx['isSuperAdmin'] && $campusName !== '') {
+            $campus = Campus::where('name', $campusName)->first();
+            if (! $campus) {
+                return $fail("Campus '{$campusName}' not found.");
+            }
+            $campusId      = $campus->id;
+            $campusDisplay = $campus->name;
+        }
+
+        $departmentId   = null;
+        $departmentName = trim((string) ($row['Department'] ?? ''));
+        if ($departmentName !== '') {
+            $deptQuery = Department::where('name', $departmentName);
+            if ($campusId) {
+                $deptQuery->where('campus_id', $campusId);
+            }
+            $department = $deptQuery->first();
+            if (! $department) {
+                return $fail("Department '{$departmentName}' not found" . ($campusId ? ' in that campus.' : '.'));
+            }
+            $departmentId = $department->id;
+        }
+
+        $staffType = trim((string) ($row['Staff Type'] ?? '')) ?: null;
+        if ($staffType && ! in_array($staffType, $ctx['allowedStaffTypes'], true)) {
+            return $fail("Staff Type '{$staffType}' is invalid.");
+        }
+
+        $employmentStatus = trim((string) ($row['Employment Status'] ?? '')) ?: null;
+        if ($employmentStatus && ! in_array($employmentStatus, $ctx['allowedEmploymentStatus'], true)) {
+            return $fail("Employment Status '{$employmentStatus}' is invalid.");
+        }
+
+        $dateHiredRaw = trim((string) ($row['Date Hired'] ?? ''));
+        $dateHired    = null;
+        if ($dateHiredRaw !== '') {
+            try {
+                $dateHired = \Carbon\Carbon::parse($dateHiredRaw)->format('Y-m-d');
+            } catch (\Throwable) {
+                return $fail("Date Hired '{$dateHiredRaw}' is not a valid date.");
+            }
+        }
+
+        $passwordInput = trim((string) ($row['Password'] ?? ''));
+        $autoGenerated = $passwordInput === '';
+        $plainPassword = null;
+
+        if ($autoGenerated) {
+            if ($generatePassword) {
+                $plainPassword = Str::password($ctx['minPasswordLength']);
+                $validator = Validator::make(['password' => $plainPassword], ['password' => ['string', Password::default()]]);
+                if ($validator->fails()) {
+                    return $fail('Could not generate a password meeting the security policy.');
+                }
+            }
+        } else {
+            $validator = Validator::make(['password' => $passwordInput], ['password' => ['string', Password::default()]]);
+            if ($validator->fails()) {
+                return $fail('Password does not meet the security policy.');
+            }
+            $plainPassword = $passwordInput;
+        }
+
+        $seenIds[$employeeId] = true;
+        if ($email) {
+            $seenEmails[$email] = true;
+        }
+
+        return [
+            'ok'             => true,
+            'error'          => null,
+            'employee_id'    => $employeeId,
+            'name'           => $name,
+            'role'           => $role,
+            'campus'         => $campusDisplay,
+            'department'     => $departmentName ?: null,
+            'auto_generated' => $autoGenerated,
+            'plain_password' => $plainPassword,
+            'data' => [
+                'employee_id'       => $employeeId,
+                'first_name'        => $firstName,
+                'last_name'         => $lastName,
+                'middle_name'       => trim((string) ($row['Middle Name'] ?? '')) ?: null,
+                'email'             => $email,
+                'role'              => $role,
+                'campus_id'         => $campusId,
+                'department_id'     => $departmentId,
+                'position'          => trim((string) ($row['Position'] ?? '')) ?: null,
+                'staff_type'        => $staffType,
+                'employment_status' => $employmentStatus,
+                'date_hired'        => $dateHired,
+            ],
+        ];
     }
 
     private function requirePrivileged(Request $request): void
