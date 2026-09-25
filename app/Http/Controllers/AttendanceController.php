@@ -11,6 +11,7 @@ use App\Models\User;
 use App\Services\WorkingHoursService;
 use Carbon\Carbon;
 use Illuminate\Http\Request;
+use Illuminate\Support\Facades\DB;
 
 class AttendanceController extends Controller
 {
@@ -53,19 +54,25 @@ class AttendanceController extends Controller
             $punchType = ($todayPunches % 2 === 0) ? 'IN' : 'OUT';
         }
 
-        $log = $this->workingHours->recordPunchIfNotDuplicate($employee->id, $punchTime, [
-            'punch_type' => $punchType,
-            'source'     => $request->source ?? 'biometric',
-            'device_id'  => $request->device_id,
-            'created_by' => null,
-            'remarks'    => $request->remarks ? strip_tags(trim($request->remarks)) : null,
-        ]);
+        $log = DB::transaction(function () use ($employee, $punchTime, $punchType, $request, $workDate) {
+            $log = $this->workingHours->recordPunchIfNotDuplicate($employee->id, $punchTime, [
+                'punch_type' => $punchType,
+                'source'     => $request->source ?? 'biometric',
+                'device_id'  => $request->device_id,
+                'created_by' => null,
+                'remarks'    => $request->remarks ? strip_tags(trim($request->remarks)) : null,
+            ]);
+
+            if ($log) {
+                $this->workingHours->computeDailyDtr($employee, $workDate);
+            }
+
+            return $log;
+        });
 
         if (! $log) {
             return response()->json(['message' => 'Duplicate punch ignored.']);
         }
-
-        $this->workingHours->computeDailyDtr($employee, $workDate);
 
         if ($punchTime->isToday()) {
             broadcast(new AttendancePunched(
@@ -294,16 +301,20 @@ class AttendanceController extends Controller
         $employee  = User::find($data['employee_id']);
         $workDate  = $this->workingHours->resolveWorkDate($employee, $punchTime);
 
-        $log = AttendanceLog::create([
-            'employee_id' => $data['employee_id'],
-            'punch_time'  => $punchTime,
-            'punch_type'  => $data['punch_type'],
-            'source'      => 'manual',
-            'created_by'  => $request->user()->id,
-            'remarks'     => isset($data['remarks']) ? strip_tags(trim($data['remarks'])) : null,
-        ]);
+        $log = DB::transaction(function () use ($data, $punchTime, $request, $employee, $workDate) {
+            $log = AttendanceLog::create([
+                'employee_id' => $data['employee_id'],
+                'punch_time'  => $punchTime,
+                'punch_type'  => $data['punch_type'],
+                'source'      => 'manual',
+                'created_by'  => $request->user()->id,
+                'remarks'     => isset($data['remarks']) ? strip_tags(trim($data['remarks'])) : null,
+            ]);
 
-        $this->workingHours->computeDailyDtr($employee, $workDate);
+            $this->workingHours->computeDailyDtr($employee, $workDate);
+
+            return $log;
+        });
 
         return response()->json(['message' => 'Punch logged.', 'log_id' => $log->id], 201);
     }
@@ -320,9 +331,10 @@ class AttendanceController extends Controller
         $employee = $log->employee;
         $workDate = $this->workingHours->resolveWorkDate($employee, $log->punch_time);
 
-        $log->delete();
-
-        $this->workingHours->computeDailyDtr($employee, $workDate);
+        DB::transaction(function () use ($log, $employee, $workDate) {
+            $log->delete();
+            $this->workingHours->computeDailyDtr($employee, $workDate);
+        });
 
         return response()->json(['message' => 'Log deleted.']);
     }

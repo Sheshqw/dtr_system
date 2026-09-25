@@ -9,6 +9,7 @@ use App\Models\User;
 use App\Notifications\CorrectionReviewed;
 use Carbon\Carbon;
 use Illuminate\Http\Request;
+use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Str;
 
 class DtrCorrectionController extends Controller
@@ -169,9 +170,11 @@ class DtrCorrectionController extends Controller
             ? DtrCorrection::where('group_id', $correction->group_id)->where('status', 'pending')->get()
             : collect([$correction]);
 
-        foreach ($toReview as $c) {
-            $this->applyReview($c, $validated, $user);
-        }
+        DB::transaction(function () use ($toReview, $validated, $user) {
+            foreach ($toReview as $c) {
+                $this->applyReview($c, $validated, $user);
+            }
+        });
 
         // Notify employee once (not once per field)
         $employee = User::find($correction->employee_id);
@@ -228,9 +231,11 @@ class DtrCorrectionController extends Controller
 
         $allToReview = $corrections->merge($groupSiblings)->unique('id');
 
-        foreach ($allToReview as $c) {
-            $this->applyReview($c, $validated, $user);
-        }
+        DB::transaction(function () use ($allToReview, $validated, $user) {
+            foreach ($allToReview as $c) {
+                $this->applyReview($c, $validated, $user);
+            }
+        });
 
         // Notify each unique employee once
         $allToReview->groupBy('employee_id')->each(function ($items) use ($validated) {
