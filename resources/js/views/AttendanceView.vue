@@ -116,7 +116,7 @@
               <tr>
                 <th class="th-cell text-left">Employee</th>
                 <th class="th-cell text-left">Department</th>
-                <th class="th-cell text-center font-mono">Time</th>
+                <th class="th-cell text-center">Date &amp; Time</th>
                 <th class="th-cell text-center">Type</th>
                 <th class="th-cell text-center">Source</th>
                 <th class="th-cell text-left">Device</th>
@@ -145,7 +145,10 @@
                   </div>
                 </td>
                 <td class="td-cell text-[#64748B]">{{ log.department }}</td>
-                <td class="td-cell text-center font-mono text-[#0F172A] font-medium">{{ log.punch_time }}</td>
+                <td class="td-cell text-center">
+                  <p class="font-mono text-[#0F172A] font-medium leading-tight">{{ log.punch_time }}</p>
+                  <p class="text-[10px] text-[#6B7A94] leading-tight">{{ formatLogDate(log) }}</p>
+                </td>
                 <td class="td-cell text-center">
                   <span :class="log.punch_type === 'IN' ? 'badge-in' : 'badge-out'">
                     {{ log.punch_type }}
@@ -719,6 +722,12 @@ function initials(name) {
 
 function formatDate(dateStr) {
   return new Date(dateStr + 'T00:00:00').toLocaleDateString('en-PH', { month: 'short', day: 'numeric' });
+}
+
+function formatLogDate(log) {
+  if (!log.punch_date) return '';
+  const d = new Date(log.punch_date + 'T00:00:00').toLocaleDateString('en-PH', { month: 'short', day: 'numeric', year: 'numeric' });
+  return log.punch_day ? `${d} · ${log.punch_day}` : d;
 }
 
 // ── Init ───────────────────────────────────────────
