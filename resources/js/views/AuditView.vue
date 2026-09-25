@@ -32,7 +32,6 @@
         <option value="">All Tables</option>
         <option value="employees">Employees</option>
         <option value="attendance_logs">Attendance Logs</option>
-        <option value="leave_requests">Leave Requests</option>
         <option value="holidays">Holidays</option>
         <option value="shifts">Shifts</option>
         <option value="departments">Departments</option>
@@ -186,7 +185,6 @@ function actionMeta(action) {
 const TABLE_LABELS = {
   employees:        'an employee record',
   attendance_logs:  'an attendance log',
-  leave_requests:   'a leave request',
   holidays:         'a holiday',
   shifts:           'a shift',
   departments:      'a department',
