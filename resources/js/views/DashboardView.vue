@@ -1030,8 +1030,8 @@ const lastSynced    = ref(null);
 async function checkDeviceStatus() {
   try {
     const res = await axios.get('/api/biometric/status');
-    deviceOnline.value  = res.data?.reachable ?? false;
-    lastSynced.value    = res.data?.last_synced ?? null;
+    deviceOnline.value  = res.data?.adms_online ?? false;
+    lastSynced.value    = res.data?.adms_last_seen ?? null;
   } catch {
     deviceOnline.value = false;
   } finally {
