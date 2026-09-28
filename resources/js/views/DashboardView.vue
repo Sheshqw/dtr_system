@@ -497,7 +497,7 @@
                 <td class="td"><StatusBadge :status="row.status" :corrected="row.is_corrected" /></td>
                 <td class="td td-r">
                   <span :class="row.hours_rendered > 0 ? 'hrs-val' : 'hrs-nil'">
-                    {{ row.hours_rendered > 0 ? row.hours_rendered.toFixed(1) + 'h' : '—' }}
+                    {{ row.hours_rendered > 0 ? Number(row.hours_rendered).toFixed(1) + 'h' : '—' }}
                   </span>
                 </td>
               </tr>

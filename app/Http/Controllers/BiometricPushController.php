@@ -99,7 +99,9 @@ class BiometricPushController extends Controller
      */
     private function recordDeviceSeen(string $sn): void
     {
-        cache(['adms_last_seen' => now(), 'adms_last_sn' => $sn], now()->addDay());
+        // Store as a plain string, not a Carbon instance -- caching an
+        // object risks it coming back as __PHP_Incomplete_Class on read.
+        cache(['adms_last_seen' => now()->toDateTimeString(), 'adms_last_sn' => $sn], now()->addDay());
     }
 
     /**
