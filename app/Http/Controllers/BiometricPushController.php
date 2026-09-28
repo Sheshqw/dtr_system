@@ -68,6 +68,7 @@ class BiometricPushController extends Controller
         }
 
         $body = $request->getContent();
+        Log::info("[ADMS] Raw ATTLOG body: " . json_encode($body));
         if (empty($body)) {
             return response("OK: 0", 200, ['Content-Type' => 'text/plain']);
         }
