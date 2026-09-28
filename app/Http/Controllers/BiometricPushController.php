@@ -31,6 +31,7 @@ class BiometricPushController extends Controller
     {
         $sn = $request->query('SN', 'unknown');
         Log::info("[ADMS] Device connected: SN={$sn}");
+        $this->recordDeviceSeen($sn);
 
         // Tell the device our server time and basic options
         $serverTime = now()->format('Y-m-d H:i:s');
@@ -61,6 +62,7 @@ class BiometricPushController extends Controller
         $table = $request->query('table', '');
 
         Log::info("[ADMS] Push from SN={$sn} table={$table}");
+        $this->recordDeviceSeen($sn);
 
         // Only process attendance log pushes
         if (strtoupper($table) !== 'ATTLOG') {
@@ -68,7 +70,6 @@ class BiometricPushController extends Controller
         }
 
         $body = $request->getContent();
-        Log::info("[ADMS] Raw ATTLOG body: " . json_encode($body));
         if (empty($body)) {
             return response("OK: 0", 200, ['Content-Type' => 'text/plain']);
         }
@@ -86,7 +87,19 @@ class BiometricPushController extends Controller
      */
     public function heartbeat(Request $request)
     {
+        $this->recordDeviceSeen($request->query('SN', 'unknown'));
+
         return response("OK", 200, ['Content-Type' => 'text/plain']);
+    }
+
+    /**
+     * Track the last time the device reached out (init/push/heartbeat), so
+     * the UI's device status can reflect actual push-based connectivity
+     * instead of a LAN reachability check the cloud server can't perform.
+     */
+    private function recordDeviceSeen(string $sn): void
+    {
+        cache(['adms_last_seen' => now(), 'adms_last_sn' => $sn], now()->addDay());
     }
 
     /**

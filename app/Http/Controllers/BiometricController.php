@@ -60,11 +60,19 @@ class BiometricController extends Controller
     {
         $this->assertCanManageBiometric($request);
 
+        $admsLastSeen = cache('adms_last_seen');
+
         return response()->json([
-            'ip'          => $this->zk->getIp(),
-            'port'        => $this->zk->getPort(),
-            'reachable'   => $this->zk->isReachable(),
-            'last_synced' => cache('biometric_last_synced'),
+            'ip'              => $this->zk->getIp(),
+            'port'            => $this->zk->getPort(),
+            'reachable'       => $this->zk->isReachable(),
+            'last_synced'     => cache('biometric_last_synced'),
+            // The device reaches out to us (ADMS push) rather than us
+            // reaching it — this is the connection method that actually
+            // works once the server is off the device's local network.
+            'adms_online'     => $admsLastSeen && now()->diffInMinutes($admsLastSeen) < 10,
+            'adms_last_seen'  => $admsLastSeen?->format('Y-m-d H:i:s'),
+            'adms_serial'     => cache('adms_last_sn'),
         ]);
     }
 

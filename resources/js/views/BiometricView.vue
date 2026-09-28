@@ -55,20 +55,52 @@
           </div>
           <div>
             <h2 class="font-semibold text-[#0F172A] text-sm">Device Status</h2>
-            <p class="text-xs text-[#64748B]">Live connectivity check over LAN</p>
+            <p class="text-xs text-[#64748B]">Real-time push connectivity (ADMS)</p>
           </div>
         </div>
 
         <div class="p-5 space-y-4">
+          <!-- ADMS push status — this is the connection method that actually
+               works once the server is off the device's local network; the
+               device reaches out to us, so there is nothing for us to "dial." -->
+          <div class="flex items-center justify-between">
+            <span class="text-sm text-[#64748B]">Connection</span>
+            <div v-if="statusLoading" class="flex items-center gap-1.5 text-xs text-[#6B7A94]">
+              <Loader2Icon class="w-3.5 h-3.5 animate-spin" />
+              Checking…
+            </div>
+            <div v-else class="flex items-center gap-1.5 text-xs font-semibold"
+                 :class="status.adms_online ? 'text-green-600' : 'text-red-500'">
+              <span class="w-2 h-2 rounded-full"
+                    :class="status.adms_online ? 'bg-green-500' : 'bg-red-400'"></span>
+              {{ status.adms_online ? 'Online' : 'No recent activity' }}
+            </div>
+          </div>
+
+          <!-- Last seen via push -->
+          <div class="flex items-center justify-between text-sm">
+            <span class="text-[#64748B]">Last Seen</span>
+            <span class="text-[#0F172A] text-xs">{{ status.adms_last_seen ?? 'Never' }}</span>
+          </div>
+
+          <!-- Device serial -->
+          <div v-if="status.adms_serial" class="flex items-center justify-between text-sm">
+            <span class="text-[#64748B]">Device Serial</span>
+            <code class="font-mono text-[#0F172A] bg-[#F1F5F9] px-2 py-0.5 rounded text-xs">{{ status.adms_serial }}</code>
+          </div>
+
+          <div class="border-t border-[#E2E8F0] pt-4 mt-1">
+          <p class="text-[10px] font-semibold text-[#64748B] uppercase tracking-wide mb-3">LAN Pull (optional, legacy)</p>
+
           <!-- IP / Port -->
           <div class="flex items-center justify-between text-sm">
             <span class="text-[#64748B]">Device IP</span>
             <code class="font-mono text-[#0F172A] bg-[#F1F5F9] px-2 py-0.5 rounded text-xs">{{ status.ip }}:{{ status.port }}</code>
           </div>
 
-          <!-- Status indicator -->
-          <div class="flex items-center justify-between">
-            <span class="text-sm text-[#64748B]">Connection</span>
+          <!-- LAN reachability indicator -->
+          <div class="flex items-center justify-between mt-2">
+            <span class="text-sm text-[#64748B]">LAN Reachable</span>
             <div v-if="statusLoading" class="flex items-center gap-1.5 text-xs text-[#6B7A94]">
               <Loader2Icon class="w-3.5 h-3.5 animate-spin" />
               Checking…
@@ -82,9 +114,10 @@
           </div>
 
           <!-- Last synced -->
-          <div class="flex items-center justify-between text-sm">
+          <div class="flex items-center justify-between text-sm mt-2">
             <span class="text-[#64748B]">Last Synced</span>
             <span class="text-[#0F172A] text-xs">{{ status.last_synced ?? 'Never' }}</span>
+          </div>
           </div>
 
           <!-- Buttons -->
@@ -142,9 +175,10 @@
           </div>
 
           <!-- Device offline notice -->
-          <div v-if="!statusLoading && !status.reachable"
+          <div v-if="!statusLoading && !status.adms_online"
                class="rounded-lg px-3 py-2.5 text-xs text-amber-800 bg-amber-50 border border-amber-200 leading-relaxed">
-            Device is unreachable. Make sure the device is powered on and connected to the same network.
+            No push activity from the device recently. Make sure it's powered on, connected to a network
+            with internet access, and its Cloud Server Setting points to this server.
             Use <strong>File Import</strong> below as an alternative.
           </div>
         </div>
@@ -353,7 +387,7 @@ import {
 const { toast } = useToast();
 
 // ── state ──────────────────────────────────────────────────────────────────
-const status       = ref({ ip: '…', port: 4370, reachable: false, last_synced: null });
+const status       = ref({ ip: '…', port: 4370, reachable: false, last_synced: null, adms_online: false, adms_last_seen: null, adms_serial: null });
 const statusLoading = ref(false);
 const syncing      = ref(false);
 const testingConnection = ref(false);
