@@ -2297,7 +2297,7 @@ onMounted(async () => {
 
 .td      { padding: 10px 16px; color: #374151; text-align: center; vertical-align: middle; }
 .td-no   { font-size: 11px; color: #94A3B8; font-family: monospace; }
-.td-muted { text-align: left; font-size: 12px; color: #64748B; }
+.td-muted { text-align: left; font-size: 12px; color: #64748B; white-space: nowrap; }
 .td-mono { font-family: 'Courier New', monospace; font-size: 12px; color: #475569; }
 .td-r    { text-align: right; }
 

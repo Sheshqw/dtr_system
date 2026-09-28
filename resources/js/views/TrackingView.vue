@@ -73,7 +73,7 @@
       </div>
 
       <!-- Summary cards -->
-      <div v-if="tardyRecords.length" class="grid grid-cols-3 gap-4">
+      <div v-if="tardyRecords.length" class="grid grid-cols-1 sm:grid-cols-3 gap-4">
         <div v-for="s in tardySummary" :key="s.label"
              class="tk-stat-card" :style="{ background: s.wash }">
           <div class="tk-stat-accent" :style="{ background: s.accent }"></div>
@@ -138,7 +138,8 @@
       </div>
 
       <div class="bg-white border border-[#E2E8F0] rounded-xl shadow-[0_1px_3px_rgba(0,0,0,0.06)] overflow-hidden">
-        <table class="w-full text-sm">
+        <div class="tk-table-scroll">
+        <table class="w-full text-sm tk-tardy-table">
           <thead class="border-b border-[#E2E8F0]">
             <tr>
               <th class="th-cell text-left w-10">#</th>
@@ -197,6 +198,7 @@
             </tr>
           </tbody>
         </table>
+        </div>
       </div>
       </template>
 
@@ -254,7 +256,7 @@
       </div>
 
       <!-- Summary cards -->
-      <div v-if="bfRecords.length" class="grid grid-cols-3 gap-4">
+      <div v-if="bfRecords.length" class="grid grid-cols-1 sm:grid-cols-3 gap-4">
         <div v-for="s in bfSummary" :key="s.label" class="stat-tile" :style="statVars(s.color)">
           <div class="stat-tile-icon">
             <component :is="s.icon" class="w-5 h-5" />
@@ -288,7 +290,8 @@
 
       <!-- Table -->
       <div v-else class="bg-white border border-[#E2E8F0] rounded-xl shadow-[0_1px_3px_rgba(0,0,0,0.06)] overflow-hidden">
-        <table class="w-full text-sm">
+        <div class="tk-table-scroll">
+        <table class="w-full text-sm tk-tardy-table">
           <thead class="border-b border-[#E2E8F0]">
             <tr>
               <th class="th-cell text-left w-10">#</th>
@@ -340,6 +343,7 @@
             </tr>
           </tbody>
         </table>
+        </div>
       </div>
 
       </template>
@@ -943,6 +947,13 @@ onMounted(async () => {
   box-shadow: 0 2px 12px rgba(27, 42, 94,0.06), 0 1px 3px rgba(27, 42, 94,0.04);
 }
 .track-scroll { overflow-x: auto; }
+
+/* Horizontal scroll for the leaderboard / Bradford tables instead of
+   letting long department names wrap and blow up row height. */
+.tk-table-scroll { overflow-x: auto; -webkit-overflow-scrolling: touch; }
+.tk-tardy-table   { min-width: 760px; }
+.tk-tardy-table .td-cell p { white-space: nowrap; }
+
 .th-cell {
   padding: 11px 16px; font-size: 10.5px; font-weight: 700;
   text-transform: uppercase; letter-spacing: 0.08em;

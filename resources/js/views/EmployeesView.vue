@@ -195,7 +195,7 @@
                 <StaffTypeBadge v-if="emp.staff_type" :type="emp.staff_type" />
                 <span v-else class="text-xs text-[#6B7A94]">—</span>
               </td>
-              <td class="td-cell text-[#64748B]">{{ emp.department ?? '—' }}</td>
+              <td class="td-cell text-[#64748B] whitespace-nowrap">{{ emp.department ?? '—' }}</td>
               <td class="td-cell text-[#64748B]">{{ emp.position ?? '—' }}</td>
               <td class="td-cell text-center"><RoleBadge :role="emp.role" /></td>
               <td class="td-cell text-center">

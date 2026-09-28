@@ -34,7 +34,8 @@
 
         <EmptyState v-else-if="!filtered.length" title="No accounts found" description="No privileged accounts match your current filters." />
 
-        <table v-else class="w-full text-sm">
+        <div v-else class="overflow-x-auto">
+        <table class="w-full text-sm admin-acct-table">
           <thead class="border-b border-[#EEF2FA] bg-[#F7F8FD]">
             <tr>
               <th class="th-cell text-left">#</th>
@@ -72,8 +73,8 @@
                   </div>
                 </div>
               </td>
-              <td class="td-cell text-[#64748B] text-xs">{{ acc.campus ?? '—' }}</td>
-              <td class="td-cell text-[#64748B] text-xs">{{ acc.department ?? '—' }}</td>
+              <td class="td-cell text-[#64748B] text-xs whitespace-nowrap">{{ acc.campus ?? '—' }}</td>
+              <td class="td-cell text-[#64748B] text-xs whitespace-nowrap">{{ acc.department ?? '—' }}</td>
               <td class="td-cell text-center">
                 <RoleBadge :role="acc.role" />
               </td>
@@ -85,6 +86,7 @@
             </tr>
           </tbody>
         </table>
+        </div>
       </div>
     </div>
 
@@ -177,6 +179,7 @@ onMounted(load);
 .select-sm:focus { outline: none; border-color: #2E4A8C; box-shadow: 0 0 0 3px rgba(46, 74, 140,0.08); }
 
 /* ── Table ────────────────────────────────────────── */
+.admin-acct-table { min-width: 640px; }
 .th-cell {
   padding: 11px 16px; font-size: 10.5px; font-weight: 700;
   text-transform: uppercase; letter-spacing: 0.08em;

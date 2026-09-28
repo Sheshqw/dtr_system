@@ -144,7 +144,7 @@
                     </div>
                   </div>
                 </td>
-                <td class="td-cell text-[#64748B]">{{ log.department }}</td>
+                <td class="td-cell text-[#64748B] whitespace-nowrap">{{ log.department }}</td>
                 <td class="td-cell text-center">
                   <p class="font-mono text-[#0F172A] font-medium leading-tight">{{ log.punch_time }}</p>
                   <p class="text-[10px] text-[#6B7A94] leading-tight">{{ formatLogDate(log) }}</p>
