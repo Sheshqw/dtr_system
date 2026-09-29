@@ -289,8 +289,8 @@
               <button @click="dayPopover = null; openEdit(dayPopover.holiday)" class="flex-1 py-2 text-sm font-medium rounded-lg border border-[#E2E8F0] text-[#0F172A] hover:bg-[#F8FAFC] transition-colors">
                 Edit
               </button>
-              <button @click="confirmDelete(dayPopover.holiday); dayPopover = null" class="flex-1 py-2 text-sm font-medium rounded-lg bg-red-50 text-red-600 hover:bg-red-100 transition-colors">
-                Delete
+              <button @click="dayPopover = null" class="flex-1 py-2 text-sm font-medium rounded-lg bg-[#F1F5F9] text-[#374151] hover:bg-[#E2E8F0] transition-colors">
+                Close
               </button>
             </div>
             <button v-else @click="dayPopover = null" class="w-full mt-2 py-2 text-sm font-medium rounded-lg border border-[#E2E8F0] text-[#0F172A] hover:bg-[#F8FAFC] transition-colors">
