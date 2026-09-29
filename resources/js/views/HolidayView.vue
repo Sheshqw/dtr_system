@@ -33,26 +33,58 @@
       </div>
     </PageHeader>
 
-    <!-- View toggle -->
-    <div class="px-6 pt-4 bg-[#F4F6FB] flex items-center gap-2">
-      <button
-        @click="view = 'calendar'"
-        class="px-3 py-1.5 text-sm font-medium rounded-lg transition-colors"
-        :class="view === 'calendar' ? 'bg-[#2E4A8C] text-white' : 'bg-white border border-[#E2E8F0] text-[#64748B] hover:bg-[#F8FAFC]'"
-      >
-        <CalendarDaysIcon class="w-4 h-4 inline -mt-0.5 mr-1" /> Calendar
-      </button>
-      <button
-        @click="view = 'list'"
-        class="px-3 py-1.5 text-sm font-medium rounded-lg transition-colors"
-        :class="view === 'list' ? 'bg-[#2E4A8C] text-white' : 'bg-white border border-[#E2E8F0] text-[#64748B] hover:bg-[#F8FAFC]'"
-      >
-        <ListIcon class="w-4 h-4 inline -mt-0.5 mr-1" /> List
-      </button>
-    </div>
-
     <!-- Content -->
     <div class="flex-1 overflow-y-auto bg-[#F4F6FB] p-6">
+
+      <!-- Stats -->
+      <div v-if="!loading" class="grid grid-cols-2 sm:grid-cols-4 gap-3 mb-5">
+        <div class="stat-tile" :style="statVars('#2E4A8C')">
+          <div class="stat-tile-icon"><CalendarIcon class="w-5 h-5" /></div>
+          <div>
+            <p class="stat-tile-value">{{ holidays.length }}</p>
+            <p class="stat-tile-label">Total in {{ year }}</p>
+          </div>
+        </div>
+        <div class="stat-tile" :style="statVars('#DC2626')">
+          <div class="stat-tile-icon"><FlagIcon class="w-5 h-5" /></div>
+          <div>
+            <p class="stat-tile-value">{{ regularCount }}</p>
+            <p class="stat-tile-label">Regular</p>
+          </div>
+        </div>
+        <div class="stat-tile" :style="statVars('#D97706')">
+          <div class="stat-tile-icon"><StarIcon class="w-5 h-5" /></div>
+          <div>
+            <p class="stat-tile-value">{{ specialCount }}</p>
+            <p class="stat-tile-label">Special</p>
+          </div>
+        </div>
+        <div class="stat-tile" :style="statVars('#7C3AED')">
+          <div class="stat-tile-icon"><CalendarClockIcon class="w-5 h-5" /></div>
+          <div class="min-w-0">
+            <p class="stat-tile-value truncate" :title="nextHoliday?.name ?? '—'">{{ nextHoliday?.name ?? '—' }}</p>
+            <p class="stat-tile-label">{{ nextHolidayLabel }}</p>
+          </div>
+        </div>
+      </div>
+
+      <!-- View toggle -->
+      <div class="flex items-center gap-2 mb-4">
+        <button
+          @click="view = 'calendar'"
+          class="px-3 py-1.5 text-sm font-medium rounded-lg transition-colors"
+          :class="view === 'calendar' ? 'bg-[#2E4A8C] text-white' : 'bg-white border border-[#E2E8F0] text-[#64748B] hover:bg-[#F8FAFC]'"
+        >
+          <CalendarDaysIcon class="w-4 h-4 inline -mt-0.5 mr-1" /> Calendar
+        </button>
+        <button
+          @click="view = 'list'"
+          class="px-3 py-1.5 text-sm font-medium rounded-lg transition-colors"
+          :class="view === 'list' ? 'bg-[#2E4A8C] text-white' : 'bg-white border border-[#E2E8F0] text-[#64748B] hover:bg-[#F8FAFC]'"
+        >
+          <ListIcon class="w-4 h-4 inline -mt-0.5 mr-1" /> List
+        </button>
+      </div>
 
       <!-- Loading skeleton -->
       <div v-if="loading" class="space-y-4">
@@ -66,7 +98,7 @@
 
       <!-- Calendar grid view -->
       <div v-else-if="view === 'calendar'" class="cal-grid">
-        <div v-for="m in monthGrids" :key="m.month" class="cal-month">
+        <div v-for="m in monthGrids" :key="m.month" class="cal-month" :class="{ 'cal-month--current': m.isCurrent }">
           <h3 class="cal-month-title">{{ m.name }}</h3>
           <div class="cal-dow-row">
             <span v-for="(d, di) in ['S','M','T','W','T','F','S']" :key="di" class="cal-dow">{{ d }}</span>
@@ -118,18 +150,6 @@
         </button>
       </div>
 
-      <!-- Legend + Count -->
-      <div v-else class="mb-4 flex items-center gap-4 text-sm">
-        <span class="text-[#64748B]">{{ holidays.length }} holiday{{ holidays.length !== 1 ? 's' : '' }} in {{ year }}</span>
-        <span class="flex items-center gap-1.5">
-          <span class="w-2.5 h-2.5 rounded-full bg-red-500"></span>
-          <span class="text-[#64748B]">Regular</span>
-        </span>
-        <span class="flex items-center gap-1.5">
-          <span class="w-2.5 h-2.5 rounded-full bg-amber-500"></span>
-          <span class="text-[#64748B]">Special</span>
-        </span>
-      </div>
 
       <!-- Grouped by month -->
       <div v-if="!loading && view === 'list' && holidays.length > 0" class="space-y-4">
@@ -352,6 +372,9 @@ import PageHeader from '@/components/PageHeader.vue';
 import {
   Calendar as CalendarIcon,
   CalendarDays as CalendarDaysIcon,
+  CalendarClock as CalendarClockIcon,
+  Flag as FlagIcon,
+  Star as StarIcon,
   List as ListIcon,
   Sparkles as SparklesIcon,
   ChevronLeft as ChevronLeftIcon,
@@ -389,6 +412,30 @@ const groupedHolidays = computed(() => {
   return groups;
 });
 
+function statVars(hex) {
+  return { '--stat-color': hex, '--stat-bg': hex + '14', '--stat-glow': hex + '30' };
+}
+
+const regularCount = computed(() => holidays.value.filter(h => h.type === 'regular').length);
+const specialCount = computed(() => holidays.value.filter(h => h.type === 'special').length);
+
+const nextHoliday = computed(() => {
+  if (!holidays.value.length) return null;
+  const todayStr = new Date().toISOString().slice(0, 10);
+  const upcoming = holidays.value.filter(h => h.date >= todayStr).sort((a, b) => a.date.localeCompare(b.date));
+  return upcoming[0] ?? holidays.value[0];
+});
+
+const nextHolidayLabel = computed(() => {
+  if (!nextHoliday.value) return 'No holidays yet';
+  const todayStr = new Date().toISOString().slice(0, 10);
+  if (nextHoliday.value.date < todayStr) return `First in ${year.value}`;
+  const days = Math.round((new Date(nextHoliday.value.date) - new Date(todayStr)) / 86400000);
+  if (days === 0) return 'Today';
+  if (days === 1) return 'Tomorrow';
+  return `In ${days} days`;
+});
+
 const monthGrids = computed(() => {
   const byDate = {};
   for (const h of holidays.value) byDate[h.date] = h;
@@ -416,6 +463,7 @@ const monthGrids = computed(() => {
     months.push({
       month,
       name: firstOfMonth.toLocaleDateString('en-PH', { month: 'long' }),
+      isCurrent: year.value === new Date().getFullYear() && month === new Date().getMonth(),
       days,
       holidays: monthHolidays,
     });
@@ -553,9 +601,12 @@ onMounted(load);
 @media (max-width: 480px)  { .cal-grid { grid-template-columns: 1fr; } }
 
 .cal-month {
-  background: #fff; border: 1px solid #E4E9F2; border-radius: 12px;
+  background: #fff; border: 1px solid #E4E9F2; border-top: 3px solid #C9A227; border-radius: 10px;
   padding: 12px; box-shadow: 0 2px 8px rgba(27, 42, 94,0.05);
+  transition: transform 0.15s ease, box-shadow 0.15s ease;
 }
+.cal-month:hover { transform: translateY(-2px); box-shadow: 0 6px 16px rgba(27, 42, 94,0.09); }
+.cal-month--current { border-top-color: #2E4A8C; background: linear-gradient(180deg, rgba(46,74,140,0.035), #fff 60px); }
 .cal-month-title { font-size: 13px; font-weight: 700; color: #0F172A; margin: 0 0 8px; text-align: center; }
 .cal-dow-row { display: grid; grid-template-columns: repeat(7, 1fr); margin-bottom: 4px; }
 .cal-dow { font-size: 9px; font-weight: 700; color: #94A3B8; text-align: center; text-transform: uppercase; }
