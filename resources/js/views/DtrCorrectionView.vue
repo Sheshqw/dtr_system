@@ -425,6 +425,25 @@
               ></textarea>
             </div>
 
+            <!-- Proof photo -->
+            <div>
+              <label class="modal-label">Proof Photo (optional)</label>
+              <p class="text-xs mb-1.5" style="color:#6B7A94;">e.g. a screenshot of a biometric error, or a photo of a manual logbook entry.</p>
+              <div v-if="!attachmentPreview">
+                <label class="attachment-drop">
+                  <UploadIcon class="w-5 h-5" style="color:#94A3B8;" />
+                  <span class="text-xs mt-1" style="color:#6B7A94;">Click to attach an image (max 5MB)</span>
+                  <input type="file" accept="image/png,image/jpeg,image/webp" class="hidden" @change="onAttachmentSelected" />
+                </label>
+              </div>
+              <div v-else class="attachment-preview">
+                <img :src="attachmentPreview" alt="Attachment preview" />
+                <button type="button" @click="clearAttachment" class="attachment-remove">
+                  <XIcon class="w-3.5 h-3.5" />
+                </button>
+              </div>
+            </div>
+
             <div v-if="submitError" class="flex items-center gap-2 px-3 py-2.5 rounded-lg text-sm" style="background:#FEF2F2;border:1px solid #FECACA;color:#991B1B;">
               <AlertCircleIcon class="w-4 h-4 flex-shrink-0" />
               {{ submitError }}
@@ -503,6 +522,12 @@
               <div class="pt-1 text-xs">
                 <p style="color:#6B7A94;">Reason from employee:</p>
                 <p class="mt-1 font-medium" style="color:#374151;">{{ reviewTarget?.reason }}</p>
+              </div>
+              <div v-if="reviewTarget?.attachment_url" class="pt-1 text-xs">
+                <p style="color:#6B7A94;">Proof photo:</p>
+                <a :href="reviewTarget.attachment_url" target="_blank" rel="noopener" class="block mt-1">
+                  <img :src="reviewTarget.attachment_url" alt="Correction proof" class="rounded-lg border max-h-40 hover:opacity-90 transition-opacity" style="border-color:#E4E9F2;" />
+                </a>
               </div>
             </div>
 
@@ -635,6 +660,7 @@ import {
   Check           as CheckIcon,
   ArrowRight      as ArrowRightIcon,
   Link            as LinkIcon,
+  Upload          as UploadIcon,
 } from 'lucide-vue-next';
 
 const auth = useAuthStore();
@@ -668,6 +694,26 @@ const submitting     = ref(false);
 const submitError    = ref('');
 const submitAttempted = ref(false);
 const form = reactive({ work_date: '', reason: '', fields: freshFieldState() });
+const attachmentFile    = ref(null);
+const attachmentPreview = ref(null);
+
+function onAttachmentSelected(e) {
+  const file = e.target.files?.[0];
+  if (!file) return;
+  if (file.size > 5 * 1024 * 1024) {
+    toast('Image must be 5MB or smaller.', 'error');
+    e.target.value = '';
+    return;
+  }
+  attachmentFile.value = file;
+  attachmentPreview.value = URL.createObjectURL(file);
+}
+
+function clearAttachment() {
+  if (attachmentPreview.value) URL.revokeObjectURL(attachmentPreview.value);
+  attachmentFile.value    = null;
+  attachmentPreview.value = null;
+}
 
 // Single review modal
 const reviewTarget  = ref(null);
@@ -771,6 +817,7 @@ async function load() {
 // ── Submit ────────────────────────────────────────────────────────
 function openSubmit() {
   Object.assign(form, { work_date: '', reason: '', fields: freshFieldState() });
+  clearAttachment();
   submitError.value = '';
   submitAttempted.value = false;
   submitModal.value = true;
@@ -787,12 +834,25 @@ async function submitRequest() {
   submitting.value  = true;
   submitError.value = '';
   try {
-    await axios.post('/api/dtr-corrections', {
-      work_date: form.work_date,
-      fields,
-      reason:    form.reason,
-    });
+    if (attachmentFile.value) {
+      const payload = new FormData();
+      payload.append('work_date', form.work_date);
+      payload.append('reason', form.reason);
+      payload.append('attachment', attachmentFile.value);
+      fields.forEach((f, i) => {
+        payload.append(`fields[${i}][field]`, f.field);
+        payload.append(`fields[${i}][requested_value]`, f.requested_value);
+      });
+      await axios.post('/api/dtr-corrections', payload, { headers: { 'Content-Type': 'multipart/form-data' } });
+    } else {
+      await axios.post('/api/dtr-corrections', {
+        work_date: form.work_date,
+        fields,
+        reason:    form.reason,
+      });
+    }
     submitModal.value = false;
+    clearAttachment();
     const count = fields.length;
     toast(`${count} correction field${count !== 1 ? 's' : ''} submitted. HR will review your request shortly.`);
     await load();
@@ -883,6 +943,24 @@ onMounted(load);
   transition: border-color 0.15s;
 }
 .modal-input-sm:focus { outline: none; border-color: #2E4A8C; }
+
+.attachment-drop {
+  display: flex; flex-direction: column; align-items: center; justify-content: center;
+  gap: 4px; padding: 18px; border: 1.5px dashed #CBD5E1; border-radius: 10px;
+  cursor: pointer; transition: border-color 0.15s, background 0.15s;
+}
+.attachment-drop:hover { border-color: #2E4A8C; background: #F8FAFC; }
+.attachment-preview {
+  position: relative; display: inline-block; border-radius: 10px; overflow: hidden;
+  border: 1px solid #E4E9F2;
+}
+.attachment-preview img { display: block; max-height: 140px; max-width: 100%; object-fit: cover; }
+.attachment-remove {
+  position: absolute; top: 6px; right: 6px; width: 22px; height: 22px;
+  border-radius: 999px; background: rgba(15,23,42,0.65); color: #fff;
+  display: flex; align-items: center; justify-content: center;
+}
+.attachment-remove:hover { background: rgba(15,23,42,0.85); }
 
 @media (max-width: 640px) {
   .grid.grid-cols-1.sm\\:grid-cols-3 { grid-template-columns: 1fr; }

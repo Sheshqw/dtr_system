@@ -9,8 +9,8 @@ class DtrCorrection extends Model
     protected $table = 'dtr_corrections';
 
     protected $fillable = [
-        'employee_id', 'work_date', 'field',
-        'original_value', 'requested_value', 'reason',
+        'group_id', 'employee_id', 'work_date', 'field',
+        'original_value', 'requested_value', 'reason', 'attachment',
         'status', 'reviewed_by', 'reviewed_at', 'reviewer_remarks',
     ];
 

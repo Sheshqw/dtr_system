@@ -91,9 +91,14 @@ class DtrCorrectionController extends Controller
             'fields.*.field'               => 'required|in:morning_in,morning_out,afternoon_in,afternoon_out',
             'fields.*.requested_value'     => ['required', 'regex:/^\d{2}:\d{2}$/'],
             'reason'                       => 'required|string|min:10|max:500',
+            'attachment'                   => 'nullable|image|mimes:jpg,jpeg,png,webp|max:5120',
         ]);
 
         $workDate = $validated['work_date'];
+
+        $attachmentPath = $request->hasFile('attachment')
+            ? $request->file('attachment')->store('correction-attachments', 'public')
+            : null;
 
         // Check for duplicate pending per field
         foreach ($validated['fields'] as $fd) {
@@ -124,6 +129,7 @@ class DtrCorrectionController extends Controller
                 'original_value'  => $dtr?->{$fd['field']},
                 'requested_value' => $fd['requested_value'],
                 'reason'          => $validated['reason'],
+                'attachment'      => $attachmentPath,
                 'status'          => 'pending',
             ]);
             $created[] = $correction;
@@ -317,6 +323,7 @@ class DtrCorrectionController extends Controller
             'original_value'   => $c->original_value ? substr($c->original_value, 0, 5) : null,
             'requested_value'  => substr($c->requested_value, 0, 5),
             'reason'           => $c->reason,
+            'attachment_url'   => $c->attachment ? \Illuminate\Support\Facades\Storage::url($c->attachment) : null,
             'status'           => $c->status,
             'reviewer_remarks' => $c->reviewer_remarks,
             'reviewed_at'      => $c->reviewed_at?->format('M j, Y h:i A'),
