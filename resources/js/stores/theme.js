@@ -2,13 +2,11 @@ import { defineStore } from 'pinia';
 import { ref } from 'vue';
 
 export const useThemeStore = defineStore('theme', () => {
-  const mode   = ref('system'); // 'light' | 'dark' | 'system'
+  const mode   = ref('light'); // 'light' | 'dark' — 'system' was removed: on this app it always rendered identically to 'dark', just adding a confusing third option
   const isDark = ref(false);
 
-  const mq = window.matchMedia('(prefers-color-scheme: dark)');
-
   function apply() {
-    const dark = mode.value === 'dark' || (mode.value === 'system' && mq.matches);
+    const dark = mode.value === 'dark';
     document.documentElement.setAttribute('data-theme', dark ? 'dark' : 'light');
     isDark.value = dark;
   }
@@ -19,19 +17,19 @@ export const useThemeStore = defineStore('theme', () => {
     apply();
   }
 
-  // When OS preference changes and user is in System mode, re-apply
-  mq.addEventListener('change', () => {
-    if (mode.value === 'system') apply();
-  });
-
   function init() {
     const saved = localStorage.getItem('dtr_theme_mode');
-    if (saved) {
+    if (saved && saved !== 'system') {
       mode.value = saved;
+    } else if (saved === 'system') {
+      // 'system' option was removed — fall back to light rather than
+      // leaving a now-invalid mode saved.
+      mode.value = 'light';
+      localStorage.setItem('dtr_theme_mode', 'light');
     } else {
-      // Migrate old toggle key ('dark'|'light') → new three-mode key
+      // Migrate old toggle key ('dark'|'light') → new mode key
       const legacy = localStorage.getItem('dtr_theme');
-      mode.value = legacy ? legacy : 'system';
+      mode.value = legacy === 'dark' ? 'dark' : 'light';
     }
     apply();
   }

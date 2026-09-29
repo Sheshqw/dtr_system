@@ -17,6 +17,7 @@
 
       <div class="ph-actions">
         <slot />
+        <SettingsPopover />
         <NotificationBell />
       </div>
     </div>
@@ -25,6 +26,7 @@
 
 <script setup>
 import NotificationBell from '@/components/NotificationBell.vue';
+import SettingsPopover from '@/components/SettingsPopover.vue';
 import { useSettingsStore } from '@/stores/settings';
 
 const settings = useSettingsStore();
@@ -42,7 +44,7 @@ defineProps({
   padding: 18px 24px;
   overflow: hidden;
   flex-shrink: 0;
-  background: linear-gradient(135deg, #1B2A5E 0%, #2A3C76 55%, #2E4A8C 100%);
+  background: linear-gradient(135deg, #253A6E 0%, #34478C 55%, #3D5CA3 100%);
 }
 
 /* Dot-grid texture */

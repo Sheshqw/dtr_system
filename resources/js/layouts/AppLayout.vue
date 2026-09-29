@@ -195,49 +195,9 @@
       <!-- Gold divider -->
       <div class="relative mx-4 h-px" style="background: linear-gradient(90deg, transparent, rgba(201, 162, 39,0.35), transparent);"></div>
 
-      <!-- Theme mode selector -->
-      <div class="relative px-4 py-2.5">
-        <p class="theme-seg-label-header">Appearance</p>
-        <div class="theme-seg" role="group" aria-label="Theme mode">
-          <button
-            v-for="opt in themeOptions"
-            :key="opt.mode"
-            @click="theme.setMode(opt.mode)"
-            class="theme-seg-btn"
-            :class="[
-              `theme-seg-btn--${opt.mode}`,
-              theme.mode === opt.mode ? `theme-seg-btn--active theme-seg-btn--active-${opt.mode}` : ''
-            ]"
-            :aria-pressed="theme.mode === opt.mode"
-            :title="opt.label"
-          >
-            <component :is="opt.icon" class="w-3 h-3" />
-            <span class="theme-seg-text">{{ opt.label }}</span>
-          </button>
-        </div>
-      </div>
-
-      <!-- Text size selector — helps users who find the default UI text
-           small (presbyopia becomes common from the 40s onward, and this
-           system's users range 22–60). Applies a whole-page zoom so every
-           screen scales together, including modals teleported to <body>. -->
-      <div class="relative px-4 pb-2.5">
-        <p class="theme-seg-label-header">Text Size</p>
-        <div class="theme-seg" role="group" aria-label="Text size">
-          <button
-            v-for="opt in textSizeOptions"
-            :key="opt.level"
-            @click="textSize.setLevel(opt.level)"
-            class="theme-seg-btn"
-            :class="textSize.level === opt.level ? 'theme-seg-btn--active theme-seg-btn--active-size' : ''"
-            :aria-pressed="textSize.level === opt.level"
-            :title="opt.title"
-          >
-            <span class="text-size-glyph" :style="{ fontSize: opt.glyph }">A</span>
-            <span class="theme-seg-text">{{ opt.label }}</span>
-          </button>
-        </div>
-      </div>
+      <!-- Appearance and Text Size moved to the top-right settings popover
+           (see PageHeader.vue) — kept the sidebar focused on navigation and
+           freed up vertical space for it. -->
 
       <!-- User card -->
       <div class="relative px-4 pb-4">
@@ -435,9 +395,6 @@ import {
   Loader2        as Loader2Icon,
   Wifi           as WifiIcon,
   Menu           as MenuIcon,
-  Sun            as SunIcon,
-  Moon           as MoonIcon,
-  Monitor        as MonitorIcon,
   ClipboardEdit  as ClipboardEditIcon,
   HeartPulse     as HeartPulseIcon,
   Search         as SearchIcon,
@@ -446,8 +403,6 @@ import {
   Lock           as LockIcon,
 } from 'lucide-vue-next';
 import { useAuthStore } from '@/stores/auth';
-import { useThemeStore } from '@/stores/theme';
-import { useTextSizeStore } from '@/stores/textSize';
 import { useSettingsStore } from '@/stores/settings';
 import { usePermissionsStore } from '@/stores/permissions';
 import { useToast } from '@/composables/useToast';
@@ -458,22 +413,9 @@ import ConfirmDialog from '@/components/ConfirmDialog.vue';
 import { useCommandPalette } from '@/composables/useCommandPalette';
 
 const auth     = useAuthStore();
-const theme    = useThemeStore();
-const textSize = useTextSizeStore();
 const perms    = usePermissionsStore();
 const palette  = useCommandPalette();
 
-const themeOptions = [
-  { mode: 'light',  label: 'Light',  icon: SunIcon     },
-  { mode: 'system', label: 'System', icon: MonitorIcon  },
-  { mode: 'dark',   label: 'Dark',   icon: MoonIcon     },
-];
-
-const textSizeOptions = [
-  { level: 'sm', label: 'Small',  glyph: '10px', title: 'Smaller text' },
-  { level: 'md', label: 'Normal', glyph: '12px', title: 'Default text size' },
-  { level: 'lg', label: 'Large',  glyph: '15px', title: 'Larger text — easier to read' },
-];
 const router = useRouter();
 const settings = useSettingsStore();
 const { toast } = useToast();
@@ -831,84 +773,6 @@ onBeforeUnmount(() => {
 @keyframes badge-pop {
   from { transform: scale(0.6); opacity: 0; }
   to   { transform: scale(1);   opacity: 1; }
-}
-
-/* ── Three-mode theme selector ───────────────────── */
-.theme-seg-label-header {
-  font-size: 8px;
-  font-weight: 700;
-  letter-spacing: 0.08em;
-  text-transform: uppercase;
-  color: rgba(157, 173, 216,0.4);
-  margin: 0 0 6px 2px;
-}
-.theme-seg {
-  display: flex;
-  gap: 2px;
-  background: rgba(0,0,0,0.28);
-  border: 1px solid rgba(255,255,255,0.07);
-  border-radius: 11px;
-  padding: 3px;
-}
-.theme-seg-btn {
-  flex: 1;
-  display: flex;
-  flex-direction: column;
-  align-items: center;
-  justify-content: center;
-  gap: 3px;
-  padding: 6px 5px;
-  border-radius: 7px;
-  border: none;
-  background: transparent;
-  color: rgba(157, 173, 216,0.45);
-  cursor: pointer;
-  transition: color 0.18s ease, background 0.18s ease;
-}
-.theme-seg-btn:hover {
-  color: rgba(255,255,255,0.8);
-  background: rgba(255,255,255,0.07);
-}
-.theme-seg-text {
-  font-size: 8px;
-  font-weight: 600;
-  letter-spacing: 0.04em;
-  line-height: 1;
-}
-/* Active states — each mode has its own clearly distinct accent */
-.theme-seg-btn--active-light {
-  background: rgba(201, 162, 39,0.20);
-  color: #B8911F;
-  box-shadow: 0 1px 4px rgba(0,0,0,0.25);
-}
-.theme-seg-btn--active-system {
-  background: rgba(226,232,240,0.12);
-  color: #E2E8F0;
-  box-shadow: 0 1px 4px rgba(0,0,0,0.25);
-}
-.theme-seg-btn--active-dark {
-  background: rgba(129,140,248,0.18);
-  color: #818CF8;
-  box-shadow: 0 1px 4px rgba(0,0,0,0.25);
-}
-.theme-seg-btn--active-size {
-  background: rgba(56,189,248,0.20);
-  color: #7DD3FC;
-  box-shadow: 0 1px 4px rgba(0,0,0,0.25);
-}
-.theme-seg-btn--active:hover {
-  filter: brightness(1.12);
-}
-
-/* ── Text size glyph — the "A" itself grows across the three buttons,
-     so the option reads as self-explanatory without needing to study
-     the small caption underneath it. ─────────────────────────────── */
-.text-size-glyph {
-  line-height: 1;
-  font-weight: 800;
-  height: 17px;
-  display: flex;
-  align-items: flex-end;
 }
 
 /* ── User card buttons ───────────────────────────── */
