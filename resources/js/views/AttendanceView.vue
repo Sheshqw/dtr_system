@@ -319,7 +319,7 @@
                     {{ rec.undertime_minutes > 0 ? rec.undertime_minutes : '—' }}
                   </td>
                   <td class="td-cell text-center">
-                    <StatusBadge v-if="rec.status !== 'weekend'" :status="rec.status" />
+                    <StatusBadge v-if="rec.status !== 'weekend'" :status="rec.status" :holiday-name="rec.holiday_name" />
                     <span v-else class="text-[#6B7A94] text-xs">—</span>
                   </td>
                 </tr>

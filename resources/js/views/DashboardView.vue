@@ -494,7 +494,7 @@
                 <td class="td td-muted">{{ row.department }}</td>
                 <td class="td td-mono">{{ row.time_in ?? '—' }}</td>
                 <td class="td td-mono">{{ row.time_out ?? '—' }}</td>
-                <td class="td"><StatusBadge :status="row.status" :corrected="row.is_corrected" /></td>
+                <td class="td"><StatusBadge :status="row.status" :corrected="row.is_corrected" :holiday-name="row.holiday_name" /></td>
                 <td class="td td-r">
                   <span :class="row.hours_rendered > 0 ? 'hrs-val' : 'hrs-nil'">
                     {{ row.hours_rendered > 0 ? Number(row.hours_rendered).toFixed(1) + 'h' : '—' }}

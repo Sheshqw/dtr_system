@@ -114,10 +114,12 @@ class AttendanceController extends Controller
                 ->orWhere('employee_id', 'like', "%{$s}%"));
         }
 
-        $employees = $query->orderBy('last_name')->get();
+        $employees   = $query->orderBy('last_name')->get();
+        $holidayName = Holiday::whereDate('date', $date)->value('name');
 
-        $rows = $employees->map(function (User $emp) use ($date) {
-            $dtr = $emp->dailyDtr->first();
+        $rows = $employees->map(function (User $emp) use ($date, $holidayName) {
+            $dtr    = $emp->dailyDtr->first();
+            $status = $dtr?->status ?? 'absent';
             return [
                 'id'              => $emp->id,
                 'employee_id'     => $emp->employee_id,
@@ -125,7 +127,8 @@ class AttendanceController extends Controller
                 'department'      => $emp->department?->name ?? '—',
                 'time_in'         => $dtr?->morning_in,
                 'time_out'        => $dtr?->afternoon_out ?? $dtr?->morning_out,
-                'status'          => $dtr?->status ?? 'absent',
+                'status'          => $status,
+                'holiday_name'    => $status === 'holiday' ? $holidayName : null,
                 'hours_rendered'  => $dtr?->hours_rendered ?? 0,
                 'tardiness_min'   => $dtr?->tardiness_minutes ?? 0,
                 'overtime_min'    => $dtr?->overtime_minutes ?? 0,
@@ -259,6 +262,11 @@ class AttendanceController extends Controller
             );
         }
 
+        $holidayNames = Holiday::whereYear('date', $year)
+            ->whereMonth('date', $month)
+            ->pluck('name', 'date')
+            ->mapWithKeys(fn($name, $date) => [\Carbon\Carbon::parse($date)->toDateString() => $name]);
+
         $records = $query->orderBy('work_date')->orderBy('employee_id')->get()->map(fn($r) => [
             'id'                => $r->id,
             'employee_db_id'    => $r->employee_id,
@@ -276,6 +284,7 @@ class AttendanceController extends Controller
             'overtime_minutes'  => $r->overtime_minutes,
             'undertime_minutes' => $r->undertime_minutes,
             'status'            => $r->status,
+            'holiday_name'      => $r->status === 'holiday' ? ($holidayNames[$r->work_date->toDateString()] ?? null) : null,
             'is_corrected'      => $r->is_corrected,
         ]);
 

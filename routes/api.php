@@ -113,6 +113,7 @@ Route::middleware('auth:sanctum')->group(function () {
     Route::get('/holidays', [HolidayController::class, 'index']);
     Route::middleware('feature:holiday_calendar')->group(function () {
         Route::post('/holidays',             [HolidayController::class, 'store']);
+        Route::post('/holidays/autofill',    [HolidayController::class, 'autofill']);
         Route::put('/holidays/{holiday}',    [HolidayController::class, 'update']);
         Route::delete('/holidays/{holiday}', [HolidayController::class, 'destroy']);
     });

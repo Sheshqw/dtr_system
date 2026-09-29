@@ -18,8 +18,9 @@
 import { computed } from 'vue';
 
 const props = defineProps({
-  status:    { type: String, required: true },
-  corrected: { type: Boolean, default: false },
+  status:      { type: String, required: true },
+  corrected:   { type: Boolean, default: false },
+  holidayName: { type: String, default: null },
 });
 
 const statusMap = {
@@ -31,9 +32,13 @@ const statusMap = {
   weekend:  { label: 'Weekend',   dot: 'bg-slate-400',   bg: 'bg-slate-50',    text: 'text-slate-500',   ring: 'ring-slate-200',   glow: 'rgba(148,163,184,0.16)' },
 };
 
-const config = computed(() =>
-  statusMap[props.status] ?? { label: props.status, dot: 'bg-slate-400', bg: 'bg-slate-50', text: 'text-slate-600', ring: 'ring-slate-200', glow: 'rgba(148,163,184,0.16)' }
-);
+const config = computed(() => {
+  const base = statusMap[props.status] ?? { label: props.status, dot: 'bg-slate-400', bg: 'bg-slate-50', text: 'text-slate-600', ring: 'ring-slate-200', glow: 'rgba(148,163,184,0.16)' };
+  if (props.status === 'holiday' && props.holidayName) {
+    return { ...base, label: props.holidayName };
+  }
+  return base;
+});
 </script>
 
 <style scoped>

@@ -15,6 +15,15 @@
         </div>
         <button
           v-if="canManage"
+          @click="autofillHolidays"
+          :disabled="autofilling"
+          class="flex items-center gap-2 px-4 py-2 text-sm font-medium text-white rounded-lg bg-white/10 border border-white/20 hover:bg-white/20 transition-colors disabled:opacity-60"
+        >
+          <SparklesIcon class="w-4 h-4" :class="autofilling ? 'animate-pulse' : ''" />
+          {{ autofilling ? 'Adding…' : 'Auto-fill PH Holidays' }}
+        </button>
+        <button
+          v-if="canManage"
           @click="openAdd"
           class="flex items-center gap-2 px-4 py-2 text-sm font-medium text-white rounded-lg bg-[#2E4A8C] hover:bg-[#3D5CA3] transition-colors"
         >
@@ -23,6 +32,24 @@
         </button>
       </div>
     </PageHeader>
+
+    <!-- View toggle -->
+    <div class="px-6 pt-4 bg-[#F4F6FB] flex items-center gap-2">
+      <button
+        @click="view = 'calendar'"
+        class="px-3 py-1.5 text-sm font-medium rounded-lg transition-colors"
+        :class="view === 'calendar' ? 'bg-[#2E4A8C] text-white' : 'bg-white border border-[#E2E8F0] text-[#64748B] hover:bg-[#F8FAFC]'"
+      >
+        <CalendarDaysIcon class="w-4 h-4 inline -mt-0.5 mr-1" /> Calendar
+      </button>
+      <button
+        @click="view = 'list'"
+        class="px-3 py-1.5 text-sm font-medium rounded-lg transition-colors"
+        :class="view === 'list' ? 'bg-[#2E4A8C] text-white' : 'bg-white border border-[#E2E8F0] text-[#64748B] hover:bg-[#F8FAFC]'"
+      >
+        <ListIcon class="w-4 h-4 inline -mt-0.5 mr-1" /> List
+      </button>
+    </div>
 
     <!-- Content -->
     <div class="flex-1 overflow-y-auto bg-[#F4F6FB] p-6">
@@ -37,8 +64,29 @@
         </div>
       </div>
 
+      <!-- Calendar grid view -->
+      <div v-else-if="view === 'calendar'" class="cal-grid">
+        <div v-for="m in monthGrids" :key="m.month" class="cal-month">
+          <h3 class="cal-month-title">{{ m.name }}</h3>
+          <div class="cal-dow-row">
+            <span v-for="d in ['S','M','T','W','T','F','S']" :key="d" class="cal-dow">{{ d }}</span>
+          </div>
+          <div class="cal-days">
+            <span
+              v-for="(day, i) in m.days" :key="i"
+              class="cal-day"
+              :class="[
+                day?.holiday ? (day.holiday.type === 'regular' ? 'cal-day--regular' : 'cal-day--special') : '',
+                day?.isToday ? 'cal-day--today' : '',
+              ]"
+              :title="day?.holiday?.name ?? ''"
+            >{{ day?.num ?? '' }}</span>
+          </div>
+        </div>
+      </div>
+
       <!-- Empty state -->
-      <div v-else-if="!loading && holidays.length === 0" class="text-center py-16">
+      <div v-else-if="!loading && holidays.length === 0 && view === 'list'" class="text-center py-16">
         <CalendarIcon class="w-12 h-12 mx-auto text-[#94A3B8] mb-3" />
         <p class="text-[#64748B] font-medium">No holidays in {{ year }}</p>
         <p class="text-sm text-[#6B7A94] mt-1">Add public or special holidays to automatically flag them in DTR records.</p>
@@ -66,7 +114,7 @@
       </div>
 
       <!-- Grouped by month -->
-      <div v-if="!loading && holidays.length > 0" class="space-y-4">
+      <div v-if="!loading && view === 'list' && holidays.length > 0" class="space-y-4">
         <div
           v-for="(group, monthKey) in groupedHolidays"
           :key="monthKey"
@@ -241,6 +289,9 @@ import { useUnsavedGuard } from '@/composables/useUnsavedGuard';
 import PageHeader from '@/components/PageHeader.vue';
 import {
   Calendar as CalendarIcon,
+  CalendarDays as CalendarDaysIcon,
+  List as ListIcon,
+  Sparkles as SparklesIcon,
   ChevronLeft as ChevronLeftIcon,
   ChevronRight as ChevronRightIcon,
   Plus as PlusIcon,
@@ -258,6 +309,8 @@ const holidays = ref([]);
 const loading  = ref(false);
 const delTarget = ref(null);
 const deleting  = ref(false);
+const view       = ref('calendar');
+const autofilling = ref(false);
 
 const canManage = computed(() => auth.employee?.role === 'admin' || auth.employee?.role === 'hr_officer');
 
@@ -273,6 +326,47 @@ const groupedHolidays = computed(() => {
   }
   return groups;
 });
+
+const monthGrids = computed(() => {
+  const byDate = {};
+  for (const h of holidays.value) byDate[h.date] = h;
+
+  const todayStr = new Date().toISOString().slice(0, 10);
+  const months = [];
+
+  for (let month = 0; month < 12; month++) {
+    const firstOfMonth = new Date(year.value, month, 1);
+    const daysInMonth   = new Date(year.value, month + 1, 0).getDate();
+    const leadBlanks     = firstOfMonth.getDay(); // 0=Sun
+
+    const days = [];
+    for (let i = 0; i < leadBlanks; i++) days.push(null);
+    for (let d = 1; d <= daysInMonth; d++) {
+      const iso = `${year.value}-${String(month + 1).padStart(2, '0')}-${String(d).padStart(2, '0')}`;
+      days.push({ num: d, holiday: byDate[iso] ?? null, isToday: iso === todayStr });
+    }
+
+    months.push({
+      month,
+      name: firstOfMonth.toLocaleDateString('en-PH', { month: 'long' }),
+      days,
+    });
+  }
+  return months;
+});
+
+async function autofillHolidays() {
+  autofilling.value = true;
+  try {
+    const res = await axios.post('/api/holidays/autofill', { year: year.value });
+    toast(res.data.message, 'success');
+    await load();
+  } catch (e) {
+    toast(e.response?.data?.message ?? 'Failed to auto-fill holidays.', 'error');
+  } finally {
+    autofilling.value = false;
+  }
+}
 
 function formatDay(date) {
   return new Date(date + 'T00:00:00').getDate();
@@ -368,6 +462,30 @@ onMounted(load);
 
 <style scoped>
 @reference "../css/app.css";
+
+/* ── Year calendar grid ──────────────────────────────────────────── */
+.cal-grid {
+  display: grid; grid-template-columns: repeat(4, 1fr); gap: 14px;
+}
+@media (max-width: 1024px) { .cal-grid { grid-template-columns: repeat(3, 1fr); } }
+@media (max-width: 768px)  { .cal-grid { grid-template-columns: repeat(2, 1fr); } }
+@media (max-width: 480px)  { .cal-grid { grid-template-columns: 1fr; } }
+
+.cal-month {
+  background: #fff; border: 1px solid #E4E9F2; border-radius: 12px;
+  padding: 12px; box-shadow: 0 2px 8px rgba(27, 42, 94,0.05);
+}
+.cal-month-title { font-size: 13px; font-weight: 700; color: #0F172A; margin: 0 0 8px; text-align: center; }
+.cal-dow-row { display: grid; grid-template-columns: repeat(7, 1fr); margin-bottom: 4px; }
+.cal-dow { font-size: 9px; font-weight: 700; color: #94A3B8; text-align: center; text-transform: uppercase; }
+.cal-days { display: grid; grid-template-columns: repeat(7, 1fr); gap: 2px; }
+.cal-day {
+  aspect-ratio: 1; display: flex; align-items: center; justify-content: center;
+  font-size: 11px; color: #475569; border-radius: 6px;
+}
+.cal-day--today    { box-shadow: inset 0 0 0 1.5px #2E4A8C; font-weight: 700; color: #2E4A8C; }
+.cal-day--regular  { background: rgba(239,68,68,0.14); color: #DC2626; font-weight: 700; }
+.cal-day--special  { background: rgba(245,158,11,0.16); color: #B45309; font-weight: 700; }
 
 .modal-label {
   display: block; font-size: 13px; font-weight: 600; color: #1E293B; margin-bottom: 5px;
