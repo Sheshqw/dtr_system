@@ -69,18 +69,36 @@
         <div v-for="m in monthGrids" :key="m.month" class="cal-month">
           <h3 class="cal-month-title">{{ m.name }}</h3>
           <div class="cal-dow-row">
-            <span v-for="d in ['S','M','T','W','T','F','S']" :key="d" class="cal-dow">{{ d }}</span>
+            <span v-for="(d, di) in ['S','M','T','W','T','F','S']" :key="di" class="cal-dow">{{ d }}</span>
           </div>
           <div class="cal-days">
-            <span
+            <button
               v-for="(day, i) in m.days" :key="i"
+              type="button"
               class="cal-day"
               :class="[
                 day?.holiday ? (day.holiday.type === 'regular' ? 'cal-day--regular' : 'cal-day--special') : '',
                 day?.isToday ? 'cal-day--today' : '',
+                !day ? 'cal-day--blank' : '',
               ]"
-              :title="day?.holiday?.name ?? ''"
-            >{{ day?.num ?? '' }}</span>
+              :disabled="!day"
+              @click="day && onDayClick(day)"
+            >{{ day?.num ?? '' }}</button>
+          </div>
+
+          <!-- Holiday list for this month — always visible, not hidden
+               behind hover/tap-only tooltips (which don't work on mobile). -->
+          <div v-if="m.holidays.length" class="cal-month-list">
+            <button
+              v-for="h in m.holidays" :key="h.id"
+              type="button"
+              class="cal-month-list-item"
+              @click="onDayClick({ holiday: h })"
+            >
+              <span class="cal-month-list-dot" :class="h.type === 'regular' ? 'bg-red-500' : 'bg-amber-500'"></span>
+              <span class="cal-month-list-day">{{ formatDay(h.date) }}</span>
+              <span class="cal-month-list-name">{{ h.name }}</span>
+            </button>
           </div>
         </div>
       </div>
@@ -254,6 +272,50 @@
       </div>
     </Teleport>
 
+    <!-- Day detail popover (view/edit/add from the calendar) -->
+    <Teleport to="body">
+      <div v-if="dayPopover" class="fixed inset-0 z-50 flex items-center justify-center p-4">
+        <div class="absolute inset-0 bg-black/40 backdrop-blur-sm" @click="dayPopover = null"></div>
+        <div class="relative bg-white rounded-2xl shadow-2xl w-full max-w-sm p-5">
+          <template v-if="dayPopover.holiday">
+            <div class="flex items-center gap-3 mb-3">
+              <span class="w-3 h-3 rounded-full flex-shrink-0" :class="dayPopover.holiday.type === 'regular' ? 'bg-red-500' : 'bg-amber-500'"></span>
+              <div>
+                <p class="text-sm font-semibold text-[#0F172A]">{{ dayPopover.holiday.name }}</p>
+                <p class="text-xs text-[#6B7A94]">{{ formatFullDate(dayPopover.holiday.date) }} — {{ dayPopover.holiday.type === 'regular' ? 'Regular Holiday' : 'Special Holiday' }}</p>
+              </div>
+            </div>
+            <div v-if="canManage" class="flex gap-2 pt-2">
+              <button @click="dayPopover = null; openEdit(dayPopover.holiday)" class="flex-1 py-2 text-sm font-medium rounded-lg border border-[#E2E8F0] text-[#0F172A] hover:bg-[#F8FAFC] transition-colors">
+                Edit
+              </button>
+              <button @click="confirmDelete(dayPopover.holiday); dayPopover = null" class="flex-1 py-2 text-sm font-medium rounded-lg bg-red-50 text-red-600 hover:bg-red-100 transition-colors">
+                Delete
+              </button>
+            </div>
+            <button v-else @click="dayPopover = null" class="w-full mt-2 py-2 text-sm font-medium rounded-lg border border-[#E2E8F0] text-[#0F172A] hover:bg-[#F8FAFC] transition-colors">
+              Close
+            </button>
+          </template>
+          <template v-else>
+            <p class="text-sm font-semibold text-[#0F172A] mb-1">{{ formatFullDate(dayPopover.date) }}</p>
+            <p class="text-xs text-[#6B7A94] mb-3">Not a holiday.</p>
+            <div v-if="canManage" class="flex gap-2">
+              <button @click="dayPopover = null" class="flex-1 py-2 text-sm font-medium rounded-lg border border-[#E2E8F0] text-[#0F172A] hover:bg-[#F8FAFC] transition-colors">
+                Cancel
+              </button>
+              <button @click="openAddOnDate(dayPopover.date)" class="flex-1 py-2 text-sm font-medium rounded-lg text-white bg-[#2E4A8C] hover:bg-[#3D5CA3] transition-colors">
+                Add Holiday
+              </button>
+            </div>
+            <button v-else @click="dayPopover = null" class="w-full py-2 text-sm font-medium rounded-lg border border-[#E2E8F0] text-[#0F172A] hover:bg-[#F8FAFC] transition-colors">
+              Close
+            </button>
+          </template>
+        </div>
+      </div>
+    </Teleport>
+
     <!-- Delete confirmation -->
     <Teleport to="body">
       <div v-if="delTarget" class="fixed inset-0 z-50 flex items-center justify-center p-4">
@@ -343,17 +405,36 @@ const monthGrids = computed(() => {
     for (let i = 0; i < leadBlanks; i++) days.push(null);
     for (let d = 1; d <= daysInMonth; d++) {
       const iso = `${year.value}-${String(month + 1).padStart(2, '0')}-${String(d).padStart(2, '0')}`;
-      days.push({ num: d, holiday: byDate[iso] ?? null, isToday: iso === todayStr });
+      days.push({ date: iso, num: d, holiday: byDate[iso] ?? null, isToday: iso === todayStr });
     }
+
+    const monthHolidays = holidays.value
+      .filter(h => h.date.slice(5, 7) === String(month + 1).padStart(2, '0'))
+      .slice()
+      .sort((a, b) => a.date.localeCompare(b.date));
 
     months.push({
       month,
       name: firstOfMonth.toLocaleDateString('en-PH', { month: 'long' }),
       days,
+      holidays: monthHolidays,
     });
   }
   return months;
 });
+
+const dayPopover = ref(null);
+
+function onDayClick(day) {
+  dayPopover.value = day;
+}
+
+function openAddOnDate(date) {
+  dayPopover.value = null;
+  form.value = { name: '', date, type: 'regular' };
+  modal.value = { open: true, editing: null, saving: false, error: '' };
+  unsavedGuard.snapshot(form.value);
+}
 
 async function autofillHolidays() {
   autofilling.value = true;
@@ -482,10 +563,33 @@ onMounted(load);
 .cal-day {
   aspect-ratio: 1; display: flex; align-items: center; justify-content: center;
   font-size: 11px; color: #475569; border-radius: 6px;
+  border: none; background: transparent; font-family: inherit; cursor: pointer;
+  transition: transform 0.1s ease, background 0.15s ease;
 }
+.cal-day:hover:not(:disabled) { background: #F1F5F9; }
+.cal-day:active:not(:disabled) { transform: scale(0.92); }
+.cal-day:disabled { cursor: default; }
+.cal-day--blank { visibility: hidden; }
 .cal-day--today    { box-shadow: inset 0 0 0 1.5px #2E4A8C; font-weight: 700; color: #2E4A8C; }
 .cal-day--regular  { background: rgba(239,68,68,0.14); color: #DC2626; font-weight: 700; }
 .cal-day--special  { background: rgba(245,158,11,0.16); color: #B45309; font-weight: 700; }
+.cal-day--regular:hover  { background: rgba(239,68,68,0.24); }
+.cal-day--special:hover  { background: rgba(245,158,11,0.26); }
+
+/* ── Per-month holiday list — always visible, no hover/tap-only info ── */
+.cal-month-list {
+  margin-top: 10px; padding-top: 8px; border-top: 1px solid #F1F5F9;
+  display: flex; flex-direction: column; gap: 3px;
+}
+.cal-month-list-item {
+  display: flex; align-items: center; gap: 6px; padding: 3px 4px;
+  border: none; background: transparent; border-radius: 6px; text-align: left;
+  font-family: inherit; cursor: pointer; transition: background 0.15s ease;
+}
+.cal-month-list-item:hover { background: #F8FAFC; }
+.cal-month-list-dot { width: 7px; height: 7px; border-radius: 999px; flex-shrink: 0; }
+.cal-month-list-day { font-size: 10.5px; font-weight: 700; color: #64748B; font-variant-numeric: tabular-nums; width: 16px; flex-shrink: 0; }
+.cal-month-list-name { font-size: 11px; color: #374151; line-height: 1.3; }
 
 .modal-label {
   display: block; font-size: 13px; font-weight: 600; color: #1E293B; margin-bottom: 5px;
