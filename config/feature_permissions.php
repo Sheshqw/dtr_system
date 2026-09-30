@@ -38,7 +38,7 @@ return [
         'hr_officer' => [
             'dtr_records.view_all' => true,
             'dtr_generation.export' => true,
-            'shift_management'      => false,
+            'shift_management'      => true,
             'holiday_calendar'      => true,
             'system_health'         => false,
             'tracking_analytics'    => true,

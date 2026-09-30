@@ -527,13 +527,13 @@ const visibleNavItems = computed(() =>
 );
 
 const hrItems = [
+  { name: 'shifts',    label: 'Shifts',      to: { name: 'shifts'    }, icon: TimerIcon       },
   { name: 'holidays',  label: 'Holidays',    to: { name: 'holidays'  }, icon: CalendarIcon    },
   { name: 'audit',     label: 'Audit Trail', to: { name: 'audit'     }, icon: ShieldCheckIcon },
   { name: 'biometric', label: 'Biometric',   to: { name: 'biometric' }, icon: WifiIcon        },
 ];
 
 const adminOnlyItems = [
-  { name: 'shifts',      label: 'Shifts',      to: { name: 'shifts'      }, icon: TimerIcon     },
   { name: 'departments', label: 'Departments', to: { name: 'departments' }, icon: Building2Icon },
   { name: 'backup',      label: 'Backup',      to: { name: 'backup'      }, icon: DatabaseIcon  },
   { name: 'settings',    label: 'Settings',    to: { name: 'settings'    }, icon: SettingsIcon  },
