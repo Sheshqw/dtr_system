@@ -103,7 +103,7 @@
                 </div>
                 <LockIcon class="w-4 h-4 text-[#2E4A8C] flex-shrink-0" />
               </div>
-              <p class="text-xs text-[#6B7A94] -mt-1">You can only generate and print your own DTR. Contact HR or Admin to access other records.</p>
+              <p class="text-xs text-[#6B7A94] -mt-1">You can preview your own DTR here. Printed or downloaded copies must be requested from HR or Admin.</p>
             </template>
 
             <!-- Month / Year -->
@@ -133,24 +133,26 @@
                 <EyeIcon v-else class="w-4 h-4" />
                 Preview DTR
               </button>
-              <button
-                @click="download"
-                :disabled="!effectiveEmployee || downloading"
-                class="btn-outline inline-flex items-center gap-2"
-              >
-                <Loader2Icon v-if="downloading" class="w-4 h-4 animate-spin" />
-                <DownloadIcon v-else class="w-4 h-4" />
-                Download PDF
-              </button>
-              <button
-                @click="exportCsv"
-                :disabled="!effectiveEmployee || exportingCsv"
-                class="btn-outline inline-flex items-center gap-2"
-              >
-                <Loader2Icon v-if="exportingCsv" class="w-4 h-4 animate-spin" />
-                <TableIcon v-else class="w-4 h-4" />
-                Export CSV
-              </button>
+              <template v-if="canSelectEmployee">
+                <button
+                  @click="download"
+                  :disabled="!effectiveEmployee || downloading"
+                  class="btn-outline inline-flex items-center gap-2"
+                >
+                  <Loader2Icon v-if="downloading" class="w-4 h-4 animate-spin" />
+                  <DownloadIcon v-else class="w-4 h-4" />
+                  Download PDF
+                </button>
+                <button
+                  @click="exportCsv"
+                  :disabled="!effectiveEmployee || exportingCsv"
+                  class="btn-outline inline-flex items-center gap-2"
+                >
+                  <Loader2Icon v-if="exportingCsv" class="w-4 h-4 animate-spin" />
+                  <TableIcon v-else class="w-4 h-4" />
+                  Export CSV
+                </button>
+              </template>
             </div>
           </div>
         </div>
@@ -472,7 +474,7 @@
               <CheckCircle2Icon class="w-3.5 h-3.5" />
               {{ previewData.totals.days_present }} days present out of {{ workdayCount }} workdays
             </span>
-            <div class="af-actions">
+            <div v-if="canSelectEmployee" class="af-actions">
               <button @click="printDtr" :disabled="printing" class="btn-outline inline-flex items-center gap-2 disabled:opacity-60">
                 <Loader2Icon v-if="printing" class="w-4 h-4 animate-spin" />
                 <PrinterIcon v-else class="w-4 h-4" />
@@ -489,6 +491,10 @@
                 Download CSC Form 48
               </button>
             </div>
+            <span v-else class="af-note">
+              <LockIcon class="w-3.5 h-3.5" />
+              Preview only — ask HR or Admin for a printed or downloaded copy.
+            </span>
           </div>
 
         </div>
@@ -686,7 +692,7 @@ async function loadPreview() {
 }
 
 async function download() {
-  if (!effectiveEmployee.value) return;
+  if (!effectiveEmployee.value || !canSelectEmployee.value) return;
   downloading.value = true;
   try {
     const res = await axios.get(`/api/reports/form48/${effectiveEmployee.value.id}`, {
@@ -715,7 +721,7 @@ async function download() {
 }
 
 async function exportCsv() {
-  if (!effectiveEmployee.value) return;
+  if (!effectiveEmployee.value || !canSelectEmployee.value) return;
   exportingCsv.value = true;
   try {
     const res = await axios.get(`/api/reports/export/${effectiveEmployee.value.id}`, {
@@ -772,7 +778,7 @@ async function exportBulk() {
 
 // ── Print DTR ─────────────────────────────────────────────────────
 function printDtr() {
-  if (!previewData.value || printing.value) return;
+  if (!previewData.value || printing.value || !canSelectEmployee.value) return;
   printing.value = true;
 
   const d  = previewData.value;

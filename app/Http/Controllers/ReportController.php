@@ -24,6 +24,9 @@ class ReportController extends Controller
         $year  = (int) $request->year;
 
         $this->authorizeView($request->user(), $employee);
+        if (! $this->isPrivileged($request)) {
+            abort(403, 'You can preview your DTR here. Printed or downloaded copies must be requested from HR or Admin.');
+        }
 
         $employee->loadMissing('department', 'shift', 'campus');
 
@@ -114,6 +117,9 @@ class ReportController extends Controller
         $year  = (int) $request->year;
 
         $this->authorizeView($request->user(), $employee);
+        if (! $this->isPrivileged($request)) {
+            abort(403, 'You can preview your DTR here. Printed or downloaded copies must be requested from HR or Admin.');
+        }
         $employee->loadMissing('department', 'shift', 'campus');
 
         $records = DailyDtr::where('employee_id', $employee->id)
