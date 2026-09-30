@@ -576,9 +576,11 @@
                     <select v-model="form.employment_status" class="form-input">
                       <option value="">— Select —</option>
                       <option value="permanent">Permanent</option>
-                      <option value="casual">Casual</option>
-                      <option value="contractual">Contractual</option>
+                      <option value="job_order">Job Order</option>
+                      <option value="cos">COS (Contract of Service)</option>
                       <option value="part-time">Part-time</option>
+                      <option value="sa">Student Assistant (SA)</option>
+                      <option value="ojt">OJT (On-the-Job Trainee)</option>
                     </select>
                   </div>
                   <div>
