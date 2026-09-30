@@ -341,32 +341,32 @@
         </div>
 
         <!-- ── Preview panel ──────────────────────────────────────────── -->
-        <div v-if="previewData" class="bg-white border border-[#E2E8F0] rounded-xl shadow-[0_1px_4px_rgba(0,0,0,0.08)] overflow-hidden">
+        <div v-if="previewData" class="bg-white border border-[#E2E8F0] rounded-xl shadow-[0_1px_4px_rgba(0,0,0,0.08)] overflow-hidden doc-preview">
 
-          <!-- Preview header -->
-          <div class="preview-head">
-            <div class="preview-head-inner">
-              <div class="ph-brand">
-                <div class="ph-initials">{{ initials(previewData.employee.name) }}</div>
-                <div>
-                  <h3 class="ph-name">{{ previewData.employee.name }}</h3>
-                  <p class="ph-meta">
-                    {{ previewData.employee.employee_id ?? '—' }}
-                    <span class="ph-dot">·</span>
-                    {{ previewData.employee.position ?? '—' }}
-                    <span class="ph-dot">·</span>
-                    {{ previewData.employee.department ?? '—' }}
-                  </p>
-                </div>
-              </div>
-              <div class="ph-right">
-                <div class="ph-period">{{ previewData.month_label }}</div>
-                <div class="ph-campus">{{ previewData.employee.campus ?? 'NEMSU' }}</div>
-              </div>
-            </div>
-            <button @click="previewData = null" class="ph-close" title="Close preview">
-              <XIcon class="w-4 h-4" />
-            </button>
+          <button @click="previewData = null" class="ph-close" title="Close preview">
+            <XIcon class="w-4 h-4" />
+          </button>
+
+          <!-- Government letterhead — mirrors the official CSC Form 48 -->
+          <div class="doc-letterhead">
+            <div class="dl-republic">Republic of the Philippines</div>
+            <div class="dl-uni">Northern Eastern Mindanao State University</div>
+            <div class="dl-campus">{{ previewData.employee.campus ?? 'NEMSU' }} · Human Resources Management Office</div>
+            <div class="dl-badge">CSC Form 48</div>
+          </div>
+
+          <!-- Title bar -->
+          <div class="doc-title-bar">
+            <h3>Daily Time Record</h3>
+            <p>Period: {{ previewData.month_label }} &nbsp;·&nbsp; Official Hours of Work</p>
+          </div>
+
+          <!-- Employee info -->
+          <div class="doc-emp-grid">
+            <div class="def-item"><span class="def-label">Employee Name</span><span class="def-val">{{ previewData.employee.name }}</span></div>
+            <div class="def-item"><span class="def-label">Employee ID</span><span class="def-val">{{ previewData.employee.employee_id ?? '—' }}</span></div>
+            <div class="def-item"><span class="def-label">Position</span><span class="def-val">{{ previewData.employee.position ?? '—' }}</span></div>
+            <div class="def-item"><span class="def-label">Department</span><span class="def-val">{{ previewData.employee.department ?? '—' }}</span></div>
           </div>
 
           <!-- Summary stats -->
@@ -466,6 +466,12 @@
               <span class="tf-label">Total Overtime</span>
               <span class="tf-val tf-indigo">{{ previewData.totals.overtime_minutes }} min</span>
             </div>
+          </div>
+
+          <!-- Certification -->
+          <div class="doc-certif">
+            <strong>I CERTIFY</strong> on my honor that the above is a true and correct report of the hours of work
+            performed, record of which was made daily at the time of arrival at and departure from office.
           </div>
 
           <!-- Action footer -->
@@ -1146,32 +1152,49 @@ onMounted(async () => {
 .btn-outline  { @apply px-4 py-2 text-sm font-medium border border-[#E2E8F0] rounded-lg text-[#374151] hover:bg-[#F0F4FF] transition-colors disabled:opacity-60; }
 .bulk-label  { @apply block text-xs font-semibold text-[#374151] mb-1.5 uppercase tracking-wide; }
 
-/* ── Preview header ────────────────────────────────── */
-.preview-head {
-  display: flex;
-  align-items: flex-start;
-  justify-content: space-between;
-  padding: 16px 20px;
+/* ── Document-style letterhead — mirrors the printed CSC Form 48 ─── */
+.doc-preview { position: relative; }
+.ph-close {
+  position: absolute; top: 14px; right: 14px; z-index: 2;
+  color: #94A3B8; padding: 5px; border-radius: 6px; transition: all 0.15s; background: #fff;
+}
+.ph-close:hover { color: #0F172A; background: #F1F5F9; }
+
+.doc-letterhead {
+  text-align: center;
+  padding: 18px 44px 14px;
+  border-bottom: 2px solid #24356F;
+  background: #FAFBFD;
+  position: relative;
+}
+.dl-republic { font-size: 11px; color: #64748B; letter-spacing: 0.03em; }
+.dl-uni { font-size: 17px; font-weight: 800; color: #1B2A5E; letter-spacing: 0.01em; margin-top: 2px; }
+.dl-campus { font-size: 11px; color: #64748B; margin-top: 3px; }
+.dl-badge {
+  position: absolute; top: 16px; right: 44px;
+  font-size: 10px; font-weight: 700; letter-spacing: 0.04em;
+  color: #C9A227; border: 1px solid #C9A227; border-radius: 5px; padding: 3px 8px;
+}
+
+.doc-title-bar {
+  text-align: center;
+  padding: 12px 20px 10px;
   border-bottom: 1px solid #F4F6FB;
-  background: linear-gradient(135deg, #1B2A5E 0%, #2E4A8C 100%);
-  gap: 12px;
 }
-.preview-head-inner { display: flex; align-items: center; justify-content: space-between; flex: 1; gap: 16px; flex-wrap: wrap; }
-.ph-brand    { display: flex; align-items: center; gap: 12px; }
-.ph-initials {
-  width: 44px; height: 44px; border-radius: 10px;
-  background: rgba(201, 162, 39,0.2); border: 1.5px solid rgba(201, 162, 39,0.5);
-  color: #C9A227; font-size: 14px; font-weight: 800;
-  display: flex; align-items: center; justify-content: center; flex-shrink: 0;
+.doc-title-bar h3 { font-size: 16px; font-weight: 700; color: #0F172A; letter-spacing: 0.02em; }
+.doc-title-bar p  { font-size: 11.5px; color: #6B7A94; margin-top: 2px; }
+
+.doc-emp-grid {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 8px 28px;
+  padding: 14px 20px;
+  border-bottom: 1px solid #F4F6FB;
+  background: #F8FAFC;
 }
-.ph-name { font-size: 15px; font-weight: 700; color: #fff; line-height: 1.2; }
-.ph-meta { font-size: 11px; color: rgba(255,255,255,0.5); margin-top: 2px; }
-.ph-dot  { margin: 0 4px; }
-.ph-right { text-align: right; }
-.ph-period { font-size: 13px; font-weight: 700; color: #C9A227; }
-.ph-campus { font-size: 10px; color: rgba(255,255,255,0.4); margin-top: 2px; letter-spacing: 0.05em; text-transform: uppercase; }
-.ph-close  { color: rgba(255,255,255,0.4); padding: 4px; border-radius: 6px; transition: all 0.15s; background: transparent; flex-shrink: 0; }
-.ph-close:hover { color: #fff; background: rgba(255,255,255,0.1); }
+.def-item { display: flex; align-items: baseline; gap: 8px; min-width: 0; }
+.def-label { font-size: 10px; font-weight: 700; text-transform: uppercase; letter-spacing: 0.06em; color: #6B7A94; width: 100px; flex-shrink: 0; }
+.def-val   { font-size: 13px; font-weight: 600; color: #0F172A; border-bottom: 1px solid #DDE4EE; flex: 1; padding-bottom: 2px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
 
 /* ── Summary stat strip ──────────────────────────── */
 .stat-strip {
@@ -1216,17 +1239,16 @@ onMounted(async () => {
   font-weight: 700;
   text-transform: uppercase;
   letter-spacing: 0.08em;
-  color: #64748B;
-  background: #F4F7FC;
-  border-bottom: 1px solid #E2E8F0;
+  color: #fff;
+  background: #24356F;
+  border: 1px solid #0A1550;
   text-align: center;
   white-space: nowrap;
 }
-.dtr-th-day { text-align: left; width: 72px; }
+.dtr-th-day { text-align: left; width: 72px; padding-left: 14px; }
 
-.dtr-row { border-bottom: 1px solid #F1F5F9; transition: background 0.1s; }
+.dtr-row { transition: background 0.1s; }
 .dtr-row:hover { filter: brightness(0.97); }
-.dtr-row:last-child { border-bottom: none; }
 
 .dtr-row--weekend { background: #F8FAFC; }
 .dtr-row--present { background: #fff; }
@@ -1235,8 +1257,8 @@ onMounted(async () => {
 .dtr-row--holiday { background: #F0F9FF; }
 .dtr-row--leave   { background: #EEF2FF; }
 
-.dtr-td { padding: 7px 10px; text-align: center; vertical-align: middle; }
-.dtr-td-day  { display: flex; align-items: center; gap: 6px; text-align: left; }
+.dtr-td { padding: 7px 10px; text-align: center; vertical-align: middle; border: 0.5px solid #E2E8F0; }
+.dtr-td-day  { display: flex; align-items: center; gap: 6px; text-align: left; padding-left: 14px; }
 .dtr-td-time { font-family: 'Courier New', monospace; font-size: 11px; color: #475569; }
 .dtr-td-mono { font-family: 'Courier New', monospace; font-size: 11px; }
 
@@ -1291,6 +1313,19 @@ onMounted(async () => {
 .af-note svg { color: #15803D; flex-shrink: 0; }
 .af-actions { display: flex; align-items: center; gap: 8px; flex-wrap: wrap; }
 
+/* ── Certification ────────────────────────────────── */
+.doc-certif {
+  font-size: 12px;
+  line-height: 1.6;
+  font-style: italic;
+  color: #374151;
+  text-align: justify;
+  padding: 12px 20px;
+  background: #FAFAFA;
+  border-top: 1px solid #F4F6FB;
+  border-left: 3px solid #C9A227;
+}
+
 /* ── Responsive ──────────────────────────────────── */
 @media (max-width: 900px) {
   .stat-strip { grid-template-columns: repeat(3, 1fr); }
@@ -1302,6 +1337,13 @@ onMounted(async () => {
   .totals-footer { flex-direction: column; align-items: flex-start; }
   .tf-sep { display: none; }
   .action-footer { flex-direction: column; align-items: flex-start; gap: 8px; }
+
+  /* Letterhead: give the CSC badge room instead of overlapping the title */
+  .doc-letterhead { padding: 16px 56px 12px; }
+  .dl-badge { position: static; display: inline-block; margin-top: 8px; }
+  .dl-uni { font-size: 15px; }
+  .doc-emp-grid { grid-template-columns: 1fr; }
+  .def-label { width: 88px; }
 
   /* Filter panel: stack vertically */
   .report-filters { flex-direction: column !important; align-items: stretch !important; gap: 8px; padding: 12px; }
