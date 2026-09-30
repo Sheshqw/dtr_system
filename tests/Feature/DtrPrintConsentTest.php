@@ -3,8 +3,11 @@
 use App\Models\Campus;
 use App\Models\DtrPrintConsent;
 use App\Models\User;
+use Illuminate\Http\UploadedFile;
+use Illuminate\Support\Facades\Storage;
 
 beforeEach(function () {
+    Storage::fake('public');
     $this->campusA = Campus::factory()->create(['code' => 'CAN']);
     $this->campusB = Campus::factory()->create(['code' => 'TAN']);
     $this->month   = (int) now()->format('n');
@@ -114,4 +117,26 @@ test('an admin can approve a print request from their own campus, letting the em
     $this->actingAs($employee, 'sanctum')
         ->get("/api/reports/form48/{$employee->id}?month={$this->month}&year={$this->year}")
         ->assertStatus(200);
+});
+
+test('a download renders fine when the approving reviewer has a signature on file', function () {
+    $hr       = User::factory()->hrOfficer()->create(['campus_id' => $this->campusA->id]);
+    $employee = User::factory()->create(['campus_id' => $this->campusA->id]);
+
+    $signaturePath = UploadedFile::fake()->image('sig.png', 200, 80)->store('signatures', 'public');
+    $hr->update(['signature_path' => $signaturePath, 'signature_enabled' => true]);
+
+    DtrPrintConsent::create([
+        'employee_id' => $employee->id,
+        'month'       => $this->month,
+        'year'        => $this->year,
+        'status'      => 'approved',
+        'reviewed_by' => $hr->id,
+        'reviewed_at' => now(),
+    ]);
+
+    $this->actingAs($employee, 'sanctum')
+        ->get("/api/reports/form48/{$employee->id}?month={$this->month}&year={$this->year}")
+        ->assertStatus(200)
+        ->assertHeader('content-type', 'application/pdf');
 });

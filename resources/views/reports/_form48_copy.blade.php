@@ -141,12 +141,24 @@
       <div class="sig-label" style="font-size:6.5pt; text-align:left; margin-bottom:2pt;">
         Verified as to the prescribed office hours:
       </div>
-      <div class="sig-space"></div>
-      <div class="sig-over"></div>
-      @if(!empty($director['name']))
-        <div class="sig-name">{{ $director['name'] }}</div>
+      @if(!empty($signingReviewer) && $signingReviewer->signature_enabled && $signingReviewer->signature_path)
+        <img
+          src="{{ \Illuminate\Support\Facades\Storage::disk('public')->path($signingReviewer->signature_path) }}"
+          style="height:16pt; max-width:90%; margin:1pt auto 0; display:block;"
+        />
+        <div class="sig-over"></div>
+        <div class="sig-name">{{ strtoupper($signingReviewer->full_name) }}</div>
+        <div class="sig-sub" style="font-weight:bold; text-transform:uppercase;">
+          {{ $signingReviewer->position ?: ucwords(str_replace('_', ' ', $signingReviewer->role)) }}
+        </div>
+      @else
+        <div class="sig-space"></div>
+        <div class="sig-over"></div>
+        @if(!empty($director['name']))
+          <div class="sig-name">{{ $director['name'] }}</div>
+        @endif
+        <div class="sig-sub" style="font-weight:bold; text-transform:uppercase;">{{ $director['title'] }}</div>
       @endif
-      <div class="sig-sub" style="font-weight:bold; text-transform:uppercase;">{{ $director['title'] }}</div>
     </td>
   </tr>
 </table>

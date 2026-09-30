@@ -256,24 +256,79 @@
             </span>
           </div>
 
-          <div class="bg-white px-6 py-5 space-y-3">
+          <div class="bg-white px-6 py-5 space-y-4">
+
+            <!-- My Digital Signature ─────────────────────────────────── -->
+            <div class="flex items-center justify-between gap-3 px-4 py-3 rounded-lg border border-[#E2E8F0] flex-wrap" style="background:#FAFBFD;">
+              <div class="flex items-center gap-3 min-w-0">
+                <div class="w-11 h-11 rounded-lg border border-[#E2E8F0] bg-white flex items-center justify-center flex-shrink-0 overflow-hidden">
+                  <img v-if="mySignatureUrl" :src="mySignatureUrl" class="max-w-full max-h-full object-contain" alt="Your signature" />
+                  <PenLineIcon v-else class="w-5 h-5 text-[#94A3B8]" />
+                </div>
+                <div class="min-w-0">
+                  <p class="text-sm font-semibold text-[#0F172A]">My Digital Signature</p>
+                  <p class="text-xs text-[#6B7A94]">
+                    <span v-if="!mySignatureUrl">Upload one to sign DTRs you approve</span>
+                    <span v-else-if="mySignatureEnabled">Shown on DTRs you approve for download</span>
+                    <span v-else>Uploaded, but hidden from downloaded DTRs</span>
+                  </p>
+                </div>
+              </div>
+              <div class="flex items-center gap-3 flex-shrink-0">
+                <label v-if="mySignatureUrl" class="inline-flex items-center gap-2 cursor-pointer select-none">
+                  <span class="text-xs font-medium text-[#475569]">{{ mySignatureEnabled ? 'Included' : 'Hidden' }}</span>
+                  <span
+                    class="relative inline-block w-9 h-5 rounded-full transition-colors"
+                    :style="{ background: mySignatureEnabled ? '#15803D' : '#CBD5E1', opacity: togglingSignature ? 0.6 : 1 }"
+                    @click="!togglingSignature && toggleSignature(!mySignatureEnabled)"
+                  >
+                    <span
+                      class="absolute top-0.5 left-0.5 w-4 h-4 rounded-full bg-white transition-transform"
+                      :style="{ transform: mySignatureEnabled ? 'translateX(16px)' : 'translateX(0)' }"
+                    ></span>
+                  </span>
+                </label>
+                <label class="btn-outline text-xs cursor-pointer inline-flex items-center gap-1.5 !py-1.5">
+                  <Loader2Icon v-if="uploadingSignature" class="w-3.5 h-3.5 animate-spin" />
+                  <UploadIcon v-else class="w-3.5 h-3.5" />
+                  {{ mySignatureUrl ? 'Replace' : 'Upload' }}
+                  <input type="file" accept="image/png,image/jpeg,image/webp" class="hidden" :disabled="uploadingSignature" @change="onSignatureSelected" />
+                </label>
+                <button v-if="mySignatureUrl" @click="removeSignature" :disabled="uploadingSignature" class="text-xs text-[#B91C1C] hover:underline">Remove</button>
+              </div>
+            </div>
+
+            <!-- Pending queue ──────────────────────────────────────────── -->
             <p v-if="!pendingConsents.length" class="text-sm text-[#6B7A94]">No pending print requests.</p>
 
-            <div v-for="c in pendingConsents" :key="c.id" class="flex items-start justify-between gap-3 px-4 py-3 rounded-lg border border-[#E2E8F0]">
-              <div class="min-w-0">
-                <p class="text-sm font-semibold text-[#0F172A]">{{ c.employee.name }} <span class="text-xs font-normal text-[#6B7A94]">· {{ c.employee.employee_id }}</span></p>
-                <p class="text-xs text-[#6B7A94] mt-0.5">{{ c.month_label }} · submitted {{ c.submitted_at }}</p>
-                <p v-if="c.purpose" class="text-xs text-[#475569] mt-1 italic">“{{ c.purpose }}”</p>
+            <div
+              v-for="c in pendingConsents" :key="c.id"
+              class="flex items-start justify-between gap-3 px-4 py-3 rounded-lg border border-[#E2E8F0] hover:border-[#C7D2F6] transition-colors flex-wrap"
+            >
+              <div class="flex items-start gap-3 min-w-0">
+                <div class="w-9 h-9 rounded-full bg-gradient-to-br from-[#2E4A8C] to-[#3D5CA3] flex items-center justify-center flex-shrink-0">
+                  <span class="text-white text-xs font-semibold">{{ initials(c.employee.name) }}</span>
+                </div>
+                <div class="min-w-0">
+                  <p class="text-sm font-semibold text-[#0F172A] truncate">{{ c.employee.name }}</p>
+                  <p class="text-xs text-[#6B7A94] mt-0.5">
+                    {{ c.employee.employee_id }}<span v-if="c.employee.position"> · {{ c.employee.position }}</span><span v-if="c.employee.department"> · {{ c.employee.department }}</span>
+                  </p>
+                  <p class="text-xs text-[#6B7A94] mt-1">
+                    {{ c.month_label }}<span v-if="isSuperAdmin && c.employee.campus"> · {{ c.employee.campus }}</span> · submitted {{ c.submitted_at }}
+                  </p>
+                  <p v-if="c.purpose" class="text-xs text-[#475569] mt-1 italic">“{{ c.purpose }}”</p>
 
-                <div v-if="denyingId === c.id" class="mt-2 flex items-center gap-2">
-                  <input v-model="denyRemarks" maxlength="500" class="form-input" placeholder="Reason for denial (optional)" />
-                  <button
-                    @click="denyConsent(c)"
-                    :disabled="reviewingId === c.id"
-                    class="px-3 py-1.5 text-xs font-semibold rounded-lg transition-colors whitespace-nowrap disabled:opacity-60"
-                    style="background:#FEF2F2;color:#991B1B;border:1px solid #FECACA;"
-                  >Confirm Deny</button>
-                  <button @click="denyingId = null" class="text-xs text-[#6B7A94] hover:text-[#0F172A]">Cancel</button>
+                  <div v-if="denyingId === c.id" class="mt-2 flex items-center gap-2 flex-wrap">
+                    <input v-model="denyRemarks" maxlength="500" class="form-input" placeholder="Reason for denial (optional)" />
+                    <button
+                      @click="denyConsent(c)"
+                      :disabled="reviewingId === c.id"
+                      class="px-3 py-1.5 text-xs font-semibold rounded-lg transition-colors whitespace-nowrap disabled:opacity-60"
+                      style="background:#FEF2F2;color:#991B1B;border:1px solid #FECACA;"
+                    >Confirm Deny</button>
+                    <button @click="denyingId = null" class="text-xs text-[#6B7A94] hover:text-[#0F172A]">Cancel</button>
+                  </div>
                 </div>
               </div>
 
@@ -298,6 +353,37 @@
                 </button>
               </div>
             </div>
+
+            <!-- Recent decisions (collapsed by default) ─────────────────── -->
+            <template v-if="recentConsentDecisions.length">
+              <button
+                @click="showConsentHistory = !showConsentHistory"
+                class="text-xs font-semibold text-[#2E4A8C] hover:underline pt-1"
+              >
+                {{ showConsentHistory ? 'Hide' : 'Show' }} recent decisions ({{ recentConsentDecisions.length }})
+              </button>
+              <div v-if="showConsentHistory" class="space-y-1.5 pt-1 border-t border-[#F1F5F9]">
+                <div
+                  v-for="c in recentConsentDecisions" :key="c.id"
+                  class="flex items-center justify-between gap-3 px-3 py-2 rounded-lg"
+                  style="background:#FAFBFD;"
+                >
+                  <div class="flex items-center gap-2 min-w-0">
+                    <div class="w-7 h-7 rounded-full bg-gradient-to-br from-[#2E4A8C] to-[#3D5CA3] flex items-center justify-center flex-shrink-0">
+                      <span class="text-white text-[10px] font-semibold">{{ initials(c.employee.name) }}</span>
+                    </div>
+                    <p class="text-xs text-[#0F172A] truncate">
+                      <span class="font-semibold">{{ c.employee.name }}</span>
+                      <span class="text-[#6B7A94]"> · {{ c.month_label }}</span>
+                    </p>
+                  </div>
+                  <span
+                    class="text-[10px] font-bold uppercase tracking-wide rounded-full px-2 py-0.5 flex-shrink-0"
+                    :style="c.status === 'approved' ? 'background:#ECFDF5;color:#065F46;' : 'background:#FEF2F2;color:#991B1B;'"
+                  >{{ c.status }}</span>
+                </div>
+              </div>
+            </template>
           </div>
         </div>
 
@@ -692,6 +778,8 @@ import {
   Send          as SendIcon,
   XCircle       as XCircleIcon,
   ShieldCheck   as ShieldCheckIcon,
+  PenLine       as PenLineIcon,
+  Upload        as UploadIcon,
 } from 'lucide-vue-next';
 
 const auth = useAuthStore();
@@ -734,7 +822,8 @@ const departments    = ref([]);
 
 // ── DTR Print Consent (employees need HR/Admin sign-off to download) ──
 const myConsents       = ref([]);   // employee's own requests, newest first
-const pendingConsents  = ref([]);   // HR/Admin: campus-scoped pending queue
+const consentQueue     = ref([]);   // HR/Admin: campus-scoped requests (all statuses)
+const showConsentHistory = ref(false);
 const consentPurpose   = ref('');
 const requestingConsent = ref(false);
 const reviewingId = ref(null);
@@ -755,6 +844,18 @@ const canDownloadOwn = computed(() =>
   currentPeriodConsent.value?.status === 'approved' &&
   !currentPeriodConsent.value?.used_at
 );
+
+const pendingConsents = computed(() => consentQueue.value.filter(c => c.status === 'pending'));
+const recentConsentDecisions = computed(() =>
+  consentQueue.value.filter(c => c.status !== 'pending').slice(0, 5)
+);
+
+// ── Reviewer's own digital signature ───────────────────────────────
+const mySignatureUrl     = ref(null);
+const mySignatureEnabled = ref(false);
+const signatureFile      = ref(null);
+const uploadingSignature = ref(false);
+const togglingSignature  = ref(false);
 
 
 const bulkEmployeeCount = computed(() => {
@@ -971,8 +1072,8 @@ async function fetchMyConsents() {
 
 async function fetchConsentQueue() {
   try {
-    const res = await axios.get('/api/dtr-print-consents', { params: { status: 'pending' } });
-    pendingConsents.value = res.data?.consents ?? [];
+    const res = await axios.get('/api/dtr-print-consents');
+    consentQueue.value = res.data?.consents ?? [];
   } catch { /* ignore */ }
 }
 
@@ -1021,6 +1122,66 @@ async function denyConsent(c) {
     toast(await extractErrorMessage(err, 'Failed to deny request.'), 'error');
   } finally {
     reviewingId.value = null;
+  }
+}
+
+// ── Reviewer's own digital signature ───────────────────────────────
+async function fetchMySignature() {
+  try {
+    const res = await axios.get('/api/my-signature');
+    mySignatureUrl.value     = res.data?.signature_url ?? null;
+    mySignatureEnabled.value = res.data?.signature_enabled ?? false;
+  } catch { /* ignore */ }
+}
+
+function onSignatureSelected(e) {
+  const file = e.target.files?.[0];
+  if (file) uploadSignature(file);
+}
+
+async function uploadSignature(file) {
+  uploadingSignature.value = true;
+  try {
+    const form = new FormData();
+    form.append('signature', file);
+    const res = await axios.post('/api/my-signature', form, {
+      headers: { 'Content-Type': 'multipart/form-data' },
+    });
+    mySignatureUrl.value     = res.data?.signature_url ?? null;
+    mySignatureEnabled.value = res.data?.signature_enabled ?? true;
+    toast(res.data?.message ?? 'Signature uploaded.', 'success');
+  } catch (err) {
+    toast(await extractErrorMessage(err, 'Failed to upload signature.'), 'error');
+  } finally {
+    uploadingSignature.value = false;
+    signatureFile.value = null;
+  }
+}
+
+async function toggleSignature(enabled) {
+  togglingSignature.value = true;
+  try {
+    const res = await axios.patch('/api/my-signature', { enabled });
+    mySignatureEnabled.value = res.data?.signature_enabled ?? enabled;
+    toast(res.data?.message ?? 'Preference updated.', 'success');
+  } catch (err) {
+    toast(await extractErrorMessage(err, 'Failed to update preference.'), 'error');
+  } finally {
+    togglingSignature.value = false;
+  }
+}
+
+async function removeSignature() {
+  uploadingSignature.value = true;
+  try {
+    await axios.delete('/api/my-signature');
+    mySignatureUrl.value     = null;
+    mySignatureEnabled.value = false;
+    toast('Signature removed.', 'success');
+  } catch (err) {
+    toast(await extractErrorMessage(err, 'Failed to remove signature.'), 'error');
+  } finally {
+    uploadingSignature.value = false;
   }
 }
 
@@ -1381,7 +1542,7 @@ onMounted(async () => {
     } catch { /* ignore */ } finally {
       loadingEmployees.value = false;
     }
-    await fetchConsentQueue();
+    await Promise.all([fetchConsentQueue(), fetchMySignature()]);
   } else {
     await fetchMyConsents();
   }

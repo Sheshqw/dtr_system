@@ -18,7 +18,9 @@ class DtrPrintConsentController extends Controller
 
         if ($this->isPrivileged($request)) {
             $query = DtrPrintConsent::with([
-                'employee:id,employee_id,first_name,last_name,position,campus_id',
+                'employee:id,employee_id,first_name,last_name,position,department_id,campus_id',
+                'employee.department:id,name',
+                'employee.campus:id,name',
                 'reviewer:id,first_name,last_name',
             ]);
 
@@ -168,6 +170,8 @@ class DtrPrintConsentController extends Controller
                 'name'        => $c->employee->full_name,
                 'employee_id' => $c->employee->employee_id,
                 'position'    => $c->employee->position,
+                'department'  => $c->employee->department?->name,
+                'campus'      => $c->employee->campus?->name,
             ];
         }
 

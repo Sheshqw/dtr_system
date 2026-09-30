@@ -20,6 +20,7 @@ class User extends Authenticatable
         'staff_type', 'contact_number', 'date_of_birth', 'date_hired',
         'gsis_number', 'philhealth_number', 'pagibig_number', 'tin_number',
         'email', 'password', 'role', 'fingerprint_id', 'photo_path',
+        'signature_path', 'signature_enabled',
         'is_active', 'failed_login_attempts', 'locked_until',
     ];
 
@@ -28,11 +29,12 @@ class User extends Authenticatable
     protected function casts(): array
     {
         return [
-            'password'       => 'hashed',
-            'is_active'      => 'boolean',
-            'locked_until'   => 'datetime',
-            'date_of_birth'  => 'date:Y-m-d',
-            'date_hired'     => 'date:Y-m-d',
+            'password'          => 'hashed',
+            'is_active'         => 'boolean',
+            'signature_enabled' => 'boolean',
+            'locked_until'      => 'datetime',
+            'date_of_birth'     => 'date:Y-m-d',
+            'date_hired'        => 'date:Y-m-d',
         ];
     }
 

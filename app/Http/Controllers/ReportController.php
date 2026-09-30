@@ -25,8 +25,10 @@ class ReportController extends Controller
         $year  = (int) $request->year;
 
         $this->authorizeView($request->user(), $employee);
+
+        $signingReviewer = null;
         if (! $this->isPrivileged($request)) {
-            $this->consumeApprovedPrintConsent($employee, $month, $year);
+            $signingReviewer = $this->consumeApprovedPrintConsent($employee, $month, $year);
         }
 
         $employee->loadMissing('department', 'shift', 'campus');
@@ -50,7 +52,7 @@ class ReportController extends Controller
         ];
 
         $pdf = Pdf::loadView('reports.form48', compact(
-            'employee', 'records', 'daysInMonth', 'monthLabel', 'year', 'month', 'totals'
+            'employee', 'records', 'daysInMonth', 'monthLabel', 'year', 'month', 'totals', 'signingReviewer'
         ))->setPaper('a4', 'portrait');
 
         $filename = "DTR_{$employee->employee_id}_{$year}_{$month}.pdf";
@@ -464,10 +466,12 @@ class ReportController extends Controller
      * A non-privileged employee may only download the official PDF once HR/Admin
      * has approved a print request for this exact month/year, and only once per
      * approval — it's consumed here so a second download needs a fresh request.
+     * Returns the reviewer who approved it, so form48() can show their signature.
      */
-    private function consumeApprovedPrintConsent(User $employee, int $month, int $year): void
+    private function consumeApprovedPrintConsent(User $employee, int $month, int $year): ?User
     {
-        $consent = DtrPrintConsent::where('employee_id', $employee->id)
+        $consent = DtrPrintConsent::with('reviewer')
+            ->where('employee_id', $employee->id)
             ->where('month', $month)
             ->where('year', $year)
             ->where('status', 'approved')
@@ -479,6 +483,8 @@ class ReportController extends Controller
         }
 
         $consent->update(['used_at' => now()]);
+
+        return $consent->reviewer;
     }
 
     private function authorizeView(User $viewer, User $target): void

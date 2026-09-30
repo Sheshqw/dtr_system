@@ -190,6 +190,7 @@ $director   = $directors[$campusCode] ?? ['name' => '', 'title' => 'Campus Direc
       'shiftAftOut'    => $shiftAftOut,
       'lateMins'       => $lateMins,
       'director'       => $director,
+      'signingReviewer'=> $signingReviewer ?? null,
     ])
   </td>
   {{-- ══ RIGHT COPY ══ --}}
@@ -203,6 +204,7 @@ $director   = $directors[$campusCode] ?? ['name' => '', 'title' => 'Campus Direc
       'shiftAftOut'    => $shiftAftOut,
       'lateMins'       => $lateMins,
       'director'       => $director,
+      'signingReviewer'=> $signingReviewer ?? null,
     ])
   </td>
 </tr>
