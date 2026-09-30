@@ -18,9 +18,10 @@ class DailyDtr extends Model
     protected function casts(): array
     {
         return [
-            'work_date'    => 'date',
-            'is_corrected' => 'boolean',
-            'corrected_at' => 'datetime',
+            'work_date'      => 'date',
+            'is_corrected'   => 'boolean',
+            'corrected_at'   => 'datetime',
+            'hours_rendered' => 'float',
         ];
     }
 

@@ -630,7 +630,7 @@ const fullMonthRows = computed(() => {
       morning_out:       rec?.morning_out  ?? null,
       afternoon_in:      rec?.afternoon_in ?? null,
       afternoon_out:     rec?.afternoon_out ?? null,
-      hours:             rec?.hours        ?? 0,
+      hours:             Number(rec?.hours) || 0,
       tardiness_minutes: rec?.tardiness_minutes ?? 0,
       overtime_minutes:  rec?.overtime_minutes  ?? 0,
       is_corrected:      rec?.is_corrected ?? false,
