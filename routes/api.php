@@ -7,6 +7,7 @@ use App\Http\Controllers\BiometricController;
 use App\Http\Controllers\BiometricPushController;
 use App\Http\Controllers\CampusController;
 use App\Http\Controllers\DtrCorrectionController;
+use App\Http\Controllers\DtrPrintConsentController;
 use App\Http\Controllers\EmployeeController;
 use App\Http\Controllers\ReportController;
 use App\Http\Controllers\TrackingController;
@@ -126,6 +127,12 @@ Route::middleware('auth:sanctum')->group(function () {
         Route::get('/reports/export-bulk', [ReportController::class, 'exportBulk']);
         Route::get('/reports/deductions',  [ReportController::class, 'exportDeductions']);
     });
+
+    // DTR Print Consent — an employee requests HR/Admin sign-off before they
+    // can download an official, printable copy of their own DTR
+    Route::get('/dtr-print-consents',                [DtrPrintConsentController::class, 'index']);
+    Route::post('/dtr-print-consents',               [DtrPrintConsentController::class, 'store']);
+    Route::patch('/dtr-print-consents/{consent}',    [DtrPrintConsentController::class, 'review']);
 
     // Tracking
     Route::get('/tracking/tardiness',       [TrackingController::class, 'tardiness']);

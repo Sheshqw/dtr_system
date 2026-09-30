@@ -133,26 +133,170 @@
                 <EyeIcon v-else class="w-4 h-4" />
                 Preview DTR
               </button>
-              <template v-if="canSelectEmployee">
+              <button
+                v-if="canSelectEmployee || canDownloadOwn"
+                @click="download"
+                :disabled="!effectiveEmployee || downloading"
+                class="btn-outline inline-flex items-center gap-2"
+              >
+                <Loader2Icon v-if="downloading" class="w-4 h-4 animate-spin" />
+                <DownloadIcon v-else class="w-4 h-4" />
+                Download PDF
+              </button>
+              <button
+                v-if="canSelectEmployee"
+                @click="exportCsv"
+                :disabled="!effectiveEmployee || exportingCsv"
+                class="btn-outline inline-flex items-center gap-2"
+              >
+                <Loader2Icon v-if="exportingCsv" class="w-4 h-4 animate-spin" />
+                <TableIcon v-else class="w-4 h-4" />
+                Export CSV
+              </button>
+            </div>
+          </div>
+        </div>
+
+        <!-- ── Print Permission card (employee self-service) ───────────── -->
+        <div v-if="!canSelectEmployee" class="rounded-xl shadow-[0_2px_8px_rgba(0,0,0,0.08)] overflow-hidden border border-[#E2E8F0]">
+          <div class="bg-gradient-to-r from-[#1B2A5E] to-[#2E4A8C] px-6 py-4 flex items-center gap-3">
+            <div class="w-10 h-10 rounded-xl bg-white/15 border border-white/20 flex items-center justify-center flex-shrink-0">
+              <ShieldCheckIcon class="w-5 h-5 text-white" />
+            </div>
+            <div>
+              <h2 class="text-white font-semibold text-sm">Print Permission — {{ selectedPeriodLabel }}</h2>
+              <p class="text-white/60 text-xs mt-0.5">Get HR/Admin sign-off to download an official, printable copy</p>
+            </div>
+          </div>
+
+          <div class="bg-white px-6 py-5 space-y-3">
+            <!-- No request yet (or previous one was denied/used) -->
+            <template v-if="!currentPeriodConsent || currentPeriodConsent.status === 'denied'">
+              <p v-if="currentPeriodConsent?.status === 'denied'" class="text-sm text-[#B91C1C] bg-[#FEF2F2] border border-[#FECACA] rounded-lg px-3 py-2">
+                Your last request for this period was denied<span v-if="currentPeriodConsent.reviewer_remarks">: “{{ currentPeriodConsent.reviewer_remarks }}”</span>. You may request again below.
+              </p>
+              <p class="text-sm text-[#475569]">
+                To download or print your official DTR for <strong>{{ selectedPeriodLabel }}</strong>, submit a request — HR or Admin must approve it first.
+              </p>
+              <input
+                v-model="consentPurpose"
+                maxlength="255"
+                class="form-input"
+                placeholder="Purpose (optional) — e.g. scholarship requirement"
+              />
+              <button
+                @click="requestConsent"
+                :disabled="requestingConsent"
+                class="btn-primary inline-flex items-center gap-2"
+              >
+                <Loader2Icon v-if="requestingConsent" class="w-4 h-4 animate-spin" />
+                <SendIcon v-else class="w-4 h-4" />
+                {{ currentPeriodConsent?.status === 'denied' ? 'Request Again' : 'Request Print Permission' }}
+              </button>
+            </template>
+
+            <!-- Pending review -->
+            <template v-else-if="currentPeriodConsent.status === 'pending'">
+              <div class="flex items-center gap-3 px-4 py-3 rounded-lg border border-[#FDE68A]" style="background:#FFFBEB;">
+                <ClockIcon class="w-5 h-5 text-[#D97706] flex-shrink-0" />
+                <div>
+                  <p class="text-sm font-semibold text-[#92400E]">Pending HR/Admin review</p>
+                  <p class="text-xs text-[#92400E]/80">Submitted {{ currentPeriodConsent.submitted_at }}</p>
+                </div>
+              </div>
+            </template>
+
+            <!-- Approved, not yet used -->
+            <template v-else-if="currentPeriodConsent.status === 'approved' && !currentPeriodConsent.used_at">
+              <div class="flex items-center gap-3 px-4 py-3 rounded-lg border border-[#BBF7D0]" style="background:#F0FDF4;">
+                <CheckCircle2Icon class="w-5 h-5 text-[#15803D] flex-shrink-0" />
+                <div>
+                  <p class="text-sm font-semibold text-[#15803D]">Approved — you may download your DTR once</p>
+                  <p class="text-xs text-[#15803D]/80">Use the Download PDF button above. Reviewed {{ currentPeriodConsent.reviewed_at }}.</p>
+                </div>
+              </div>
+            </template>
+
+            <!-- Approved and already used -->
+            <template v-else>
+              <div class="flex items-center gap-3 px-4 py-3 rounded-lg border border-[#E2E8F0]" style="background:#F8FAFC;">
+                <CheckCircle2Icon class="w-5 h-5 text-[#64748B] flex-shrink-0" />
+                <div>
+                  <p class="text-sm font-semibold text-[#334155]">Already downloaded {{ currentPeriodConsent.used_at }}</p>
+                  <p class="text-xs text-[#64748B]">Need another copy? Submit a new request.</p>
+                </div>
+              </div>
+              <button
+                @click="requestConsent"
+                :disabled="requestingConsent"
+                class="btn-outline inline-flex items-center gap-2"
+              >
+                <Loader2Icon v-if="requestingConsent" class="w-4 h-4 animate-spin" />
+                <SendIcon v-else class="w-4 h-4" />
+                Request Another Copy
+              </button>
+            </template>
+          </div>
+        </div>
+
+        <!-- ── DTR Print Requests (HR/Admin review queue) ───────────────── -->
+        <div v-if="canSelectEmployee" class="rounded-xl shadow-[0_2px_8px_rgba(0,0,0,0.08)] overflow-hidden border border-[#E2E8F0]">
+          <div class="bg-gradient-to-r from-[#1B2A5E] to-[#2E4A8C] px-6 py-4 flex items-center justify-between gap-3">
+            <div class="flex items-center gap-3">
+              <div class="w-10 h-10 rounded-xl bg-white/15 border border-white/20 flex items-center justify-center flex-shrink-0">
+                <ShieldCheckIcon class="w-5 h-5 text-white" />
+              </div>
+              <div>
+                <h2 class="text-white font-semibold text-sm">DTR Print Requests</h2>
+                <p class="text-white/60 text-xs mt-0.5">Approve before an employee can download their official DTR</p>
+              </div>
+            </div>
+            <span v-if="pendingConsents.length" class="text-xs font-bold text-[#1B2A5E] bg-[#C9A227] rounded-full px-2.5 py-1">
+              {{ pendingConsents.length }} pending
+            </span>
+          </div>
+
+          <div class="bg-white px-6 py-5 space-y-3">
+            <p v-if="!pendingConsents.length" class="text-sm text-[#6B7A94]">No pending print requests.</p>
+
+            <div v-for="c in pendingConsents" :key="c.id" class="flex items-start justify-between gap-3 px-4 py-3 rounded-lg border border-[#E2E8F0]">
+              <div class="min-w-0">
+                <p class="text-sm font-semibold text-[#0F172A]">{{ c.employee.name }} <span class="text-xs font-normal text-[#6B7A94]">· {{ c.employee.employee_id }}</span></p>
+                <p class="text-xs text-[#6B7A94] mt-0.5">{{ c.month_label }} · submitted {{ c.submitted_at }}</p>
+                <p v-if="c.purpose" class="text-xs text-[#475569] mt-1 italic">“{{ c.purpose }}”</p>
+
+                <div v-if="denyingId === c.id" class="mt-2 flex items-center gap-2">
+                  <input v-model="denyRemarks" maxlength="500" class="form-input" placeholder="Reason for denial (optional)" />
+                  <button
+                    @click="denyConsent(c)"
+                    :disabled="reviewingId === c.id"
+                    class="px-3 py-1.5 text-xs font-semibold rounded-lg transition-colors whitespace-nowrap disabled:opacity-60"
+                    style="background:#FEF2F2;color:#991B1B;border:1px solid #FECACA;"
+                  >Confirm Deny</button>
+                  <button @click="denyingId = null" class="text-xs text-[#6B7A94] hover:text-[#0F172A]">Cancel</button>
+                </div>
+              </div>
+
+              <div v-if="denyingId !== c.id" class="flex items-center gap-2 flex-shrink-0">
                 <button
-                  @click="download"
-                  :disabled="!effectiveEmployee || downloading"
-                  class="btn-outline inline-flex items-center gap-2"
+                  @click="approveConsent(c)"
+                  :disabled="reviewingId === c.id"
+                  class="inline-flex items-center gap-1.5 px-3 py-1.5 text-xs font-semibold rounded-lg transition-colors disabled:opacity-60"
+                  style="background:#ECFDF5;color:#065F46;border:1px solid #A7F3D0;"
                 >
-                  <Loader2Icon v-if="downloading" class="w-4 h-4 animate-spin" />
-                  <DownloadIcon v-else class="w-4 h-4" />
-                  Download PDF
+                  <Loader2Icon v-if="reviewingId === c.id" class="w-3.5 h-3.5 animate-spin" />
+                  <CheckCircle2Icon v-else class="w-3.5 h-3.5" />
+                  Approve
                 </button>
                 <button
-                  @click="exportCsv"
-                  :disabled="!effectiveEmployee || exportingCsv"
-                  class="btn-outline inline-flex items-center gap-2"
+                  @click="denyingId = c.id; denyRemarks = ''"
+                  class="inline-flex items-center gap-1.5 px-3 py-1.5 text-xs font-semibold rounded-lg transition-colors"
+                  style="background:#FEF2F2;color:#991B1B;border:1px solid #FECACA;"
                 >
-                  <Loader2Icon v-if="exportingCsv" class="w-4 h-4 animate-spin" />
-                  <TableIcon v-else class="w-4 h-4" />
-                  Export CSV
+                  <XCircleIcon class="w-3.5 h-3.5" />
+                  Deny
                 </button>
-              </template>
+              </div>
             </div>
           </div>
         </div>
@@ -497,9 +641,16 @@
                 Download CSC Form 48
               </button>
             </div>
+            <div v-else-if="canDownloadOwn" class="af-actions">
+              <button @click="download" :disabled="downloading" class="btn-primary inline-flex items-center gap-2">
+                <Loader2Icon v-if="downloading" class="w-4 h-4 animate-spin" />
+                <DownloadIcon v-else class="w-4 h-4" />
+                Download CSC Form 48
+              </button>
+            </div>
             <span v-else class="af-note">
               <LockIcon class="w-3.5 h-3.5" />
-              Preview only — ask HR or Admin for a printed or downloaded copy.
+              Preview only — request print permission above to download an official copy.
             </span>
           </div>
 
@@ -538,6 +689,9 @@ import {
   BookOpen      as BookOpenIcon,
   FileDown      as FileDownIcon,
   Users         as UsersIcon,
+  Send          as SendIcon,
+  XCircle       as XCircleIcon,
+  ShieldCheck   as ShieldCheckIcon,
 } from 'lucide-vue-next';
 
 const auth = useAuthStore();
@@ -577,6 +731,30 @@ const bulkYear       = ref(now.getFullYear());
 const bulkDepartment = ref('');
 const bulkStaffType  = ref('');
 const departments    = ref([]);
+
+// ── DTR Print Consent (employees need HR/Admin sign-off to download) ──
+const myConsents       = ref([]);   // employee's own requests, newest first
+const pendingConsents  = ref([]);   // HR/Admin: campus-scoped pending queue
+const consentPurpose   = ref('');
+const requestingConsent = ref(false);
+const reviewingId = ref(null);
+const denyingId   = ref(null);
+const denyRemarks = ref('');
+
+const selectedPeriodLabel = computed(() => {
+  const m = months.find(x => x.value === month.value)?.label ?? '';
+  return `${m} ${year.value}`;
+});
+
+const currentPeriodConsent = computed(() =>
+  myConsents.value.find(c => c.month === month.value && c.year === year.value) ?? null
+);
+
+const canDownloadOwn = computed(() =>
+  !canSelectEmployee.value &&
+  currentPeriodConsent.value?.status === 'approved' &&
+  !currentPeriodConsent.value?.used_at
+);
 
 
 const bulkEmployeeCount = computed(() => {
@@ -698,7 +876,7 @@ async function loadPreview() {
 }
 
 async function download() {
-  if (!effectiveEmployee.value || !canSelectEmployee.value) return;
+  if (!effectiveEmployee.value || !(canSelectEmployee.value || canDownloadOwn.value)) return;
   downloading.value = true;
   try {
     const res = await axios.get(`/api/reports/form48/${effectiveEmployee.value.id}`, {
@@ -719,6 +897,7 @@ async function download() {
     link.click();
     link.remove();
     window.URL.revokeObjectURL(url);
+    if (!canSelectEmployee.value) await fetchMyConsents();
   } catch (err) {
     toast(await extractErrorMessage(err, 'Failed to generate PDF.'), 'error');
   } finally {
@@ -779,6 +958,69 @@ async function exportBulk() {
     toast(await extractErrorMessage(err, 'Failed to export bulk CSV.'), 'error');
   } finally {
     exportingBulk.value = false;
+  }
+}
+
+// ── DTR Print Consent ───────────────────────────────────────────────
+async function fetchMyConsents() {
+  try {
+    const res = await axios.get('/api/dtr-print-consents');
+    myConsents.value = res.data?.consents ?? [];
+  } catch { /* ignore */ }
+}
+
+async function fetchConsentQueue() {
+  try {
+    const res = await axios.get('/api/dtr-print-consents', { params: { status: 'pending' } });
+    pendingConsents.value = res.data?.consents ?? [];
+  } catch { /* ignore */ }
+}
+
+async function requestConsent() {
+  requestingConsent.value = true;
+  try {
+    await axios.post('/api/dtr-print-consents', {
+      month: month.value,
+      year: year.value,
+      purpose: consentPurpose.value || null,
+    });
+    toast('Print request submitted. HR/Admin will review it shortly.', 'success');
+    consentPurpose.value = '';
+    await fetchMyConsents();
+  } catch (err) {
+    toast(await extractErrorMessage(err, 'Failed to submit print request.'), 'error');
+  } finally {
+    requestingConsent.value = false;
+  }
+}
+
+async function approveConsent(c) {
+  reviewingId.value = c.id;
+  try {
+    await axios.patch(`/api/dtr-print-consents/${c.id}`, { status: 'approved' });
+    toast(`Approved ${c.employee.name}'s print request.`, 'success');
+    await fetchConsentQueue();
+  } catch (err) {
+    toast(await extractErrorMessage(err, 'Failed to approve request.'), 'error');
+  } finally {
+    reviewingId.value = null;
+  }
+}
+
+async function denyConsent(c) {
+  reviewingId.value = c.id;
+  try {
+    await axios.patch(`/api/dtr-print-consents/${c.id}`, {
+      status: 'denied',
+      reviewer_remarks: denyRemarks.value || null,
+    });
+    toast(`Denied ${c.employee.name}'s print request.`, 'success');
+    denyingId.value = null;
+    await fetchConsentQueue();
+  } catch (err) {
+    toast(await extractErrorMessage(err, 'Failed to deny request.'), 'error');
+  } finally {
+    reviewingId.value = null;
   }
 }
 
@@ -1139,6 +1381,9 @@ onMounted(async () => {
     } catch { /* ignore */ } finally {
       loadingEmployees.value = false;
     }
+    await fetchConsentQueue();
+  } else {
+    await fetchMyConsents();
   }
 });
 </script>
