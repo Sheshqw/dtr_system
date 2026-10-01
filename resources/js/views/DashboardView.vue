@@ -279,6 +279,23 @@
         <span class="ca-action">Review now →</span>
       </div>
 
+      <!-- ══ Pending print requests alert ════════════════════════════ -->
+      <div
+        v-if="isAdminOrHr && pendingPrintRequests > 0"
+        class="corrections-alert corrections-alert--indigo"
+        @click="router.push({ name: 'reports' })"
+        role="button"
+        tabindex="0"
+        @keyup.enter="router.push({ name: 'reports' })"
+      >
+        <div class="ca-dot"></div>
+        <span class="ca-text">
+          <strong>{{ pendingPrintRequests }} DTR print {{ pendingPrintRequests === 1 ? 'request' : 'requests' }}</strong>
+          awaiting your approval
+        </span>
+        <span class="ca-action">Review now →</span>
+      </div>
+
       <!-- ══ My Personal DTR Status (regular employees only) ══════════ -->
       <div v-if="!isAdminOrHr" class="bg-white rounded-xl overflow-hidden" style="border:1px solid #E5E7EB;">
         <!-- Card header -->
@@ -337,6 +354,21 @@
               {{ pendingCorrections }} pending correction{{ pendingCorrections !== 1 ? 's' : '' }}
             </span>
             <span class="text-xs" style="color:#B45309;">→ Review</span>
+          </div>
+
+          <!-- Pending print request badge -->
+          <div
+            v-if="pendingPrintRequests > 0"
+            class="flex items-center gap-2 px-3 py-2 rounded-lg cursor-pointer transition-colors hover:opacity-80"
+            style="background:#EEF2FF;border:1px solid #C7D2FE;"
+            @click="router.push({ name: 'reports' })"
+            title="View your print request status"
+          >
+            <FileTextIcon class="w-4 h-4 flex-shrink-0" style="color:#4338CA;" />
+            <span class="text-sm font-semibold" style="color:#3730A3;">
+              {{ pendingPrintRequests }} print request{{ pendingPrintRequests !== 1 ? 's' : '' }} pending
+            </span>
+            <span class="text-xs" style="color:#4338CA;">→ View</span>
           </div>
 
           <!-- Quick links -->
@@ -1022,6 +1054,16 @@ async function fetchPendingCorrections() {
   } catch { /* ignore */ }
 }
 
+// ── Pending DTR print requests ────────────────────────────────────
+const pendingPrintRequests = ref(0);
+
+async function fetchPendingPrintRequests() {
+  try {
+    const res = await axios.get('/api/dtr-print-consents');
+    pendingPrintRequests.value = res.data?.summary?.pending ?? 0;
+  } catch { /* ignore */ }
+}
+
 // ── Biometric device status ──────────────────────────────────────
 const deviceOnline  = ref(false);
 const deviceChecked = ref(false);
@@ -1606,6 +1648,7 @@ onMounted(async () => {
   }
   checkDeviceStatus();
   fetchPendingCorrections();
+  fetchPendingPrintRequests();
 
   if (window.Echo) {
     echoChannel = window.Echo.channel('attendance');
@@ -2141,6 +2184,24 @@ onMounted(async () => {
 }
 .ca-text   { flex: 1; font-size: 13px; color: #92400E; }
 .ca-action { font-size: 12px; font-weight: 600; color: #B45309; white-space: nowrap; }
+
+/* ── Indigo variant — reuses the alert shape for a different alert kind ── */
+.corrections-alert--indigo {
+  background: #EEF2FF;
+  border-color: #C7D2FE;
+  border-left-color: #4338CA;
+}
+.corrections-alert--indigo:hover { background: #E0E7FF; }
+.corrections-alert--indigo .ca-dot {
+  background: #4338CA;
+  animation: pulse-indigo 2s ease infinite;
+}
+@keyframes pulse-indigo {
+  0%, 100% { box-shadow: 0 0 0 0 rgba(67,56,202,0.4); }
+  50%       { box-shadow: 0 0 0 5px rgba(67,56,202,0); }
+}
+.corrections-alert--indigo .ca-text   { color: #3730A3; }
+.corrections-alert--indigo .ca-action { color: #4338CA; }
 
 /* ── Panel (generic) ──────────────────────────────────────────── */
 .panel {

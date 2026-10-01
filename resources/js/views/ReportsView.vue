@@ -4,9 +4,28 @@
     <PageHeader title="Reports" subtitle="Generate monthly DTR summaries and official CSC Form 48" :icon="FileTextIcon" />
 
     <div class="report-page flex-1 overflow-auto bg-[#F8FAFC] p-6">
-      <div class="mx-auto space-y-5" :class="previewData ? 'max-w-5xl' : 'max-w-3xl'">
+      <div class="mx-auto" :class="(activeTab === 'generate' && previewData) ? 'max-w-5xl' : 'max-w-3xl'">
+
+        <!-- ── Tab bar ─────────────────────────────────────────────────── -->
+        <div class="tab-bar">
+          <button
+            v-for="t in reportTabs" :key="t.key"
+            type="button"
+            @click="activeTab = t.key"
+            class="tab-btn"
+            :class="activeTab === t.key ? 'tab-btn--active' : ''"
+          >
+            <component :is="t.icon" class="w-4 h-4" />
+            {{ t.label }}
+            <span v-if="t.badge" class="tab-badge">{{ t.badge }}</span>
+            <span v-else-if="t.dot" class="tab-dot" title="Ready to download"></span>
+          </button>
+        </div>
+
+        <div class="space-y-5">
 
         <!-- ── Generator card ─────────────────────────────────────────── -->
+        <template v-if="activeTab === 'generate'">
         <div class="rounded-xl shadow-[0_2px_8px_rgba(0,0,0,0.08)] overflow-hidden border border-[#E2E8F0]">
 
           <!-- Gradient header — matches the visual tier of Bulk Export and
@@ -156,8 +175,10 @@
             </div>
           </div>
         </div>
+        </template>
 
         <!-- ── Print Permission card (employee self-service) ───────────── -->
+        <template v-if="activeTab === 'requests'">
         <div v-if="!canSelectEmployee" class="rounded-xl shadow-[0_2px_8px_rgba(0,0,0,0.08)] overflow-hidden border border-[#E2E8F0]">
           <div class="bg-gradient-to-r from-[#1B2A5E] to-[#2E4A8C] px-6 py-4 flex items-center gap-3">
             <div class="w-10 h-10 rounded-xl bg-white/15 border border-white/20 flex items-center justify-center flex-shrink-0">
@@ -386,8 +407,10 @@
             </template>
           </div>
         </div>
+        </template>
 
         <!-- ── Bulk Export card ───────────────────────────────────────── -->
+        <template v-if="activeTab === 'bulk' && canSelectEmployee">
         <div v-if="canSelectEmployee" class="rounded-xl shadow-[0_2px_8px_rgba(0,0,0,0.08)] overflow-hidden border border-[#E2E8F0]">
 
           <!-- Gradient header -->
@@ -506,8 +529,10 @@
             </div>
           </div>
         </div>
+        </template>
 
         <!-- ── Preview skeleton (while loading) ─────────────────────── -->
+        <template v-if="activeTab === 'generate'">
         <div v-if="previewing" class="bg-white border border-[#E2E8F0] rounded-xl shadow-[0_1px_4px_rgba(0,0,0,0.08)] overflow-hidden">
 
           <!-- Header skeleton — mimics the dark gradient header -->
@@ -741,6 +766,9 @@
           </div>
 
         </div>
+        </template>
+
+        </div>
 
       </div>
     </div>
@@ -849,6 +877,25 @@ const pendingConsents = computed(() => consentQueue.value.filter(c => c.status =
 const recentConsentDecisions = computed(() =>
   consentQueue.value.filter(c => c.status !== 'pending').slice(0, 5)
 );
+
+// ── Tabs ──────────────────────────────────────────────────────────
+const activeTab = ref('generate');
+const reportTabs = computed(() => {
+  const tabs = [
+    { key: 'generate', label: 'Generate & Preview', icon: FileTextIcon },
+    {
+      key: 'requests',
+      label: canSelectEmployee.value ? 'Print Requests' : 'Print Permission',
+      icon: ShieldCheckIcon,
+      badge: canSelectEmployee.value ? pendingConsents.value.length : 0,
+      dot: !canSelectEmployee.value && canDownloadOwn.value,
+    },
+  ];
+  if (canSelectEmployee.value) {
+    tabs.push({ key: 'bulk', label: 'Bulk Export', icon: FileDownIcon });
+  }
+  return tabs;
+});
 
 // ── Reviewer's own digital signature ───────────────────────────────
 const mySignatureUrl     = ref(null);
@@ -1557,6 +1604,63 @@ onMounted(async () => {
 .btn-primary { @apply px-4 py-2 bg-[#2E4A8C] text-white text-sm font-medium rounded-lg hover:bg-[#3D5CA3] disabled:opacity-60 transition-colors; }
 .btn-outline  { @apply px-4 py-2 text-sm font-medium border border-[#E2E8F0] rounded-lg text-[#374151] hover:bg-[#F0F4FF] transition-colors disabled:opacity-60; }
 .bulk-label  { @apply block text-xs font-semibold text-[#374151] mb-1.5 uppercase tracking-wide; }
+
+/* ── Tab bar ───────────────────────────────────────────────────── */
+.tab-bar {
+  display: flex;
+  align-items: center;
+  gap: 2px;
+  border-bottom: 1px solid #E2E8F0;
+  margin-bottom: 20px;
+  overflow-x: auto;
+}
+.tab-btn {
+  position: relative;
+  display: inline-flex;
+  align-items: center;
+  gap: 7px;
+  padding: 10px 16px;
+  font-size: 13.5px;
+  font-weight: 600;
+  color: #6B7A94;
+  white-space: nowrap;
+  transition: color 0.15s;
+  flex-shrink: 0;
+}
+.tab-btn:hover { color: #1B2A5E; }
+.tab-btn--active { color: #1B2A5E; }
+.tab-btn--active::after {
+  content: '';
+  position: absolute;
+  left: 2px; right: 2px; bottom: -1px;
+  height: 2px;
+  background: #1B2A5E;
+  border-radius: 2px 2px 0 0;
+}
+.tab-badge {
+  font-size: 10px;
+  font-weight: 700;
+  color: #1B2A5E;
+  background: #C9A227;
+  border-radius: 999px;
+  padding: 1px 6px;
+  line-height: 1.4;
+}
+.tab-dot {
+  width: 7px; height: 7px;
+  border-radius: 50%;
+  background: #15803D;
+  flex-shrink: 0;
+  animation: tab-dot-pulse 2s ease infinite;
+}
+@keyframes tab-dot-pulse {
+  0%, 100% { box-shadow: 0 0 0 0 rgba(21,128,61,0.4); }
+  50%       { box-shadow: 0 0 0 4px rgba(21,128,61,0); }
+}
+
+@media (max-width: 640px) {
+  .tab-btn { padding: 9px 12px; font-size: 12.5px; }
+}
 
 /* ── Document-style letterhead — mirrors the printed CSC Form 48 ─── */
 .doc-preview { position: relative; }

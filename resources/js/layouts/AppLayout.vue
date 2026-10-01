@@ -132,6 +132,10 @@
             v-if="item.name === 'corrections' && pendingCorrections > 0"
             class="nav-badge"
           >{{ pendingCorrections > 99 ? '99+' : pendingCorrections }}</span>
+          <span
+            v-if="item.name === 'reports' && pendingPrintRequests > 0"
+            class="nav-badge"
+          >{{ pendingPrintRequests > 99 ? '99+' : pendingPrintRequests }}</span>
           <span v-if="$route.name === item.name" class="nav-pip" />
         </RouterLink>
 
@@ -577,6 +581,19 @@ async function fetchPendingCorrections() {
   }
 }
 
+// ── Pending DTR print requests badge ───────────────────────────────
+const pendingPrintRequests = ref(0);
+
+async function fetchPendingPrintRequests() {
+  if (!isAdminOrHr.value) return;
+  try {
+    const res = await axios.get('/api/dtr-print-consents');
+    pendingPrintRequests.value = res.data?.summary?.pending ?? 0;
+  } catch {
+    // silently ignore
+  }
+}
+
 // ── Real-time punch toast ─────────────────────────────────────────
 let echoChannel = null;
 
@@ -591,7 +608,11 @@ function listenForPunches() {
 
 onMounted(() => {
   fetchPendingCorrections();
-  correctionPollTimer = setInterval(fetchPendingCorrections, 60_000);
+  fetchPendingPrintRequests();
+  correctionPollTimer = setInterval(() => {
+    fetchPendingCorrections();
+    fetchPendingPrintRequests();
+  }, 60_000);
   listenForPunches();
 });
 
