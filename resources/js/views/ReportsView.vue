@@ -28,16 +28,17 @@
         <template v-if="activeTab === 'generate'">
         <div class="rounded-xl shadow-[0_2px_8px_rgba(0,0,0,0.08)] overflow-hidden border border-[#E2E8F0]">
 
-          <!-- Gradient header — matches the visual tier of Bulk Export and
-               Month Lock below it; this is the primary card on the page,
-               so it shouldn't look plainer than the secondary ones. -->
-          <div class="bg-gradient-to-r from-[#1B2A5E] to-[#2E4A8C] px-6 py-4 flex items-center gap-3">
-            <div class="w-10 h-10 rounded-xl bg-white/15 border border-white/20 flex items-center justify-center flex-shrink-0">
-              <FileTextIcon class="w-5 h-5 text-white" />
-            </div>
-            <div>
-              <h2 class="text-white font-semibold text-sm">CSC Form 48 — Daily Time Record</h2>
-              <p class="text-white/60 text-xs mt-0.5">Official government-mandated DTR for SUC employees</p>
+          <!-- Card header — tinted strip + colored accent, not a solid fill,
+               so a page of several cards doesn't read as heavy/formal. -->
+          <div class="card-head" style="--accent:#1B2A5E; --tint:#F4F6FB;">
+            <div class="card-head-left">
+              <div class="card-head-icon">
+                <FileTextIcon class="w-5 h-5" />
+              </div>
+              <div>
+                <h2 class="card-head-title">CSC Form 48 — Daily Time Record</h2>
+                <p class="card-head-sub">Official government-mandated DTR for SUC employees</p>
+              </div>
             </div>
           </div>
 
@@ -180,13 +181,15 @@
         <!-- ── Print Permission card (employee self-service) ───────────── -->
         <template v-if="activeTab === 'requests'">
         <div v-if="!canSelectEmployee" class="rounded-xl shadow-[0_2px_8px_rgba(0,0,0,0.08)] overflow-hidden border border-[#E2E8F0]">
-          <div class="bg-gradient-to-r from-[#1B2A5E] to-[#2E4A8C] px-6 py-4 flex items-center gap-3">
-            <div class="w-10 h-10 rounded-xl bg-white/15 border border-white/20 flex items-center justify-center flex-shrink-0">
-              <ShieldCheckIcon class="w-5 h-5 text-white" />
-            </div>
-            <div>
-              <h2 class="text-white font-semibold text-sm">Print Permission — {{ selectedPeriodLabel }}</h2>
-              <p class="text-white/60 text-xs mt-0.5">Get HR/Admin sign-off to download an official, printable copy</p>
+          <div class="card-head" style="--accent:#1B2A5E; --tint:#F4F6FB;">
+            <div class="card-head-left">
+              <div class="card-head-icon">
+                <ShieldCheckIcon class="w-5 h-5" />
+              </div>
+              <div>
+                <h2 class="card-head-title">Print Permission — {{ selectedPeriodLabel }}</h2>
+                <p class="card-head-sub">Get HR/Admin sign-off to download an official, printable copy</p>
+              </div>
             </div>
           </div>
 
@@ -262,17 +265,17 @@
 
         <!-- ── DTR Print Requests (HR/Admin review queue) ───────────────── -->
         <div v-if="canSelectEmployee" class="rounded-xl shadow-[0_2px_8px_rgba(0,0,0,0.08)] overflow-hidden border border-[#E2E8F0]">
-          <div class="bg-gradient-to-r from-[#1B2A5E] to-[#2E4A8C] px-6 py-4 flex items-center justify-between gap-3">
-            <div class="flex items-center gap-3">
-              <div class="w-10 h-10 rounded-xl bg-white/15 border border-white/20 flex items-center justify-center flex-shrink-0">
-                <ShieldCheckIcon class="w-5 h-5 text-white" />
+          <div class="card-head" style="--accent:#1B2A5E; --tint:#F4F6FB;">
+            <div class="card-head-left">
+              <div class="card-head-icon">
+                <ShieldCheckIcon class="w-5 h-5" />
               </div>
               <div>
-                <h2 class="text-white font-semibold text-sm">DTR Print Requests</h2>
-                <p class="text-white/60 text-xs mt-0.5">Approve before an employee can download their official DTR</p>
+                <h2 class="card-head-title">DTR Print Requests</h2>
+                <p class="card-head-sub">Approve before an employee can download their official DTR</p>
               </div>
             </div>
-            <span v-if="pendingConsents.length" class="text-xs font-bold text-[#1B2A5E] bg-[#C9A227] rounded-full px-2.5 py-1">
+            <span v-if="pendingConsents.length" class="text-xs font-bold text-white bg-[#EF4444] rounded-full px-2.5 py-1">
               {{ pendingConsents.length }} pending
             </span>
           </div>
@@ -423,21 +426,21 @@
         <template v-if="activeTab === 'bulk' && canSelectEmployee">
         <div v-if="canSelectEmployee" class="rounded-xl shadow-[0_2px_8px_rgba(0,0,0,0.08)] overflow-hidden border border-[#E2E8F0]">
 
-          <!-- Gradient header -->
-          <div class="bg-gradient-to-r from-[#064E3B] to-[#059669] px-6 py-4 flex items-center justify-between">
-            <div class="flex items-center gap-3">
-              <div class="w-10 h-10 rounded-xl bg-white/15 border border-white/20 flex items-center justify-center flex-shrink-0">
-                <FileDownIcon class="w-5 h-5 text-white" />
+          <!-- Card header -->
+          <div class="card-head" style="--accent:#059669; --tint:#F0FDF4;">
+            <div class="card-head-left">
+              <div class="card-head-icon">
+                <FileDownIcon class="w-5 h-5" />
               </div>
               <div>
-                <h2 class="text-white font-semibold text-sm">Bulk Attendance Export</h2>
-                <p class="text-white/60 text-xs mt-0.5">Export all employees' monthly attendance as a single CSV</p>
+                <h2 class="card-head-title">Bulk Attendance Export</h2>
+                <p class="card-head-sub">Export all employees' monthly attendance as a single CSV</p>
               </div>
             </div>
             <!-- Employee count badge -->
-            <div class="flex items-center gap-2 bg-white/10 border border-white/20 rounded-lg px-3 py-1.5">
-              <UsersIcon class="w-3.5 h-3.5 text-white/70" />
-              <span class="text-white text-xs font-semibold">{{ bulkEmployeeCount }} employee{{ bulkEmployeeCount !== 1 ? 's' : '' }}</span>
+            <div class="flex items-center gap-2 bg-[#059669]/10 border border-[#059669]/25 rounded-lg px-3 py-1.5">
+              <UsersIcon class="w-3.5 h-3.5 text-[#059669]" />
+              <span class="text-[#065F46] text-xs font-semibold">{{ bulkEmployeeCount }} employee{{ bulkEmployeeCount !== 1 ? 's' : '' }}</span>
             </div>
           </div>
 
@@ -545,16 +548,16 @@
         <template v-if="activeTab === 'generate'">
         <div v-if="previewing" class="bg-white border border-[#E2E8F0] rounded-xl shadow-[0_1px_4px_rgba(0,0,0,0.08)] overflow-hidden">
 
-          <!-- Header skeleton — mimics the dark gradient header -->
-          <div class="bg-gradient-to-r from-[#1B2A5E] to-[#2E4A8C] px-5 py-4 flex items-center justify-between">
+          <!-- Header skeleton — mimics the document letterhead it loads into -->
+          <div class="px-5 py-4 flex items-center justify-between border-b border-[#E2E8F0]" style="background:#FAFBFD;">
             <div class="flex items-center gap-3">
-              <div class="sk-dark w-11 h-11 rounded-xl"></div>
+              <div class="sk w-11 h-11 rounded-xl"></div>
               <div class="space-y-2">
-                <div class="sk-dark h-4 w-44 rounded"></div>
-                <div class="sk-dark h-3 w-64 rounded opacity-60"></div>
+                <div class="sk h-4 w-44 rounded"></div>
+                <div class="sk h-3 w-64 rounded opacity-60"></div>
               </div>
             </div>
-            <div class="sk-dark h-5 w-24 rounded"></div>
+            <div class="sk h-5 w-24 rounded"></div>
           </div>
 
           <!-- Stat strip skeleton — 6 columns -->
@@ -1617,6 +1620,33 @@ onMounted(async () => {
 .btn-outline  { @apply px-4 py-2 text-sm font-medium border border-[#E2E8F0] rounded-lg text-[#374151] hover:bg-[#F0F4FF] transition-colors disabled:opacity-60; }
 .bulk-label  { @apply block text-xs font-semibold text-[#374151] mb-1.5 uppercase tracking-wide; }
 
+/* ── Card header — shared across every card on this page ─────────
+   A tinted strip with a colored left-border accent instead of a
+   solid navy/green gradient fill — same visual language as the
+   dashboard's alert banners, just less heavy for something that
+   appears at the top of every card on the page. Color is set per
+   instance via --accent/--tint so one class covers every variant. */
+.card-head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  flex-wrap: wrap;
+  gap: 12px;
+  padding: 16px 24px;
+  border-bottom: 1px solid #E2E8F0;
+  border-left: 4px solid var(--accent, #1B2A5E);
+  background: var(--tint, #F4F6FB);
+}
+.card-head-left { display: flex; align-items: center; gap: 12px; min-width: 0; }
+.card-head-icon {
+  width: 40px; height: 40px; border-radius: 12px; flex-shrink: 0;
+  display: flex; align-items: center; justify-content: center;
+  background: color-mix(in srgb, var(--accent, #1B2A5E) 14%, transparent);
+  color: var(--accent, #1B2A5E);
+}
+.card-head-title { font-size: 14px; font-weight: 700; color: #0F172A; }
+.card-head-sub   { font-size: 12px; color: #64748B; margin-top: 2px; }
+
 /* ── Tab bar ───────────────────────────────────────────────────── */
 .tab-bar {
   display: flex;
@@ -1652,8 +1682,8 @@ onMounted(async () => {
 .tab-badge {
   font-size: 10px;
   font-weight: 700;
-  color: #1B2A5E;
-  background: #C9A227;
+  color: #fff;
+  background: #EF4444;
   border-radius: 999px;
   padding: 1px 6px;
   line-height: 1.4;
@@ -1975,14 +2005,6 @@ onMounted(async () => {
 
 .sk {
   background: linear-gradient(90deg, #F4F6FB 25%, #DDE3F0 50%, #F4F6FB 75%);
-  background-size: 200% 100%;
-  animation: sk-shimmer 1.6s ease-in-out infinite;
-  border-radius: 4px;
-}
-
-/* Dark variant — for use on the dark gradient header */
-.sk-dark {
-  background: linear-gradient(90deg, rgba(255,255,255,.12) 25%, rgba(255,255,255,.22) 50%, rgba(255,255,255,.12) 75%);
   background-size: 200% 100%;
   animation: sk-shimmer 1.6s ease-in-out infinite;
   border-radius: 4px;

@@ -647,6 +647,20 @@ input, select, textarea {
 [data-theme="dark"] .ca-action { color: #FDE68A !important; }
 [data-theme="dark"] .ca-dot    { background: #F59E0B !important; }
 
+/* Indigo variant (DTR print-request alert) — compound selectors so this
+   wins over the amber base rules above regardless of source order. */
+[data-theme="dark"] .corrections-alert.corrections-alert--indigo       { background: rgba(99,102,241,0.14) !important; border-color: rgba(99,102,241,0.30) !important; }
+[data-theme="dark"] .corrections-alert.corrections-alert--indigo:hover { background: rgba(99,102,241,0.22) !important; }
+[data-theme="dark"] .corrections-alert--indigo .ca-text   { color: #C7D2FE !important; }
+[data-theme="dark"] .corrections-alert--indigo .ca-action { color: #A5B4FC !important; }
+[data-theme="dark"] .corrections-alert--indigo .ca-dot    { background: #818CF8 !important; }
+
+/* ── ReportsView — shared card header (navy/green tinted strip) ──────────── */
+[data-theme="dark"] .card-head       { background: #1E3050 !important; border-bottom-color: rgba(255,255,255,0.07) !important; }
+[data-theme="dark"] .card-head-title { color: #E4EAF5 !important; }
+[data-theme="dark"] .card-head-sub   { color: #9AAAC9 !important; }
+[data-theme="dark"] .card-head-icon  { background: color-mix(in srgb, var(--accent, #1B2A5E) 28%, transparent) !important; }
+
 /* ── DashboardView — Skeletons ───────────────────────────────────────────── */
 [data-theme="dark"] .an-sk        { background: #1C2A44 !important; border-color: rgba(255,255,255,0.06) !important; }
 [data-theme="dark"] .an-sk--icon  { background: #1E2D45 !important; }
