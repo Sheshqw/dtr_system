@@ -140,3 +140,44 @@ test('a download renders fine when the approving reviewer has a signature on fil
         ->assertStatus(200)
         ->assertHeader('content-type', 'application/pdf');
 });
+
+test('the default queue view returns every pending request but caps reviewed history', function () {
+    $admin = User::factory()->admin()->create(['campus_id' => $this->campusA->id]);
+
+    // 3 pending requests (different employees, same period is fine since
+    // each is a different employee) — all of these must come back.
+    for ($i = 0; $i < 3; $i++) {
+        $employee = User::factory()->create(['campus_id' => $this->campusA->id]);
+        DtrPrintConsent::create([
+            'employee_id' => $employee->id,
+            'month'       => $this->month,
+            'year'        => $this->year,
+            'status'      => 'pending',
+        ]);
+    }
+
+    // 15 already-reviewed requests — more than the history cap.
+    for ($i = 0; $i < 15; $i++) {
+        $employee = User::factory()->create(['campus_id' => $this->campusA->id]);
+        DtrPrintConsent::create([
+            'employee_id' => $employee->id,
+            'month'       => $this->month,
+            'year'        => $this->year,
+            'status'      => 'approved',
+            'reviewed_by' => $admin->id,
+            'reviewed_at' => now(),
+        ]);
+    }
+
+    $res = $this->actingAs($admin, 'sanctum')
+        ->getJson('/api/dtr-print-consents')
+        ->assertStatus(200)
+        ->json();
+
+    $pendingCount = collect($res['consents'])->where('status', 'pending')->count();
+    $approvedCount = collect($res['consents'])->where('status', 'approved')->count();
+
+    expect($pendingCount)->toBe(3);
+    expect($approvedCount)->toBe(10); // capped, not all 15
+    expect($res['summary']['approved'])->toBe(15); // the summary count is still accurate
+});

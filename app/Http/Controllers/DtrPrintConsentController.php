@@ -12,38 +12,70 @@ class DtrPrintConsentController extends Controller
 {
     use ScopesByCampus;
 
+    /**
+     * How many already-reviewed (non-pending) requests the default view
+     * loads — it only grows over time (an approval is single-use, so every
+     * subsequent download needs a fresh request), so loading the whole
+     * history on every fetch gets slower and slower as a campus racks up
+     * months of requests, even though the UI only ever shows a handful of
+     * recent decisions at a time.
+     */
+    private const HISTORY_LIMIT = 10;
+
+    private const EMPLOYEE_EAGER_LOAD = [
+        'employee:id,employee_id,first_name,last_name,position,department_id,campus_id',
+        'employee.department:id,name',
+        'employee.campus:id,name',
+        'reviewer:id,first_name,last_name',
+    ];
+
     public function index(Request $request)
     {
         $user = $request->user();
 
         if ($this->isPrivileged($request)) {
-            $query = DtrPrintConsent::with([
-                'employee:id,employee_id,first_name,last_name,position,department_id,campus_id',
-                'employee.department:id,name',
-                'employee.campus:id,name',
-                'reviewer:id,first_name,last_name',
-            ]);
-
+            $baseQuery = DtrPrintConsent::query();
             if (! $this->isSuperAdmin($request)) {
-                $query->whereHas('employee', fn($q) => $q->where('campus_id', $user->campus_id));
+                $baseQuery->whereHas('employee', fn($q) => $q->where('campus_id', $user->campus_id));
             }
 
-            if ($request->filled('status')) $query->where('status', $request->query('status'));
+            if ($request->filled('status')) {
+                // An explicit status filter is a deliberate, narrower
+                // request — honor it as-is rather than applying the
+                // history limit meant for the default "everything at a
+                // glance" view.
+                $consents = (clone $baseQuery)
+                    ->where('status', $request->query('status'))
+                    ->with(self::EMPLOYEE_EAGER_LOAD)
+                    ->orderByDesc('created_at')
+                    ->get()
+                    ->map(fn($c) => $this->formatConsent($c, true));
+            } else {
+                // Default view: every pending request (actionable, stays
+                // small since HR acts on them) + only the most recent
+                // reviewed ones, not the entire history.
+                $pending = (clone $baseQuery)->where('status', 'pending')
+                    ->with(self::EMPLOYEE_EAGER_LOAD)
+                    ->orderByDesc('created_at')
+                    ->get();
 
-            $consents = $query
-                ->orderByRaw("CASE status WHEN 'pending' THEN 0 ELSE 1 END")
-                ->orderByDesc('created_at')
-                ->get()
-                ->map(fn($c) => $this->formatConsent($c, true));
+                $history = (clone $baseQuery)->where('status', '!=', 'pending')
+                    ->with(self::EMPLOYEE_EAGER_LOAD)
+                    ->orderByDesc('created_at')
+                    ->limit(self::HISTORY_LIMIT)
+                    ->get();
 
-            $baseQuery = DtrPrintConsent::whereHas('employee', fn($q) =>
+                $consents = $pending->concat($history)->map(fn($c) => $this->formatConsent($c, true));
+            }
+
+            $summaryBase = DtrPrintConsent::whereHas('employee', fn($q) =>
                 $q->when(! $this->isSuperAdmin($request), fn($q2) => $q2->where('campus_id', $user->campus_id))
             );
 
             $summary = [
-                'pending'  => (clone $baseQuery)->where('status', 'pending')->count(),
-                'approved' => (clone $baseQuery)->where('status', 'approved')->count(),
-                'denied'   => (clone $baseQuery)->where('status', 'denied')->count(),
+                'pending'  => (clone $summaryBase)->where('status', 'pending')->count(),
+                'approved' => (clone $summaryBase)->where('status', 'approved')->count(),
+                'denied'   => (clone $summaryBase)->where('status', 'denied')->count(),
             ];
         } else {
             $query = DtrPrintConsent::with('reviewer:id,first_name,last_name')

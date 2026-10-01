@@ -1259,12 +1259,27 @@ async function requestConsent() {
   }
 }
 
+// Patches the reviewed row in place instead of refetching the whole queue —
+// review() already returns the fully-updated consent, and re-fetching
+// /api/dtr-print-consents means re-running a query over the campus's whole
+// request history (which only grows — every approval is single-use, so a
+// busy campus racks up months of these) just to redraw one changed row.
+function applyConsentUpdate(updated) {
+  if (!updated) return;
+  const idx = consentQueue.value.findIndex(c => c.id === updated.id);
+  if (idx !== -1) consentQueue.value.splice(idx, 1);
+  // Moved to the front rather than updated in place — a request that just
+  // got reviewed should read as the most recent decision, not stay stuck
+  // wherever it happened to sit in the list from the original page load.
+  consentQueue.value.unshift(updated);
+}
+
 async function approveConsent(c) {
   reviewingId.value = c.id;
   try {
-    await axios.patch(`/api/dtr-print-consents/${c.id}`, { status: 'approved' });
+    const res = await axios.patch(`/api/dtr-print-consents/${c.id}`, { status: 'approved' });
     toast(`Approved ${c.employee.name}'s print request.`, 'success');
-    await fetchConsentQueue();
+    applyConsentUpdate(res.data?.consent);
   } catch (err) {
     toast(await extractErrorMessage(err, 'Failed to approve request.'), 'error');
   } finally {
@@ -1275,13 +1290,13 @@ async function approveConsent(c) {
 async function denyConsent(c) {
   reviewingId.value = c.id;
   try {
-    await axios.patch(`/api/dtr-print-consents/${c.id}`, {
+    const res = await axios.patch(`/api/dtr-print-consents/${c.id}`, {
       status: 'denied',
       reviewer_remarks: denyRemarks.value || null,
     });
     toast(`Denied ${c.employee.name}'s print request.`, 'success');
     denyingId.value = null;
-    await fetchConsentQueue();
+    applyConsentUpdate(res.data?.consent);
   } catch (err) {
     toast(await extractErrorMessage(err, 'Failed to deny request.'), 'error');
   } finally {
