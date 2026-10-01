@@ -81,11 +81,13 @@ table.emp tr:nth-child(even) td {
     <tr>
       <th>Employee ID</th>
       <th>Name</th>
-      <th>Email</th>
-      <th>Role</th>
+      <th>Gender</th>
+      <th>Age</th>
       <th>Campus</th>
       <th>Department</th>
       <th>Position</th>
+      <th>Designation</th>
+      @if($includeSalary)<th>Monthly Salary</th>@endif
       <th>Date Hired</th>
       <th>Status</th>
     </tr>
@@ -95,18 +97,20 @@ table.emp tr:nth-child(even) td {
     <tr>
       <td>{{ $e->employee_id }}</td>
       <td>{{ $e->full_name }}</td>
-      <td>{{ $e->email }}</td>
-      <td>{{ $e->role }}</td>
+      <td>{{ $e->gender ? ucfirst($e->gender) : '—' }}</td>
+      <td>{{ $e->age ?? '—' }}</td>
       <td>{{ $e->campus?->name }}</td>
       <td>{{ $e->department?->name }}</td>
       <td>{{ $e->position }}</td>
+      <td>{{ $e->designation ?? '—' }}</td>
+      @if($includeSalary)<td>{{ $e->salary !== null ? number_format($e->salary, 2) : '—' }}</td>@endif
       <td>{{ $e->date_hired?->format('M d, Y') }}</td>
       <td class="{{ $e->is_active ? 'status-active' : 'status-inactive' }}">
         {{ $e->is_active ? 'Active' : 'Inactive' }}
       </td>
     </tr>
     @empty
-    <tr><td colspan="9" style="text-align:center; padding:10pt;">No employees match the current filters.</td></tr>
+    <tr><td colspan="{{ $includeSalary ? 11 : 10 }}" style="text-align:center; padding:10pt;">No employees match the current filters.</td></tr>
     @endforelse
   </tbody>
 </table>

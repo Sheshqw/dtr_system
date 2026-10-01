@@ -16,11 +16,11 @@ class User extends Authenticatable
     protected $fillable = [
         'employee_id', 'first_name', 'last_name', 'middle_name', 'suffix',
         'gender', 'civil_status',
-        'campus_id', 'department_id', 'shift_id', 'position', 'employment_status',
+        'campus_id', 'department_id', 'shift_id', 'position', 'designation', 'employment_status',
         'staff_type', 'contact_number', 'date_of_birth', 'date_hired',
         'gsis_number', 'philhealth_number', 'pagibig_number', 'tin_number',
         'email', 'password', 'role', 'fingerprint_id', 'photo_path',
-        'signature_path', 'signature_enabled',
+        'signature_path', 'signature_enabled', 'salary',
         'is_active', 'failed_login_attempts', 'locked_until',
     ];
 
@@ -35,6 +35,7 @@ class User extends Authenticatable
             'locked_until'      => 'datetime',
             'date_of_birth'     => 'date:Y-m-d',
             'date_hired'        => 'date:Y-m-d',
+            'salary'            => 'float',
         ];
     }
 
@@ -42,6 +43,15 @@ class User extends Authenticatable
     {
         $parts = array_filter([$this->first_name, $this->middle_name, $this->last_name, $this->suffix]);
         return trim(implode(' ', $parts));
+    }
+
+    /**
+     * Computed from date_of_birth, never stored — always reflects "today",
+     * which a stored value would silently drift away from.
+     */
+    public function getAgeAttribute(): ?int
+    {
+        return $this->date_of_birth?->age;
     }
 
     public function isSuperAdmin(): bool

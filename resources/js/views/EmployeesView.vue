@@ -506,6 +506,7 @@
                   <div class="col-span-2">
                     <label class="form-label">Date of Birth</label>
                     <input v-model="form.date_of_birth" type="date" class="form-input" />
+                    <p v-if="formAge !== null" class="field-hint">{{ formAge }} years old</p>
                   </div>
                   <div class="col-span-3">
                     <label class="form-label">Contact Number</label>
@@ -554,7 +555,7 @@
 
                 <div class="grid grid-cols-2 gap-4">
                   <div>
-                    <label class="form-label">Position / Designation</label>
+                    <label class="form-label">Position</label>
                     <input
                       v-model="form.position"
                       class="form-input"
@@ -570,6 +571,24 @@
                         ? `Showing ${suggestedPositions.length} positions for ${selectedStaffTypeLabel}`
                         : 'Select a staff type above to see relevant positions' }}
                     </p>
+                  </div>
+                  <div>
+                    <label class="form-label">Designation</label>
+                    <input
+                      v-model="form.designation"
+                      class="form-input"
+                      placeholder="e.g. Dean, Program Chair (optional)"
+                    />
+                    <p class="field-hint">An administrative title on top of their position, if any.</p>
+                  </div>
+                  <div v-if="auth.isAdmin || auth.isHrOfficer">
+                    <label class="form-label">Monthly Salary</label>
+                    <input
+                      v-model.number="form.salary"
+                      type="number" min="0" step="0.01"
+                      class="form-input"
+                      placeholder="Confidential — visible to Admin/HR only"
+                    />
                   </div>
                   <div>
                     <label class="form-label">Employment Status</label>
@@ -1290,11 +1309,25 @@ const form  = reactive({
   employee_id: '', first_name: '', last_name: '', middle_name: '', suffix: '',
   gender: '', civil_status: '', date_of_birth: '',
   email: '', password: '', role: 'employee',
-  staff_type: '', position: '', employment_status: '',
+  staff_type: '', position: '', designation: '', salary: null, employment_status: '',
   department_id: '', shift_id: '',
   contact_number: '', date_hired: '',
   gsis_number: '', philhealth_number: '', pagibig_number: '', tin_number: '',
   fingerprint_id: '',
+});
+
+// Computed client-side too (not just server-side) so it updates live as the
+// Date of Birth field changes, before the form is even saved.
+const formAge = computed(() => {
+  if (!form.date_of_birth) return null;
+  const dob = new Date(form.date_of_birth);
+  if (Number.isNaN(dob.getTime())) return null;
+  const today = new Date();
+  let age = today.getFullYear() - dob.getFullYear();
+  const beforeBirthday = today.getMonth() < dob.getMonth() ||
+    (today.getMonth() === dob.getMonth() && today.getDate() < dob.getDate());
+  if (beforeBirthday) age--;
+  return age >= 0 ? age : null;
 });
 
 // ── Filtering & pagination ──────────────────────────────────────────
@@ -1523,7 +1556,7 @@ function blankForm() {
     employee_id: '', first_name: '', last_name: '', middle_name: '', suffix: '',
     gender: '', civil_status: '', date_of_birth: '',
     email: '', password: '', role: 'employee',
-    staff_type: '', position: '', employment_status: '',
+    staff_type: '', position: '', designation: '', salary: null, employment_status: '',
     department_id: '', shift_id: '',
     contact_number: '', date_hired: '',
     gsis_number: '', philhealth_number: '', pagibig_number: '', tin_number: '',
@@ -1556,6 +1589,7 @@ function openEdit(emp) {
     gender: emp.gender ?? '', civil_status: emp.civil_status ?? '',
     date_of_birth: emp.date_of_birth ?? '', email: emp.email ?? '', password: '',
     role: emp.role, staff_type: emp.staff_type ?? '', position: emp.position ?? '',
+    designation: emp.designation ?? '', salary: emp.salary ?? null,
     employment_status: emp.employment_status ?? '', department_id: emp.department_id ?? '',
     shift_id: emp.shift_id ?? '', contact_number: emp.contact_number ?? '',
     date_hired: emp.date_hired ?? '', gsis_number: emp.gsis_number ?? '',
@@ -1587,6 +1621,8 @@ async function submit() {
     if (!payload.gender)            payload.gender = null;
     if (!payload.civil_status)      payload.civil_status = null;
     if (!payload.staff_type)        payload.staff_type = null;
+    if (!payload.designation)       payload.designation = null;
+    if (payload.salary === '' || payload.salary === undefined) payload.salary = null;
     if (!payload.date_of_birth)     payload.date_of_birth = null;
     if (!payload.date_hired)        payload.date_hired = null;
     if (!payload.contact_number)    payload.contact_number = null;

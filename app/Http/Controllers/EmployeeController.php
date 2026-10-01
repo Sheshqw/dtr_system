@@ -68,7 +68,7 @@ class EmployeeController extends Controller
             $perPage   = max(1, min(100, (int) $request->get('per_page', 25)));
             $paginated = $query->paginate($perPage);
             return response()->json([
-                'data' => $paginated->map(fn(User $e) => $this->format($e))->values(),
+                'data' => $paginated->map(fn(User $e) => $this->format($e, $request))->values(),
                 'meta' => [
                     'current_page' => $paginated->currentPage(),
                     'last_page'    => $paginated->lastPage(),
@@ -80,7 +80,7 @@ class EmployeeController extends Controller
             ]);
         }
 
-        $employees = $query->get()->map(fn(User $e) => $this->format($e));
+        $employees = $query->get()->map(fn(User $e) => $this->format($e, $request));
 
         return response()->json($employees);
     }
@@ -106,6 +106,8 @@ class EmployeeController extends Controller
             'department_id'     => 'nullable|exists:departments,id',
             'shift_id'          => 'nullable|exists:shifts,id',
             'position'          => 'nullable|string|max:100',
+            'designation'       => 'nullable|string|max:100',
+            'salary'            => 'nullable|numeric|min:0|max:99999999.99',
             'employment_status' => 'nullable|in:permanent,job_order,cos,part-time,sa,ojt',
             'staff_type'        => 'nullable|in:faculty,administrative,security,custodial,maintenance,laboratory,driver,other',
             'contact_number'    => 'nullable|string|max:30',
@@ -131,7 +133,7 @@ class EmployeeController extends Controller
 
         AuditLog::record('CREATE', 'employees', $employee->id, null, $employee->toArray());
 
-        return response()->json($this->format($employee->load('department', 'shift', 'campus')), 201);
+        return response()->json($this->format($employee->load('department', 'shift', 'campus'), $request), 201);
     }
 
     public function update(Request $request, User $employee)
@@ -156,6 +158,8 @@ class EmployeeController extends Controller
             'department_id'     => 'nullable|exists:departments,id',
             'shift_id'          => 'nullable|exists:shifts,id',
             'position'          => 'nullable|string|max:100',
+            'designation'       => 'nullable|string|max:100',
+            'salary'            => 'nullable|numeric|min:0|max:99999999.99',
             'employment_status' => 'nullable|in:permanent,job_order,cos,part-time,sa,ojt',
             'staff_type'        => 'nullable|in:faculty,administrative,security,custodial,maintenance,laboratory,driver,other',
             'contact_number'    => 'nullable|string|max:30',
@@ -186,7 +190,7 @@ class EmployeeController extends Controller
 
         AuditLog::record('UPDATE', 'employees', $employee->id, $old, $employee->fresh()->toArray());
 
-        return response()->json($this->format($employee->load('department', 'shift', 'campus')));
+        return response()->json($this->format($employee->load('department', 'shift', 'campus'), $request));
     }
 
     public function destroy(Request $request, User $employee)
@@ -246,21 +250,27 @@ class EmployeeController extends Controller
      */
     public function exportExcel(Request $request)
     {
-        $rows = $this->filteredQuery($request)->get()->map(fn(User $e) => [
+        $includeSalary = $this->isPrivileged($request);
+
+        $rows = $this->filteredQuery($request)->get()->map(fn(User $e) => array_filter([
             'Employee ID'       => $e->employee_id,
             'Last Name'         => $e->last_name,
             'First Name'        => $e->first_name,
             'Middle Name'       => $e->middle_name,
+            'Gender'            => $e->gender ? ucfirst($e->gender) : null,
+            'Age'               => $e->age,
             'Email'             => $e->email,
             'Role'              => $e->role,
             'Campus'            => $e->campus?->name,
             'Department'        => $e->department?->name,
             'Position'          => $e->position,
+            'Designation'       => $e->designation,
+            'Monthly Salary'    => $includeSalary ? $e->salary : null,
             'Staff Type'        => $e->staff_type,
             'Employment Status' => $e->employment_status,
             'Date Hired'        => $e->date_hired?->format('Y-m-d'),
             'Status'            => $e->is_active ? 'Active' : 'Inactive',
-        ]);
+        ], fn($v, $k) => $k !== 'Monthly Salary' || $includeSalary, ARRAY_FILTER_USE_BOTH));
 
         return (new FastExcel($rows))->download('employees_' . now()->format('Ymd_His') . '.xlsx');
     }
@@ -274,8 +284,9 @@ class EmployeeController extends Controller
         $employees = $this->filteredQuery($request)->get();
 
         $pdf = Pdf::loadView('reports.employees_list', [
-            'employees'  => $employees,
-            'generated'  => now()->format('F j, Y g:i A'),
+            'employees'     => $employees,
+            'includeSalary' => $this->isPrivileged($request),
+            'generated'     => now()->format('F j, Y g:i A'),
         ])->setPaper('a4', 'landscape');
 
         return $pdf->download('employees_' . now()->format('Ymd_His') . '.pdf');
@@ -294,12 +305,16 @@ class EmployeeController extends Controller
             'Last Name'         => 'Dela Cruz',
             'First Name'        => 'Juan',
             'Middle Name'       => 'Santos',
+            'Gender'            => 'Male',
+            'Birthdate'         => '1990-05-14',
             'Email'             => 'jdelacruz@nemsu.edu.ph',
             'Password'          => '',
             'Role'              => 'employee',
             'Campus'            => 'Cantilan Campus',
             'Department'        => 'Department of Computer Studies',
             'Position'          => 'Instructor I',
+            'Designation'       => '',
+            'Monthly Salary'    => '25000',
             'Staff Type'        => 'faculty',
             'Employment Status' => 'permanent',
             'Date Hired'        => '2026-01-01',
@@ -534,6 +549,36 @@ class EmployeeController extends Controller
             }
         }
 
+        $genderRaw = trim((string) ($row['Gender'] ?? ''));
+        $gender    = $genderRaw !== '' ? strtolower($genderRaw) : null;
+        if ($gender && ! in_array($gender, ['male', 'female'], true)) {
+            return $fail("Gender '{$genderRaw}' must be Male or Female.");
+        }
+
+        $birthdateRaw = trim((string) ($row['Birthdate'] ?? ''));
+        $birthdate    = null;
+        if ($birthdateRaw !== '') {
+            try {
+                $birthdate = \Carbon\Carbon::parse($birthdateRaw)->format('Y-m-d');
+            } catch (\Throwable) {
+                return $fail("Birthdate '{$birthdateRaw}' is not a valid date.");
+            }
+            if (\Carbon\Carbon::parse($birthdate)->isFuture()) {
+                return $fail('Birthdate cannot be in the future.');
+            }
+        }
+
+        $salaryRaw = trim((string) ($row['Monthly Salary'] ?? ''));
+        $salary    = null;
+        if ($salaryRaw !== '') {
+            if (! is_numeric($salaryRaw) || (float) $salaryRaw < 0) {
+                return $fail("Monthly Salary '{$salaryRaw}' must be a positive number.");
+            }
+            $salary = round((float) $salaryRaw, 2);
+        }
+
+        $designation = trim((string) ($row['Designation'] ?? '')) ?: null;
+
         $passwordInput = trim((string) ($row['Password'] ?? ''));
         $autoGenerated = $passwordInput === '';
         $plainPassword = null;
@@ -579,8 +624,12 @@ class EmployeeController extends Controller
                 'campus_id'         => $campusId,
                 'department_id'     => $departmentId,
                 'position'          => trim((string) ($row['Position'] ?? '')) ?: null,
+                'designation'       => $designation,
+                'salary'            => $salary,
                 'staff_type'        => $staffType,
                 'employment_status' => $employmentStatus,
+                'gender'            => $gender,
+                'date_of_birth'     => $birthdate,
                 'date_hired'        => $dateHired,
             ],
         ];
@@ -606,8 +655,10 @@ class EmployeeController extends Controller
         };
     }
 
-    private function format(User $e): array
+    private function format(User $e, ?Request $request = null): array
     {
+        $includeSalary = $request && $this->isPrivileged($request);
+
         return [
             'id'                => $e->id,
             'employee_id'       => $e->employee_id,
@@ -621,10 +672,13 @@ class EmployeeController extends Controller
             'email'             => $e->email,
             'role'              => $e->role,
             'position'          => $e->position,
+            'designation'       => $e->designation,
+            'salary'            => $includeSalary ? $e->salary : null,
             'employment_status' => $e->employment_status,
             'staff_type'        => $e->staff_type,
             'contact_number'    => $e->contact_number,
             'date_of_birth'     => $e->date_of_birth?->format('Y-m-d'),
+            'age'               => $e->age,
             'date_hired'        => $e->date_hired?->format('Y-m-d'),
             'gsis_number'       => $e->gsis_number,
             'philhealth_number' => $e->philhealth_number,
