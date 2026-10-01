@@ -6,7 +6,6 @@ use App\Http\Controllers\BackupController;
 use App\Http\Controllers\BiometricController;
 use App\Http\Controllers\BiometricPushController;
 use App\Http\Controllers\CampusController;
-use App\Http\Controllers\DtrCorrectionController;
 use App\Http\Controllers\DtrPrintConsentController;
 use App\Http\Controllers\EmployeeController;
 use App\Http\Controllers\ReportController;
@@ -74,6 +73,10 @@ Route::middleware('auth:sanctum')->group(function () {
     Route::post('/attendance/logs',              [AttendanceController::class, 'storeLog']);
     Route::delete('/attendance/logs/{log}',      [AttendanceController::class, 'destroyLog']);
     Route::get('/attendance/daily',              [AttendanceController::class, 'daily']);
+
+    // Self-service "Mark as On Leave" — any authenticated user, own record only
+    Route::post('/attendance/on-leave',          [AttendanceController::class, 'markOnLeave']);
+    Route::post('/attendance/on-leave/unmark',   [AttendanceController::class, 'unmarkOnLeave']);
 
     // Employees — viewing the full roster is a distinct, revocable permission
     // from managing it (store/update/destroy already require Super Admin,
@@ -150,12 +153,6 @@ Route::middleware('auth:sanctum')->group(function () {
     Route::get('/analytics/departments', [AnalyticsController::class, 'departments']);
     Route::get('/analytics/staff-types', [AnalyticsController::class, 'staffTypes']);
     Route::get('/analytics/campus-comparison', [AnalyticsController::class, 'campusComparison']);
-
-    // DTR Correction Requests
-    Route::get('/dtr-corrections',                    [DtrCorrectionController::class, 'index']);
-    Route::post('/dtr-corrections',                   [DtrCorrectionController::class, 'store']);
-    Route::post('/dtr-corrections/batch-review',      [DtrCorrectionController::class, 'batchReview']);
-    Route::patch('/dtr-corrections/{correction}',     [DtrCorrectionController::class, 'review']);
 
     // Header notification bell — aggregated "needs attention" feed
     Route::get('/alerts', [AlertController::class, 'index']);

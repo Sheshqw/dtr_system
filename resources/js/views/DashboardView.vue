@@ -262,27 +262,10 @@
         </div>
       </div>
 
-      <!-- ══ Pending corrections alert ═════════════════════════════ -->
-      <div
-        v-if="isAdminOrHr && pendingCorrections > 0"
-        class="corrections-alert"
-        @click="router.push({ name: 'corrections' })"
-        role="button"
-        tabindex="0"
-        @keyup.enter="router.push({ name: 'corrections' })"
-      >
-        <div class="ca-dot"></div>
-        <span class="ca-text">
-          <strong>{{ pendingCorrections }} DTR correction {{ pendingCorrections === 1 ? 'request' : 'requests' }}</strong>
-          awaiting your review
-        </span>
-        <span class="ca-action">Review now →</span>
-      </div>
-
       <!-- ══ Pending print requests alert ════════════════════════════ -->
       <div
         v-if="isAdminOrHr && pendingPrintRequests > 0"
-        class="corrections-alert corrections-alert--indigo"
+        class="dash-alert dash-alert--indigo"
         @click="router.push({ name: 'reports' })"
         role="button"
         tabindex="0"
@@ -341,21 +324,6 @@
           <!-- Divider -->
           <div class="flex-1"></div>
 
-          <!-- Pending corrections badge -->
-          <div
-            v-if="pendingCorrections > 0"
-            class="flex items-center gap-2 px-3 py-2 rounded-lg cursor-pointer transition-colors hover:opacity-80"
-            style="background:#FFFBEB;border:1px solid #FDE68A;"
-            @click="router.push({ name: 'corrections' })"
-            title="View pending correction requests"
-          >
-            <ClockIcon class="w-4 h-4 flex-shrink-0" style="color:#D97706;" />
-            <span class="text-sm font-semibold" style="color:#92400E;">
-              {{ pendingCorrections }} pending correction{{ pendingCorrections !== 1 ? 's' : '' }}
-            </span>
-            <span class="text-xs" style="color:#B45309;">→ Review</span>
-          </div>
-
           <!-- Pending print request badge -->
           <div
             v-if="pendingPrintRequests > 0"
@@ -373,14 +341,6 @@
 
           <!-- Quick links -->
           <div class="flex items-center gap-2">
-            <button
-              @click="router.push({ name: 'corrections' })"
-              class="inline-flex items-center gap-1.5 px-3 py-1.5 text-xs font-semibold rounded-lg transition-colors"
-              style="background:#EEF2FF;color:#4338CA;border:1px solid #C7D2FE;"
-            >
-              <ClipboardEditIcon class="w-3.5 h-3.5" />
-              Request Correction
-            </button>
             <button
               @click="router.push({ name: 'reports' })"
               class="inline-flex items-center gap-1.5 px-3 py-1.5 text-xs font-semibold rounded-lg transition-colors"
@@ -526,7 +486,7 @@
                 <td class="td td-muted">{{ row.department }}</td>
                 <td class="td td-mono">{{ row.time_in ?? '—' }}</td>
                 <td class="td td-mono">{{ row.time_out ?? '—' }}</td>
-                <td class="td"><StatusBadge :status="row.status" :corrected="row.is_corrected" :holiday-name="row.holiday_name" /></td>
+                <td class="td"><StatusBadge :status="row.status" :holiday-name="row.holiday_name" /></td>
                 <td class="td td-r">
                   <span :class="row.hours_rendered > 0 ? 'hrs-val' : 'hrs-nil'">
                     {{ row.hours_rendered > 0 ? Number(row.hours_rendered).toFixed(1) + 'h' : '—' }}
@@ -878,7 +838,6 @@ import {
   X              as XIcon,
   Target         as TargetIcon,
   Clock          as ClockIcon,
-  ClipboardEdit  as ClipboardEditIcon,
   FileText       as FileTextIcon,
 } from 'lucide-vue-next';
 import {
@@ -1042,16 +1001,6 @@ function sortState(key) {
 
 function initials(name) {
   return name?.split(' ').filter(Boolean).map(n => n[0]).slice(0, 2).join('').toUpperCase() ?? '?';
-}
-
-// ── Pending corrections ──────────────────────────────────────────
-const pendingCorrections = ref(0);
-
-async function fetchPendingCorrections() {
-  try {
-    const res = await axios.get('/api/dtr-corrections');
-    pendingCorrections.value = res.data?.summary?.pending ?? 0;
-  } catch { /* ignore */ }
 }
 
 // ── Pending DTR print requests ────────────────────────────────────
@@ -1647,7 +1596,6 @@ onMounted(async () => {
     analyticsLoading.value = false;
   }
   checkDeviceStatus();
-  fetchPendingCorrections();
   fetchPendingPrintRequests();
 
   if (window.Echo) {
@@ -2157,8 +2105,8 @@ onMounted(async () => {
   font-style: normal;
 }
 
-/* ── Pending corrections alert bar ───────────────────────────── */
-.corrections-alert {
+/* ── Pending-requests alert bar ───────────────────────────────── */
+.dash-alert {
   display: flex;
   align-items: center;
   gap: 10px;
@@ -2170,7 +2118,7 @@ onMounted(async () => {
   cursor: pointer;
   transition: background 0.15s;
 }
-.corrections-alert:hover { background: #FEF3C7; }
+.dash-alert:hover { background: #FEF3C7; }
 .ca-dot {
   width: 8px; height: 8px;
   border-radius: 50%;
@@ -2186,13 +2134,13 @@ onMounted(async () => {
 .ca-action { font-size: 12px; font-weight: 600; color: #B45309; white-space: nowrap; }
 
 /* ── Indigo variant — reuses the alert shape for a different alert kind ── */
-.corrections-alert--indigo {
+.dash-alert--indigo {
   background: #EEF2FF;
   border-color: #C7D2FE;
   border-left-color: #4338CA;
 }
-.corrections-alert--indigo:hover { background: #E0E7FF; }
-.corrections-alert--indigo .ca-dot {
+.dash-alert--indigo:hover { background: #E0E7FF; }
+.dash-alert--indigo .ca-dot {
   background: #4338CA;
   animation: pulse-indigo 2s ease infinite;
 }
@@ -2200,8 +2148,8 @@ onMounted(async () => {
   0%, 100% { box-shadow: 0 0 0 0 rgba(67,56,202,0.4); }
   50%       { box-shadow: 0 0 0 5px rgba(67,56,202,0); }
 }
-.corrections-alert--indigo .ca-text   { color: #3730A3; }
-.corrections-alert--indigo .ca-action { color: #4338CA; }
+.dash-alert--indigo .ca-text   { color: #3730A3; }
+.dash-alert--indigo .ca-action { color: #4338CA; }
 
 /* ── Panel (generic) ──────────────────────────────────────────── */
 .panel {
@@ -2835,8 +2783,8 @@ onMounted(async () => {
   .chart-panel  { padding: 14px; }
   .cp-title     { font-size: 12px; }
 
-  /* Corrections alert */
-  .corrections-alert { flex-direction: column; gap: 6px; padding: 10px 12px; }
+  /* Alert bar */
+  .dash-alert { flex-direction: column; gap: 6px; padding: 10px 12px; }
 }
 
 /* ═══════════════════════════════════════════════════════════════
@@ -2917,9 +2865,9 @@ onMounted(async () => {
 .emp-avatar { transition: background 0.35s ease, transform 0.2s ease; }
 .log-row:hover .emp-avatar { transform: scale(1.06); }
 
-/* ── 9. Pending-corrections banner lifts on hover ─────────────── */
-.corrections-alert { transition: background 0.15s, transform 0.18s ease, box-shadow 0.18s ease; }
-.corrections-alert:hover { transform: translateY(-1px); box-shadow: 0 6px 18px -6px rgba(217,119,6,0.28); }
+/* ── 9. Pending-requests banner lifts on hover ─────────────────── */
+.dash-alert { transition: background 0.15s, transform 0.18s ease, box-shadow 0.18s ease; }
+.dash-alert:hover { transform: translateY(-1px); box-shadow: 0 6px 18px -6px rgba(67,56,202,0.28); }
 
 /* ── 10. Department ranking rows nudge right on hover ─────────── */
 .drl-row--clickable { transition: background 0.15s ease, transform 0.15s ease; }

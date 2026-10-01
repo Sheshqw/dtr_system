@@ -79,7 +79,7 @@
         if (!$isWknd) {
             if ($status === 'absent')  $remark = 'ABS';
             elseif ($status === 'holiday') $remark = 'HOL';
-            elseif ($rec?->is_corrected)   $remark = '*';
+            elseif ($status === 'on_leave') $remark = 'LV';
         }
       @endphp
       <tr class="{{ $isWknd ? 'row-wknd' : '' }}">
@@ -94,6 +94,10 @@
           <td class="c-ut"></td>
         @elseif ($status === 'holiday')
           <td colspan="4" style="font-size:5.5pt;font-style:italic;color:#555;">Holiday</td>
+          <td class="c-ut"></td>
+          <td class="c-ut"></td>
+        @elseif ($status === 'on_leave')
+          <td colspan="4" style="font-size:5.5pt;font-style:italic;color:#555;">On Leave</td>
           <td class="c-ut"></td>
           <td class="c-ut"></td>
         @else

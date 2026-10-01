@@ -5,6 +5,7 @@ namespace App\Http\Controllers;
 use App\Events\AttendancePunched;
 use App\Http\Traits\ScopesByCampus;
 use App\Models\AttendanceLog;
+use App\Models\AuditLog;
 use App\Models\DailyDtr;
 use App\Models\Holiday;
 use App\Models\User;
@@ -132,7 +133,6 @@ class AttendanceController extends Controller
                 'hours_rendered'  => $dtr?->hours_rendered ?? 0,
                 'tardiness_min'   => $dtr?->tardiness_minutes ?? 0,
                 'overtime_min'    => $dtr?->overtime_minutes ?? 0,
-                'is_corrected'    => $dtr?->is_corrected ?? false,
             ];
         });
 
@@ -285,7 +285,6 @@ class AttendanceController extends Controller
             'undertime_minutes' => $r->undertime_minutes,
             'status'            => $r->status,
             'holiday_name'      => $r->status === 'holiday' ? ($holidayNames[$r->work_date->toDateString()] ?? null) : null,
-            'is_corrected'      => $r->is_corrected,
         ]);
 
         return response()->json($records);
@@ -347,6 +346,131 @@ class AttendanceController extends Controller
         });
 
         return response()->json(['message' => 'Log deleted.']);
+    }
+
+    /**
+     * Mark one or more of the acting user's own days as On Leave — no request,
+     * no approval, no leave balance. Always acts on $request->user() only;
+     * there is no employee_id parameter, so there is no path for marking
+     * someone else's record. Allowed only on a working day (not weekend, not
+     * a declared holiday) that has no punches at all.
+     */
+    public function markOnLeave(Request $request)
+    {
+        $validated = $request->validate([
+            'dates'   => 'required|array|min:1|max:31',
+            'dates.*' => 'date_format:Y-m-d',
+        ]);
+
+        $employee = $request->user();
+        $results  = [];
+
+        foreach ($validated['dates'] as $date) {
+            $results[] = DB::transaction(fn() => $this->applyOnLeave($employee, $date));
+        }
+
+        return response()->json([
+            'results' => $results,
+            'marked'  => count(array_filter($results, fn($r) => $r['ok'])),
+            'failed'  => count(array_filter($results, fn($r) => ! $r['ok'])),
+        ]);
+    }
+
+    /**
+     * Remove the On Leave mark from one or more of the acting user's own
+     * days. The day is recomputed through WorkingHoursService afterward so
+     * it goes back to whatever its punches (or lack of them) say it should
+     * be — computeDailyDtr() preserves an existing on_leave/holiday status
+     * on a no-punch day, so the status is cleared first here or that guard
+     * would just put it straight back to on_leave.
+     */
+    public function unmarkOnLeave(Request $request)
+    {
+        $validated = $request->validate([
+            'dates'   => 'required|array|min:1|max:31',
+            'dates.*' => 'date_format:Y-m-d',
+        ]);
+
+        $employee = $request->user();
+        $results  = [];
+
+        foreach ($validated['dates'] as $date) {
+            $results[] = DB::transaction(fn() => $this->removeOnLeave($employee, $date));
+        }
+
+        return response()->json([
+            'results' => $results,
+            'unmarked' => count(array_filter($results, fn($r) => $r['ok'])),
+            'failed'   => count(array_filter($results, fn($r) => ! $r['ok'])),
+        ]);
+    }
+
+    private function applyOnLeave(User $employee, string $date): array
+    {
+        $fail = fn(string $error) => ['date' => $date, 'ok' => false, 'error' => $error];
+
+        $parsed = Carbon::parse($date);
+
+        if ($parsed->isWeekend()) {
+            return $fail('Weekends cannot be marked as On Leave.');
+        }
+
+        if (Holiday::whereDate('date', $date)->exists()) {
+            return $fail('This day is a declared holiday.');
+        }
+
+        if (AttendanceLog::where('employee_id', $employee->id)->whereDate('punch_time', $date)->exists()) {
+            return $fail('This day already has time entries.');
+        }
+
+        $dtr = DailyDtr::where('employee_id', $employee->id)->whereDate('work_date', $date)->first();
+
+        if ($dtr && $dtr->status === 'on_leave') {
+            return ['date' => $date, 'ok' => true, 'status' => 'on_leave'];
+        }
+
+        $old = $dtr?->toArray();
+
+        $dtr ??= new DailyDtr(['employee_id' => $employee->id, 'work_date' => $date]);
+        $dtr->status             = 'on_leave';
+        $dtr->morning_in         = null;
+        $dtr->morning_out        = null;
+        $dtr->afternoon_in       = null;
+        $dtr->afternoon_out      = null;
+        $dtr->hours_rendered     = 0;
+        $dtr->tardiness_minutes  = 0;
+        $dtr->overtime_minutes   = 0;
+        $dtr->undertime_minutes  = 0;
+        $dtr->save();
+
+        AuditLog::record('MARK_ON_LEAVE', 'daily_dtr', $dtr->id, $old, $dtr->fresh()->toArray());
+
+        return ['date' => $date, 'ok' => true, 'status' => 'on_leave'];
+    }
+
+    private function removeOnLeave(User $employee, string $date): array
+    {
+        $fail = fn(string $error) => ['date' => $date, 'ok' => false, 'error' => $error];
+
+        $dtr = DailyDtr::where('employee_id', $employee->id)->whereDate('work_date', $date)->first();
+
+        if (! $dtr || $dtr->status !== 'on_leave') {
+            return $fail('This day is not marked as On Leave.');
+        }
+
+        $old = $dtr->toArray();
+
+        // Clear the status so computeDailyDtr()'s no-punch guard (which
+        // intentionally preserves an existing on_leave/holiday status)
+        // doesn't just hand the same value straight back.
+        $dtr->status = 'absent';
+        $dtr->save();
+
+        $this->workingHours->computeDailyDtr($employee, $date);
+
+        AuditLog::record('UNMARK_ON_LEAVE', 'daily_dtr', $dtr->id, $old, $dtr->fresh()->toArray());
+
+        return ['date' => $date, 'ok' => true, 'status' => $dtr->fresh()->status];
     }
 
     private function authorizeViewEmployee(User $viewer, User $target): void

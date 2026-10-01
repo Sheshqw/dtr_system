@@ -6,11 +6,6 @@
   >
     <span class="w-1.5 h-1.5 rounded-full flex-shrink-0 sb-dot" :class="config.dot" :style="{ boxShadow: `0 0 0 3px ${config.glow}` }"></span>
     {{ config.label }}
-    <span
-      v-if="corrected"
-      class="text-[10px] font-normal opacity-60 -ml-0.5"
-      title="Manually corrected"
-    >✎</span>
   </span>
 </template>
 
@@ -19,7 +14,6 @@ import { computed } from 'vue';
 
 const props = defineProps({
   status:      { type: String, required: true },
-  corrected:   { type: Boolean, default: false },
   holidayName: { type: String, default: null },
 });
 

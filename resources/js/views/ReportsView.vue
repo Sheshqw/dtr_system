@@ -660,11 +660,40 @@
             <span class="legend-item"><span class="legend-dot" style="background:#CBD5E1;"></span>Weekend</span>
           </div>
 
+          <!-- Mark / Unmark On Leave action bar (own record only) -->
+          <div v-if="isOwnRecord && selectedLeaveDates.size > 0" class="leave-action-bar">
+            <span class="text-xs text-[#475569]">{{ selectedLeaveDates.size }} day{{ selectedLeaveDates.size !== 1 ? 's' : '' }} selected</span>
+            <div class="flex items-center gap-2">
+              <button
+                v-if="selectedToMark.length"
+                @click="submitMarkOnLeave"
+                :disabled="markingLeave"
+                class="inline-flex items-center gap-1.5 px-3 py-1.5 text-xs font-semibold rounded-lg transition-colors disabled:opacity-60"
+                style="background:#EEF2FF;color:#3730A3;border:1px solid #C7D2FE;"
+              >
+                <Loader2Icon v-if="markingLeave" class="w-3.5 h-3.5 animate-spin" />
+                Mark {{ selectedToMark.length }} as On Leave
+              </button>
+              <button
+                v-if="selectedToUnmark.length"
+                @click="submitUnmarkOnLeave"
+                :disabled="unmarkingLeave"
+                class="inline-flex items-center gap-1.5 px-3 py-1.5 text-xs font-semibold rounded-lg transition-colors disabled:opacity-60"
+                style="background:#F1F5F9;color:#334155;border:1px solid #E2E8F0;"
+              >
+                <Loader2Icon v-if="unmarkingLeave" class="w-3.5 h-3.5 animate-spin" />
+                Remove On Leave ({{ selectedToUnmark.length }})
+              </button>
+              <button @click="selectedLeaveDates = new Set()" class="text-xs text-[#6B7A94] hover:text-[#0F172A]">Clear</button>
+            </div>
+          </div>
+
           <!-- DTR table -->
           <div class="report-table-wrap overflow-x-auto">
             <table class="dtr-table">
               <thead>
                 <tr>
+                  <th v-if="isOwnRecord" class="dtr-th" style="width:30px;"></th>
                   <th class="dtr-th dtr-th-day">Day</th>
                   <th class="dtr-th">AM In</th>
                   <th class="dtr-th">AM Out</th>
@@ -683,6 +712,15 @@
                   class="dtr-row"
                   :class="rowClass(row)"
                 >
+                  <td v-if="isOwnRecord" class="dtr-td">
+                    <input
+                      v-if="row.leaveEligible"
+                      type="checkbox"
+                      :checked="selectedLeaveDates.has(row.isoDate)"
+                      @change="toggleLeaveDate(row)"
+                      :title="row.status === 'on_leave' ? 'Select to remove On Leave' : 'Select to mark as On Leave'"
+                    />
+                  </td>
                   <td class="dtr-td dtr-td-day">
                     <span class="day-num">{{ row.day }}</span>
                     <span class="day-name">{{ row.dayName }}</span>
@@ -704,7 +742,7 @@
                     <span v-else-if="!row.isWeekend" class="hrs-nil">—</span>
                   </td>
                   <td class="dtr-td">
-                    <StatusBadge v-if="row.status && row.status !== 'weekend'" :status="row.status" :corrected="row.is_corrected" />
+                    <StatusBadge v-if="row.status && row.status !== 'weekend'" :status="row.status" />
                     <span v-else-if="row.isWeekend" class="wknd-label">REST</span>
                     <span v-else class="hrs-nil">—</span>
                   </td>
@@ -842,6 +880,14 @@ const effectiveEmployee = computed(() => {
     : null;
 });
 
+// "Mark as On Leave" is self-service only — it's available whenever the DTR
+// being viewed is the signed-in user's own, regardless of role (an HR
+// Officer looking at their own record via the picker gets it too; looking
+// at anyone else's does not).
+const isOwnRecord = computed(() =>
+  !!effectiveEmployee.value && !!auth.employee && effectiveEmployee.value.id === auth.employee.id
+);
+
 const employees         = ref([]);
 const loadingEmployees  = ref(false);
 const empSearch    = ref('');
@@ -961,12 +1007,14 @@ const fullMonthRows = computed(() => {
     const isWeekend = dow === 0 || dow === 6;
     const dayName = date.toLocaleDateString('en-PH', { weekday: 'short' });
     const rec     = recordMap[d];
+    const status  = rec?.status ?? (isWeekend ? 'weekend' : null);
 
     rows.push({
       day:               d,
+      isoDate:           `${y}-${String(m).padStart(2, '0')}-${String(d).padStart(2, '0')}`,
       dayName,
       isWeekend,
-      status:            rec?.status ?? (isWeekend ? 'weekend' : null),
+      status,
       morning_in:        rec?.morning_in   ?? null,
       morning_out:       rec?.morning_out  ?? null,
       afternoon_in:      rec?.afternoon_in ?? null,
@@ -974,13 +1022,61 @@ const fullMonthRows = computed(() => {
       hours:             Number(rec?.hours) || 0,
       tardiness_minutes: rec?.tardiness_minutes ?? 0,
       overtime_minutes:  rec?.overtime_minutes  ?? 0,
-      is_corrected:      rec?.is_corrected ?? false,
+      leaveEligible:     !isWeekend && (status === 'absent' || status === 'on_leave'),
     });
   }
   return rows;
 });
 
 const workdayCount = computed(() => fullMonthRows.value.filter(r => !r.isWeekend).length);
+
+// ── Mark / Unmark On Leave (self-service, own record only) ──────────────
+const selectedLeaveDates = ref(new Set());
+const markingLeave       = ref(false);
+const unmarkingLeave     = ref(false);
+
+const selectedToMark   = computed(() => fullMonthRows.value.filter(r => selectedLeaveDates.value.has(r.isoDate) && r.status === 'absent'));
+const selectedToUnmark = computed(() => fullMonthRows.value.filter(r => selectedLeaveDates.value.has(r.isoDate) && r.status === 'on_leave'));
+
+function toggleLeaveDate(row) {
+  if (!row.leaveEligible) return;
+  const next = new Set(selectedLeaveDates.value);
+  if (next.has(row.isoDate)) next.delete(row.isoDate);
+  else next.add(row.isoDate);
+  selectedLeaveDates.value = next;
+}
+
+async function submitMarkOnLeave() {
+  if (!selectedToMark.value.length) return;
+  markingLeave.value = true;
+  try {
+    const dates = selectedToMark.value.map(r => r.isoDate);
+    const res = await axios.post('/api/attendance/on-leave', { dates });
+    toast(`Marked ${res.data.marked} day${res.data.marked !== 1 ? 's' : ''} as On Leave.`, 'success');
+    selectedLeaveDates.value = new Set();
+    await loadPreview();
+  } catch (err) {
+    toast(await extractErrorMessage(err, 'Failed to mark day(s) as On Leave.'), 'error');
+  } finally {
+    markingLeave.value = false;
+  }
+}
+
+async function submitUnmarkOnLeave() {
+  if (!selectedToUnmark.value.length) return;
+  unmarkingLeave.value = true;
+  try {
+    const dates = selectedToUnmark.value.map(r => r.isoDate);
+    const res = await axios.post('/api/attendance/on-leave/unmark', { dates });
+    toast(`Removed On Leave from ${res.data.unmarked} day${res.data.unmarked !== 1 ? 's' : ''}.`, 'success');
+    selectedLeaveDates.value = new Set();
+    await loadPreview();
+  } catch (err) {
+    toast(await extractErrorMessage(err, 'Failed to remove On Leave.'), 'error');
+  } finally {
+    unmarkingLeave.value = false;
+  }
+}
 
 const previewStats = computed(() => {
   if (!previewData.value) return [];
@@ -1026,6 +1122,7 @@ async function loadPreview() {
   if (!effectiveEmployee.value) return;
   previewing.value  = true;
   previewData.value = null;
+  selectedLeaveDates.value = new Set();
   try {
     const res = await axios.get(`/api/reports/preview/${effectiveEmployee.value.id}`, {
       params: { month: month.value, year: year.value },
@@ -1859,6 +1956,18 @@ onMounted(async () => {
 }
 .legend-item { display: flex; align-items: center; gap: 5px; font-size: 10.5px; color: #64748B; }
 .legend-dot  { width: 8px; height: 8px; border-radius: 2px; flex-shrink: 0; }
+
+/* ── Mark/Unmark On Leave action bar ──────────────────────────────── */
+.leave-action-bar {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  padding: 10px 20px;
+  background: #EEF2FF;
+  border-bottom: 1px solid #C7D2FE;
+  flex-wrap: wrap;
+}
 
 /* ── DTR table ───────────────────────────────────── */
 .dtr-table { width: 100%; border-collapse: collapse; font-size: 12px; }

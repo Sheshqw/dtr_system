@@ -12,15 +12,13 @@ class DailyDtr extends Model
         'employee_id', 'work_date',
         'morning_in', 'morning_out', 'afternoon_in', 'afternoon_out',
         'hours_rendered', 'tardiness_minutes', 'overtime_minutes', 'undertime_minutes',
-        'status', 'is_corrected', 'corrected_by', 'correction_reason', 'corrected_at',
+        'status',
     ];
 
     protected function casts(): array
     {
         return [
             'work_date'      => 'date',
-            'is_corrected'   => 'boolean',
-            'corrected_at'   => 'datetime',
             'hours_rendered' => 'float',
         ];
     }
@@ -28,10 +26,5 @@ class DailyDtr extends Model
     public function employee()
     {
         return $this->belongsTo(User::class, 'employee_id');
-    }
-
-    public function correctedBy()
-    {
-        return $this->belongsTo(User::class, 'corrected_by');
     }
 }

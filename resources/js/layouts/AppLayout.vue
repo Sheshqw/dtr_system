@@ -129,10 +129,6 @@
           </span>
           <span class="nav-label">{{ item.label }}</span>
           <span
-            v-if="item.name === 'corrections' && pendingCorrections > 0"
-            class="nav-badge"
-          >{{ pendingCorrections > 99 ? '99+' : pendingCorrections }}</span>
-          <span
             v-if="item.name === 'reports' && pendingPrintRequests > 0"
             class="nav-badge"
           >{{ pendingPrintRequests > 99 ? '99+' : pendingPrintRequests }}</span>
@@ -399,7 +395,6 @@ import {
   Loader2        as Loader2Icon,
   Wifi           as WifiIcon,
   Menu           as MenuIcon,
-  ClipboardEdit  as ClipboardEditIcon,
   HeartPulse     as HeartPulseIcon,
   Search         as SearchIcon,
   MonitorSmartphone as MonitorSmartphoneIcon,
@@ -524,7 +519,6 @@ const navItems = [
   { name: 'employees',   label: 'Employee Logs', to: { name: 'employees'   }, icon: UsersIcon, requiresFeature: 'dtr_records.view_all' },
   { name: 'tracking',    label: 'Tracking',     to: { name: 'tracking'    }, icon: BarChart2Icon       },
   { name: 'reports',     label: 'Reports',      to: { name: 'reports'     }, icon: FileTextIcon        },
-  { name: 'corrections', label: 'Corrections',  to: { name: 'corrections' }, icon: ClipboardEditIcon  },
 ];
 const visibleNavItems = computed(() =>
   navItems.filter(item => !item.requiresFeature || perms.can(item.requiresFeature))
@@ -567,22 +561,9 @@ async function handleLogout() {
   router.push({ name: 'login' });
 }
 
-// ── Pending corrections badge ─────────────────────────────────────
-const pendingCorrections = ref(0);
-let correctionPollTimer = null;
-
-async function fetchPendingCorrections() {
-  if (!isAdminOrHr.value) return;
-  try {
-    const res = await axios.get('/api/dtr-corrections');
-    pendingCorrections.value = res.data?.summary?.pending ?? 0;
-  } catch {
-    // silently ignore
-  }
-}
-
 // ── Pending DTR print requests badge ───────────────────────────────
 const pendingPrintRequests = ref(0);
+let badgePollTimer = null;
 
 async function fetchPendingPrintRequests() {
   if (!isAdminOrHr.value) return;
@@ -607,17 +588,13 @@ function listenForPunches() {
 }
 
 onMounted(() => {
-  fetchPendingCorrections();
   fetchPendingPrintRequests();
-  correctionPollTimer = setInterval(() => {
-    fetchPendingCorrections();
-    fetchPendingPrintRequests();
-  }, 60_000);
+  badgePollTimer = setInterval(fetchPendingPrintRequests, 60_000);
   listenForPunches();
 });
 
 onBeforeUnmount(() => {
-  clearInterval(correctionPollTimer);
+  clearInterval(badgePollTimer);
   echoChannel?.stopListening('.punched');
   window.Echo?.leave('attendance');
 });

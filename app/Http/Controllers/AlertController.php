@@ -3,15 +3,14 @@
 namespace App\Http\Controllers;
 
 use App\Http\Traits\ScopesByCampus;
-use App\Models\DtrCorrection;
 use App\Models\SystemHealthLog;
 use Illuminate\Http\Request;
 
 /**
  * Aggregates "needs your attention" items from across the system into one
  * lightweight feed for the header notification bell. Each source already
- * has its own full page (DTR Corrections, System Health) — this endpoint
- * just surfaces counts + deep links so nothing gets missed.
+ * has its own full page (System Health) — this endpoint just surfaces
+ * counts + deep links so nothing gets missed.
  */
 class AlertController extends Controller
 {
@@ -19,30 +18,7 @@ class AlertController extends Controller
 
     public function index(Request $request)
     {
-        $user   = $request->user();
         $alerts = [];
-
-        if ($this->isPrivileged($request)) {
-            $pendingQuery = DtrCorrection::where('status', 'pending');
-
-            if (! $this->isSuperAdmin($request)) {
-                $pendingQuery->whereHas('employee', fn($q) => $q->where('campus_id', $user->campus_id));
-            }
-
-            $pending = $pendingQuery->count();
-
-            if ($pending > 0) {
-                $alerts[] = $this->item(
-                    id: 'corrections_pending',
-                    severity: 'warning',
-                    icon: 'clipboard-edit',
-                    title: 'Pending DTR Corrections',
-                    message: $pending . ' correction request' . ($pending === 1 ? '' : 's') . ' awaiting your review.',
-                    count: $pending,
-                    route: 'corrections',
-                );
-            }
-        }
 
         if ($this->isSuperAdmin($request)) {
             $critical = SystemHealthLog::where('status', 'new')->where('severity', 'critical')->count();

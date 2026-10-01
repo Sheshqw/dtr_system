@@ -180,7 +180,7 @@ code, kbd {
 .log-table .th, .log-row,
 .f-ctrl, .f-btn, .btn-outline,
 .bg-white, main, .dash-page,
-.tk-card, .corrections-alert, .drl-header, .drl-row,
+.tk-card, .dash-alert, .drl-header, .drl-row,
 .bg-slate-50, .bg-amber-50, .bg-indigo-50, .bg-red-50,
 .bg-blue-50, .bg-green-50, .bg-purple-50,
 input, select, textarea {
@@ -640,20 +640,12 @@ input, select, textarea {
 [data-theme="dark"] .drl-row--clickable:hover,
 [data-theme="dark"] .drl-row--clickable:focus-visible { background: rgba(255,255,255,0.045) !important; }
 
-/* ── DashboardView — Corrections alert ───────────────────────────────────── */
-[data-theme="dark"] .corrections-alert       { background: rgba(217,119,6,0.10) !important; border-color: rgba(217,119,6,0.25) !important; }
-[data-theme="dark"] .corrections-alert:hover { background: rgba(217,119,6,0.18) !important; }
-[data-theme="dark"] .ca-text   { color: #FCD34D !important; }
-[data-theme="dark"] .ca-action { color: #FDE68A !important; }
-[data-theme="dark"] .ca-dot    { background: #F59E0B !important; }
-
-/* Indigo variant (DTR print-request alert) — compound selectors so this
-   wins over the amber base rules above regardless of source order. */
-[data-theme="dark"] .corrections-alert.corrections-alert--indigo       { background: rgba(99,102,241,0.14) !important; border-color: rgba(99,102,241,0.30) !important; }
-[data-theme="dark"] .corrections-alert.corrections-alert--indigo:hover { background: rgba(99,102,241,0.22) !important; }
-[data-theme="dark"] .corrections-alert--indigo .ca-text   { color: #C7D2FE !important; }
-[data-theme="dark"] .corrections-alert--indigo .ca-action { color: #A5B4FC !important; }
-[data-theme="dark"] .corrections-alert--indigo .ca-dot    { background: #818CF8 !important; }
+/* ── DashboardView — dashboard alert banner (DTR print-request alert) ────── */
+[data-theme="dark"] .dash-alert.dash-alert--indigo       { background: rgba(99,102,241,0.14) !important; border-color: rgba(99,102,241,0.30) !important; }
+[data-theme="dark"] .dash-alert.dash-alert--indigo:hover { background: rgba(99,102,241,0.22) !important; }
+[data-theme="dark"] .dash-alert--indigo .ca-text   { color: #C7D2FE !important; }
+[data-theme="dark"] .dash-alert--indigo .ca-action { color: #A5B4FC !important; }
+[data-theme="dark"] .dash-alert--indigo .ca-dot    { background: #818CF8 !important; }
 
 /* ── ReportsView — shared card header (navy/green tinted strip) ──────────── */
 [data-theme="dark"] .card-head       { background: #1E3050 !important; border-bottom-color: rgba(255,255,255,0.07) !important; }
@@ -727,7 +719,7 @@ input, select, textarea {
 [data-theme="dark"] .badge-gray  { background: rgba(100,116,139,0.15) !important; color: #B7C3DE !important; }
 [data-theme="dark"] .btn-icon:hover { background: rgba(255,255,255,0.08) !important; color: #93C5FD !important; }
 
-/* ── DtrCorrectionView — scoped class overrides ──────────────────────────── */
+/* ── Shared modal scoped class overrides ─────────────────────────────────── */
 [data-theme="dark"] .modal-label { color: #E4EAF5 !important; }
 [data-theme="dark"] .modal-input {
   background: #1E3050 !important;
@@ -735,64 +727,6 @@ input, select, textarea {
   color: #E2E8F0 !important;
 }
 [data-theme="dark"] .modal-input:focus { border-color: #3B82F6 !important; }
-[data-theme="dark"] .corr-card {
-  background: #1C2A44 !important;
-  border-color: rgba(255,255,255,0.07) !important;
-  box-shadow: 0 1px 3px rgba(0,0,0,0.3) !important;
-}
-[data-theme="dark"] .req-item {
-  background: #1C2A44 !important;
-  border-color: rgba(255,255,255,0.07) !important;
-}
-
-/* Inline-style targets added via classes in DtrCorrectionView template */
-[data-theme="dark"] .corr-thead-row { background: #17223A !important; border-bottom-color: rgba(255,255,255,0.07) !important; }
-[data-theme="dark"] .corr-data-row  { border-bottom-color: rgba(255,255,255,0.04) !important; }
-[data-theme="dark"] .corr-data-row:hover { background: rgba(255,255,255,0.025) !important; }
-[data-theme="dark"] .item-name   { color: #E2E8F0 !important; }
-[data-theme="dark"] .item-date   { color: #E4EAF5 !important; }
-[data-theme="dark"] .field-badge { background: rgba(99,102,241,0.15) !important; color: #A5B4FC !important; }
-[data-theme="dark"] .val-old     { background: rgba(239,68,68,0.15) !important; color: #FCA5A5 !important; }
-[data-theme="dark"] .val-new     { background: rgba(16,185,129,0.15) !important; color: #6EE7B7 !important; }
-[data-theme="dark"] .action-approve {
-  background: rgba(21,128,61,0.15) !important;
-  color: #86efac !important;
-  border-color: rgba(74,222,128,0.25) !important;
-}
-[data-theme="dark"] .action-reject {
-  background: rgba(239,68,68,0.15) !important;
-  color: #fca5a5 !important;
-  border-color: rgba(248,113,113,0.25) !important;
-}
-[data-theme="dark"] .modal-hdr  { border-bottom-color: rgba(255,255,255,0.08) !important; }
-[data-theme="dark"] .modal-icon-box { background: rgba(99,102,241,0.15) !important; }
-[data-theme="dark"] .modal-title    { color: #E2E8F0 !important; }
-[data-theme="dark"] .submit-error {
-  background: rgba(239,68,68,0.15) !important;
-  border-color: rgba(248,113,113,0.25) !important;
-  color: #FCA5A5 !important;
-}
-[data-theme="dark"] .modal-cancel { background: #1E3050 !important; color: #E4EAF5 !important; }
-
-/* Review modal conditional header */
-[data-theme="dark"] .review-hdr--approve {
-  background: rgba(21,128,61,0.12) !important;
-  border-bottom-color: rgba(74,222,128,0.15) !important;
-}
-[data-theme="dark"] .review-hdr--deny {
-  background: rgba(239,68,68,0.12) !important;
-  border-bottom-color: rgba(248,113,113,0.15) !important;
-}
-[data-theme="dark"] .review-icon--approve { background: rgba(21,128,61,0.20) !important; }
-[data-theme="dark"] .review-icon--deny    { background: rgba(239,68,68,0.20) !important; }
-[data-theme="dark"] .review-hdr--approve .review-title { color: #86efac !important; }
-[data-theme="dark"] .review-hdr--deny .review-title    { color: #fca5a5 !important; }
-[data-theme="dark"] .review-hdr--approve .review-sub   { color: #4ade80 !important; }
-[data-theme="dark"] .review-hdr--deny .review-sub      { color: #f87171 !important; }
-[data-theme="dark"] .review-box  { background: #1C2A44 !important; border-color: rgba(255,255,255,0.08) !important; }
-[data-theme="dark"] .detail-val  { color: #E2E8F0 !important; }
-[data-theme="dark"] .reason-txt  { color: #E4EAF5 !important; }
-
 /* ── BackupView — scoped class overrides ─────────────────────────────────── */
 [data-theme="dark"] .backup-stat-card       { background: #1C2A44 !important; border-color: rgba(255,255,255,0.07) !important; }
 [data-theme="dark"] .backup-detail          { background: #1E3050 !important; color: #B7C3DE !important; border-top-color: rgba(255,255,255,0.07) !important; }

@@ -25,6 +25,8 @@
         <option value="LOGOUT">Logout</option>
         <option value="DTR_MONTH_LOCKED">DTR Month Locked</option>
         <option value="DTR_MONTH_UNLOCKED">DTR Month Unlocked</option>
+        <option value="MARK_ON_LEAVE">Marked On Leave</option>
+        <option value="UNMARK_ON_LEAVE">Removed On Leave</option>
         <option value="FEATURE_PERMISSION_CHANGED">Feature Permission Changed</option>
         <option value="FEATURE_PERMISSION_RESET">Feature Permission Reset</option>
       </select>
@@ -32,6 +34,7 @@
         <option value="">All Tables</option>
         <option value="employees">Employees</option>
         <option value="attendance_logs">Attendance Logs</option>
+        <option value="daily_dtr">Daily DTR</option>
         <option value="holidays">Holidays</option>
         <option value="shifts">Shifts</option>
         <option value="departments">Departments</option>
@@ -144,6 +147,7 @@ import {
   ShieldAlert as ShieldAlertIcon,
   Lock        as LockIcon,
   Unlock      as UnlockIcon,
+  Calendar    as CalendarIcon,
 } from 'lucide-vue-next';
 
 const logs    = ref([]);
@@ -167,6 +171,8 @@ const ACTION_META = {
   ACCOUNT_LOCKED: { icon: LockIcon,    color: '#DC2626', bg: '#FEF2F2', verb: 'was locked out after 5 failed attempts' },
   DTR_MONTH_LOCKED:   { icon: LockIcon,   color: '#B45309', bg: '#FFFBEB', verb: 'locked a month\'s DTR records' },
   DTR_MONTH_UNLOCKED: { icon: UnlockIcon, color: '#2563EB', bg: '#EFF6FF', verb: 'unlocked a month\'s DTR records' },
+  MARK_ON_LEAVE:      { icon: CalendarIcon, color: '#4338CA', bg: '#EEF2FF', verb: 'marked a day as On Leave' },
+  UNMARK_ON_LEAVE:    { icon: CalendarIcon, color: '#64748B', bg: '#F1F5F9', verb: 'removed an On Leave mark' },
   FEATURE_PERMISSION_CHANGED: { icon: LockIcon,   color: '#7C3AED', bg: '#F5F3FF', verb: 'changed a feature permission' },
   FEATURE_PERMISSION_RESET:   { icon: UnlockIcon, color: '#64748B', bg: '#F1F5F9', verb: 'reset a feature permission' },
 };
@@ -185,6 +191,7 @@ function actionMeta(action) {
 const TABLE_LABELS = {
   employees:        'an employee record',
   attendance_logs:  'an attendance log',
+  daily_dtr:        'a DTR record',
   holidays:         'a holiday',
   shifts:           'a shift',
   departments:      'a department',
