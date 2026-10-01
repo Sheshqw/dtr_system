@@ -11,6 +11,7 @@ use App\Models\SystemSetting;
 use App\Models\User;
 use Barryvdh\DomPDF\Facade\Pdf;
 use Illuminate\Http\Request;
+use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Hash;
 use Illuminate\Support\Facades\Storage;
 use Illuminate\Support\Facades\Validator;
@@ -375,6 +376,14 @@ class EmployeeController extends Controller
      * batch — a typo in row 40 shouldn't cost the 39 good rows before it.
      * Row-by-row logic is identical to importPreview() (both call
      * resolveImportRow()) so what the admin previewed is exactly what happens.
+     *
+     * Validated rows are inserted in chunks via the query builder instead of
+     * one Eloquent User::create() per row, and passwords are hashed once per
+     * distinct value (in practice: once, since auto-generated rows share one
+     * batch password — see prepareImport()) instead of once per row. Together
+     * these are what take a 2,600-row import from several minutes to a few
+     * seconds; see EmployeeImportPerformanceTest for the before/after case
+     * this guards against regressing.
      * POST /api/employees/import
      */
     public function import(Request $request)
@@ -387,11 +396,10 @@ class EmployeeController extends Controller
 
         [$rows, $ctx] = $this->prepareImport($request);
 
-        $imported           = 0;
-        $errors             = [];
-        $generatedPasswords = [];
-        $seenIds            = [];
-        $seenEmails         = [];
+        $errors      = [];
+        $seenIds     = [];
+        $seenEmails  = [];
+        $resolvedOk  = [];
 
         foreach ($rows as $i => $row) {
             $rowNum   = $i + 2; // header occupies row 1
@@ -402,44 +410,112 @@ class EmployeeController extends Controller
                 continue;
             }
 
-            try {
+            $resolvedOk[] = $resolved;
+        }
+
+        $imported      = 0;
+        $usedDefault   = 0;
+        $now           = now();
+
+        if ($resolvedOk) {
+            $defaultHash = Hash::make($ctx['defaultPassword']);
+            $customHashCache = [];
+
+            $insertRows = [];
+            foreach ($resolvedOk as $resolved) {
                 $data = $resolved['data'];
-                $data['password'] = Hash::make($resolved['plain_password']);
-
-                $employee = User::create($data);
-
-                AuditLog::record('CREATE', 'employees', $employee->id, null, $employee->toArray());
-                $imported++;
 
                 if ($resolved['auto_generated']) {
-                    $generatedPasswords[] = [
-                        'employee_id' => $resolved['employee_id'],
-                        'name'        => $resolved['name'],
-                        'password'    => $resolved['plain_password'],
-                    ];
+                    $data['password'] = $defaultHash;
+                    $usedDefault++;
+                } else {
+                    $pw = $resolved['plain_password'];
+                    $customHashCache[$pw] ??= Hash::make($pw);
+                    $data['password'] = $customHashCache[$pw];
                 }
-            } catch (\Throwable $e) {
-                $errors[] = "Row {$rowNum}: " . $e->getMessage();
+
+                $data['created_at'] = $now;
+                $data['updated_at'] = $now;
+                $insertRows[] = $data;
             }
+
+            DB::transaction(function () use ($insertRows) {
+                foreach (array_chunk($insertRows, 500) as $chunk) {
+                    DB::table('employees')->insert($chunk);
+                }
+            });
+
+            // One audit entry per created employee, same as the single-create
+            // path (AuditLog::record), but batched the same way the inserts
+            // above are — looking the new ids back up by employee_id (unique)
+            // since a bulk insert doesn't return one id per row.
+            $idMap = DB::table('employees')
+                ->whereIn('employee_id', array_column($insertRows, 'employee_id'))
+                ->pluck('id', 'employee_id');
+
+            $auditRows = array_map(function ($data) use ($idMap, $request, $now) {
+                $logged = $data;
+                unset($logged['password']);
+                $logged['id'] = $idMap[$data['employee_id']] ?? null;
+
+                return [
+                    'user_id'        => $request->user()->id,
+                    'action'         => 'CREATE',
+                    'table_affected' => 'employees',
+                    'record_id'      => $idMap[$data['employee_id']] ?? null,
+                    'old_value'      => null,
+                    'new_value'      => json_encode($logged),
+                    'reason'         => null,
+                    'ip_address'     => $request->ip(),
+                    'created_at'     => $now,
+                    'updated_at'     => $now,
+                ];
+            }, $insertRows);
+
+            foreach (array_chunk($auditRows, 500) as $chunk) {
+                DB::table('audit_logs')->insert($chunk);
+            }
+
+            $imported = count($insertRows);
         }
 
         return response()->json([
-            'imported'            => $imported,
-            'failed'              => count($errors),
-            'errors'              => $errors,
-            'generated_passwords' => $generatedPasswords,
+            'imported'               => $imported,
+            'failed'                 => count($errors),
+            'errors'                 => $errors,
+            'default_password'       => $usedDefault > 0 ? $ctx['defaultPassword'] : null,
+            'default_password_count' => $usedDefault,
         ]);
     }
 
     /**
      * Parse the uploaded workbook and build the lookup context shared by
      * importPreview() and import() — computed once per request rather than
-     * once per row.
+     * once per row. At 2,600+ rows, "once per row" for the uniqueness checks
+     * and Campus/Department lookups below would mean several thousand extra
+     * queries; preloading them here turns that into a handful.
      */
     private function prepareImport(Request $request): array
     {
         $isSuperAdmin   = $this->isSuperAdmin($request);
         $lockedCampusId = $isSuperAdmin ? null : $request->user()->campus_id;
+
+        $rows = (new FastExcel)->import($request->file('file')->getRealPath());
+
+        $fileEmployeeIds = $rows->map(fn($r) => trim((string) ($r['Employee ID'] ?? '')))->filter()->unique()->values();
+        $fileEmails      = $rows->map(fn($r) => trim((string) ($r['Email'] ?? '')))->filter()->unique()->values();
+
+        $minPasswordLength = max(12, SystemSetting::current()->password_min_length);
+
+        // One shared temporary password for every auto-generated row in this
+        // batch, rather than a unique one per row — the point isn't to reuse
+        // a password long-term, it's to avoid computing a fresh bcrypt hash
+        // (hundreds of ms each) per employee when hundreds or thousands are
+        // being imported at once. Validated once against the same policy a
+        // per-row generated password would have had to pass.
+        do {
+            $defaultPassword = Str::password($minPasswordLength);
+        } while (Validator::make(['password' => $defaultPassword], ['password' => ['string', Password::default()]])->fails());
 
         $ctx = [
             'allowedRoles'            => $this->assignableRoles($request),
@@ -448,10 +524,13 @@ class EmployeeController extends Controller
             'lockedCampusId'          => $lockedCampusId,
             'lockedCampusName'        => $lockedCampusId ? Campus::find($lockedCampusId)?->name : null,
             'isSuperAdmin'            => $isSuperAdmin,
-            'minPasswordLength'       => max(12, SystemSetting::current()->password_min_length),
+            'minPasswordLength'       => $minPasswordLength,
+            'defaultPassword'         => $defaultPassword,
+            'existingIds'             => $fileEmployeeIds->isEmpty() ? collect() : User::whereIn('employee_id', $fileEmployeeIds)->pluck('employee_id')->flip(),
+            'existingEmails'          => $fileEmails->isEmpty() ? collect() : User::whereIn('email', $fileEmails)->pluck('email')->flip(),
+            'campusesByName'          => Campus::pluck('id', 'name'),
+            'departments'             => Department::get(['id', 'name', 'campus_id']),
         ];
-
-        $rows = (new FastExcel)->import($request->file('file')->getRealPath());
 
         return [$rows, $ctx];
     }
@@ -484,7 +563,7 @@ class EmployeeController extends Controller
             return $fail('Employee ID, Last Name, and First Name are required.');
         }
 
-        if (isset($seenIds[$employeeId]) || User::where('employee_id', $employeeId)->exists()) {
+        if (isset($seenIds[$employeeId]) || isset($ctx['existingIds'][$employeeId])) {
             return $fail("Employee ID '{$employeeId}' already exists.");
         }
 
@@ -493,7 +572,7 @@ class EmployeeController extends Controller
             if (! filter_var($email, FILTER_VALIDATE_EMAIL)) {
                 return $fail("'{$email}' is not a valid email.");
             }
-            if (isset($seenEmails[$email]) || User::where('email', $email)->exists()) {
+            if (isset($seenEmails[$email]) || isset($ctx['existingEmails'][$email])) {
                 return $fail("Email '{$email}' already exists.");
             }
         }
@@ -507,22 +586,19 @@ class EmployeeController extends Controller
         $campusDisplay = $ctx['lockedCampusName'];
         $campusName    = trim((string) ($row['Campus'] ?? ''));
         if ($ctx['isSuperAdmin'] && $campusName !== '') {
-            $campus = Campus::where('name', $campusName)->first();
-            if (! $campus) {
+            $campusId = $ctx['campusesByName'][$campusName] ?? null;
+            if (! $campusId) {
                 return $fail("Campus '{$campusName}' not found.");
             }
-            $campusId      = $campus->id;
-            $campusDisplay = $campus->name;
+            $campusDisplay = $campusName;
         }
 
         $departmentId   = null;
         $departmentName = trim((string) ($row['Department'] ?? ''));
         if ($departmentName !== '') {
-            $deptQuery = Department::where('name', $departmentName);
-            if ($campusId) {
-                $deptQuery->where('campus_id', $campusId);
-            }
-            $department = $deptQuery->first();
+            $department = $ctx['departments']->first(
+                fn($d) => $d->name === $departmentName && (! $campusId || (int) $d->campus_id === (int) $campusId)
+            );
             if (! $department) {
                 return $fail("Department '{$departmentName}' not found" . ($campusId ? ' in that campus.' : '.'));
             }
@@ -585,11 +661,10 @@ class EmployeeController extends Controller
 
         if ($autoGenerated) {
             if ($generatePassword) {
-                $plainPassword = Str::password($ctx['minPasswordLength']);
-                $validator = Validator::make(['password' => $plainPassword], ['password' => ['string', Password::default()]]);
-                if ($validator->fails()) {
-                    return $fail('Could not generate a password meeting the security policy.');
-                }
+                // Shared across the whole batch (see prepareImport()) rather
+                // than a fresh Str::password() per row — the difference
+                // between one bcrypt hash and a few thousand at import time.
+                $plainPassword = $ctx['defaultPassword'];
             }
         } else {
             $validator = Validator::make(['password' => $passwordInput], ['password' => ['string', Password::default()]]);

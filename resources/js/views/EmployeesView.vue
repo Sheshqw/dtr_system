@@ -923,15 +923,20 @@
               </ul>
             </div>
 
-            <div v-if="importResult.generated_passwords?.length" class="rounded-lg border border-[#FDE68A] bg-[#FFFBEB] p-3">
+            <div v-if="importResult.default_password" class="rounded-lg border border-[#FDE68A] bg-[#FFFBEB] p-3">
               <p class="text-xs font-semibold text-[#92400E] mb-1.5">
-                Temporary passwords generated — save these now, they won't be shown again
+                Shared temporary password — save this now, it won't be shown again
               </p>
-              <ul class="text-xs text-[#92400E]/90 space-y-1 max-h-32 overflow-y-auto font-mono">
-                <li v-for="g in importResult.generated_passwords" :key="g.employee_id">
-                  {{ g.employee_id }} ({{ g.name }}) — {{ g.password }}
-                </li>
-              </ul>
+              <p class="text-xs text-[#92400E]/90 leading-relaxed">
+                {{ importResult.default_password_count }} newly imported employee{{ importResult.default_password_count !== 1 ? 's' : '' }}
+                left the Password column blank and were given the same temporary password:
+              </p>
+              <p class="mt-1.5 font-mono text-sm font-bold text-[#92400E] bg-white border border-[#FDE68A] rounded px-2.5 py-1.5 inline-block">
+                {{ importResult.default_password }}
+              </p>
+              <p class="text-xs text-[#92400E]/80 mt-1.5">
+                Distribute it to each employee individually and have them change it on first login.
+              </p>
             </div>
           </template>
 
