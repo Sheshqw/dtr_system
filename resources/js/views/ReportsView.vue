@@ -320,11 +320,14 @@
             </div>
 
             <!-- Pending queue ──────────────────────────────────────────── -->
-            <p v-if="!pendingConsents.length" class="text-sm text-[#6B7A94]">No pending print requests.</p>
+            <div v-if="!pendingConsents.length" class="empty-pending">
+              <CheckCircle2Icon class="w-5 h-5" />
+              All caught up — no pending print requests.
+            </div>
 
             <div
               v-for="c in pendingConsents" :key="c.id"
-              class="flex items-start justify-between gap-3 px-4 py-3 rounded-lg border border-[#E2E8F0] hover:border-[#C7D2F6] transition-colors flex-wrap"
+              class="pending-row flex items-start justify-between gap-3 px-4 py-3 rounded-lg border border-[#E2E8F0] flex-wrap"
             >
               <div class="flex items-start gap-3 min-w-0">
                 <div class="w-9 h-9 rounded-full bg-gradient-to-br from-[#2E4A8C] to-[#3D5CA3] flex items-center justify-center flex-shrink-0">
@@ -375,36 +378,43 @@
               </div>
             </div>
 
-            <!-- Recent decisions (collapsed by default) ─────────────────── -->
-            <template v-if="recentConsentDecisions.length">
+            <!-- Request History (collapsed by default) ────────────────────── -->
+            <div v-if="recentConsentDecisions.length" class="history-section">
               <button
+                type="button"
                 @click="showConsentHistory = !showConsentHistory"
-                class="text-xs font-semibold text-[#2E4A8C] hover:underline pt-1"
+                class="history-toggle"
               >
-                {{ showConsentHistory ? 'Hide' : 'Show' }} recent decisions ({{ recentConsentDecisions.length }})
+                <span class="history-toggle-left">
+                  <HistoryIcon class="w-4 h-4" />
+                  Request History
+                  <span class="history-count">{{ recentConsentDecisions.length }}</span>
+                </span>
+                <ChevronDownIcon class="w-4 h-4 chevron" :class="showConsentHistory ? 'chevron--open' : ''" />
               </button>
-              <div v-if="showConsentHistory" class="space-y-1.5 pt-1 border-t border-[#F1F5F9]">
-                <div
-                  v-for="c in recentConsentDecisions" :key="c.id"
-                  class="flex items-center justify-between gap-3 px-3 py-2 rounded-lg"
-                  style="background:#FAFBFD;"
-                >
-                  <div class="flex items-center gap-2 min-w-0">
-                    <div class="w-7 h-7 rounded-full bg-gradient-to-br from-[#2E4A8C] to-[#3D5CA3] flex items-center justify-center flex-shrink-0">
-                      <span class="text-white text-[10px] font-semibold">{{ initials(c.employee.name) }}</span>
+
+              <div class="history-collapse" :class="showConsentHistory ? 'is-open' : ''">
+                <div class="history-collapse-inner">
+                  <div class="history-list">
+                    <div v-for="c in recentConsentDecisions" :key="c.id" class="history-row">
+                      <div class="flex items-center gap-2.5 min-w-0">
+                        <div class="w-7 h-7 rounded-full bg-gradient-to-br from-[#2E4A8C] to-[#3D5CA3] flex items-center justify-center flex-shrink-0">
+                          <span class="text-white text-[10px] font-semibold">{{ initials(c.employee.name) }}</span>
+                        </div>
+                        <div class="min-w-0">
+                          <p class="text-xs font-semibold text-[#0F172A] truncate">{{ c.employee.name }}</p>
+                          <p class="text-[11px] text-[#6B7A94]">{{ c.month_label }} · {{ c.reviewed_at }}</p>
+                        </div>
+                      </div>
+                      <span
+                        class="text-[10px] font-bold uppercase tracking-wide rounded-full px-2 py-0.5 flex-shrink-0"
+                        :style="c.status === 'approved' ? 'background:#ECFDF5;color:#065F46;' : 'background:#FEF2F2;color:#991B1B;'"
+                      >{{ c.status }}</span>
                     </div>
-                    <p class="text-xs text-[#0F172A] truncate">
-                      <span class="font-semibold">{{ c.employee.name }}</span>
-                      <span class="text-[#6B7A94]"> · {{ c.month_label }}</span>
-                    </p>
                   </div>
-                  <span
-                    class="text-[10px] font-bold uppercase tracking-wide rounded-full px-2 py-0.5 flex-shrink-0"
-                    :style="c.status === 'approved' ? 'background:#ECFDF5;color:#065F46;' : 'background:#FEF2F2;color:#991B1B;'"
-                  >{{ c.status }}</span>
                 </div>
               </div>
-            </template>
+            </div>
           </div>
         </div>
         </template>
@@ -808,6 +818,8 @@ import {
   ShieldCheck   as ShieldCheckIcon,
   PenLine       as PenLineIcon,
   Upload        as UploadIcon,
+  History       as HistoryIcon,
+  ChevronDown   as ChevronDownIcon,
 } from 'lucide-vue-next';
 
 const auth = useAuthStore();
@@ -1661,6 +1673,84 @@ onMounted(async () => {
 @media (max-width: 640px) {
   .tab-btn { padding: 9px 12px; font-size: 12.5px; }
 }
+
+/* ── Print-requests empty state ──────────────────────────────────── */
+.empty-pending {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 14px 16px;
+  border-radius: 10px;
+  background: #F0FDF4;
+  border: 1px dashed #BBF7D0;
+  color: #166534;
+  font-size: 13px;
+  font-weight: 500;
+}
+.empty-pending svg { color: #15803D; flex-shrink: 0; }
+
+/* ── Pending request row ─────────────────────────────────────────── */
+.pending-row {
+  transition: border-color 0.15s ease, box-shadow 0.15s ease, transform 0.15s ease;
+}
+.pending-row:hover {
+  border-color: #C7D2F6;
+  box-shadow: 0 2px 10px -4px rgba(27,42,94,0.15);
+  transform: translateY(-1px);
+}
+
+/* ── Request History (collapsible) ───────────────────────────────── */
+.history-section { border-top: 1px solid #F1F5F9; padding-top: 10px; margin-top: 2px; }
+.history-toggle {
+  width: 100%;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 4px 2px;
+  font-size: 12.5px;
+  font-weight: 600;
+  color: #2E4A8C;
+  transition: color 0.15s ease;
+}
+.history-toggle:hover { color: #1B2A5E; }
+.history-toggle-left { display: flex; align-items: center; gap: 7px; }
+.history-count {
+  font-size: 10.5px;
+  font-weight: 700;
+  color: #475569;
+  background: #E2E8F0;
+  border-radius: 999px;
+  padding: 1px 7px;
+  line-height: 1.5;
+}
+.chevron { color: #94A3B8; transition: transform 0.2s ease; flex-shrink: 0; }
+.chevron--open { transform: rotate(180deg); }
+
+.history-collapse {
+  display: grid;
+  grid-template-rows: 0fr;
+  transition: grid-template-rows 0.25s ease;
+}
+.history-collapse.is-open { grid-template-rows: 1fr; }
+.history-collapse-inner { overflow: hidden; min-height: 0; }
+.history-list {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  padding-top: 8px;
+}
+.history-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  padding: 8px 12px;
+  border-radius: 8px;
+  background: #FAFBFD;
+  border: 1px solid #F1F5F9;
+  transition: background 0.15s ease, border-color 0.15s ease;
+}
+.history-row:hover { background: #F4F7FC; border-color: #E2E8F0; }
 
 /* ── Document-style letterhead — mirrors the printed CSC Form 48 ─── */
 .doc-preview { position: relative; }
