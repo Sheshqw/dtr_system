@@ -6,6 +6,7 @@ use App\Http\Traits\ScopesByCampus;
 use App\Models\DailyDtr;
 use App\Models\DtrPrintConsent;
 use App\Models\User;
+use App\Services\WorkingHoursService;
 use Barryvdh\DomPDF\Facade\Pdf;
 use Carbon\Carbon;
 use Illuminate\Http\Request;
@@ -13,6 +14,8 @@ use Illuminate\Http\Request;
 class ReportController extends Controller
 {
     use ScopesByCampus;
+
+    public function __construct(private WorkingHoursService $workingHours) {}
 
     public function form48(Request $request, User $employee)
     {
@@ -33,15 +36,21 @@ class ReportController extends Controller
 
         $employee->loadMissing('department', 'shift', 'campus');
 
+        $daysInMonth = Carbon::create($year, $month)->daysInMonth;
+        $monthLabel  = Carbon::create($year, $month)->format('F Y');
+
+        $this->workingHours->backfillHolidays(
+            [$employee->id],
+            Carbon::create($year, $month, 1)->toDateString(),
+            Carbon::create($year, $month, $daysInMonth)->toDateString()
+        );
+
         $records = DailyDtr::where('employee_id', $employee->id)
             ->whereYear('work_date', $year)
             ->whereMonth('work_date', $month)
             ->orderBy('work_date')
             ->get()
             ->keyBy(fn($r) => $r->work_date->day);
-
-        $daysInMonth = Carbon::create($year, $month)->daysInMonth;
-        $monthLabel  = Carbon::create($year, $month)->format('F Y');
 
         $totals = [
             'days_present'      => $records->whereIn('status', ['present', 'late'])->count(),
@@ -71,6 +80,12 @@ class ReportController extends Controller
 
         $month = (int) $request->month;
         $year  = (int) $request->year;
+
+        $this->workingHours->backfillHolidays(
+            [$employee->id],
+            Carbon::create($year, $month, 1)->toDateString(),
+            Carbon::create($year, $month)->endOfMonth()->toDateString()
+        );
 
         $records = DailyDtr::where('employee_id', $employee->id)
             ->whereYear('work_date', $year)
@@ -124,6 +139,12 @@ class ReportController extends Controller
             abort(403, 'You can preview your DTR here. Printed or downloaded copies must be requested from HR or Admin.');
         }
         $employee->loadMissing('department', 'shift', 'campus');
+
+        $this->workingHours->backfillHolidays(
+            [$employee->id],
+            Carbon::create($year, $month, 1)->toDateString(),
+            Carbon::create($year, $month)->endOfMonth()->toDateString()
+        );
 
         $records = DailyDtr::where('employee_id', $employee->id)
             ->whereYear('work_date', $year)
@@ -204,6 +225,12 @@ class ReportController extends Controller
             ->whereNotIn('role', ['super_admin', 'admin'])
             ->orderBy('last_name')
             ->get();
+
+        $this->workingHours->backfillHolidays(
+            $employees->pluck('id')->all(),
+            Carbon::create($year, $month, 1)->toDateString(),
+            Carbon::create($year, $month)->endOfMonth()->toDateString()
+        );
 
         $allRecords = DailyDtr::whereYear('work_date', $year)
             ->whereMonth('work_date', $month)

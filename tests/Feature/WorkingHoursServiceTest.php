@@ -232,3 +232,41 @@ test('recordPunchIfNotDuplicate allows a punch outside the 5-minute window', fun
     expect($second)->not->toBeNull();
     expect(AttendanceLog::where('employee_id', $this->employee->id)->count())->toBe(2);
 });
+
+// ── Holiday backfill (self-heal for employees created after a holiday) ──
+
+test('backfillHolidays creates a holiday row for an employee who had none yet', function () {
+    $date = workDate();
+    Holiday::create(['date' => $date, 'name' => 'Test Holiday', 'type' => 'regular']);
+
+    expect(\App\Models\DailyDtr::where('employee_id', $this->employee->id)->whereDate('work_date', $date)->exists())->toBeFalse();
+
+    $this->service->backfillHolidays([$this->employee->id], $date, $date);
+
+    $dtr = \App\Models\DailyDtr::where('employee_id', $this->employee->id)->whereDate('work_date', $date)->first();
+    expect($dtr)->not->toBeNull();
+    expect($dtr->status)->toBe('holiday');
+});
+
+test('backfillHolidays is a no-op once a row is already correctly marked', function () {
+    $date = workDate();
+    Holiday::create(['date' => $date, 'name' => 'Test Holiday', 'type' => 'regular']);
+
+    $this->service->backfillHolidays([$this->employee->id], $date, $date);
+    $firstRun = \App\Models\DailyDtr::where('employee_id', $this->employee->id)->whereDate('work_date', $date)->first();
+
+    // A second call shouldn't touch (or duplicate) the already-correct row.
+    $this->service->backfillHolidays([$this->employee->id], $date, $date);
+    $secondRun = \App\Models\DailyDtr::where('employee_id', $this->employee->id)->whereDate('work_date', $date)->first();
+
+    expect(\App\Models\DailyDtr::where('employee_id', $this->employee->id)->whereDate('work_date', $date)->count())->toBe(1);
+    expect($secondRun->updated_at->equalTo($firstRun->updated_at))->toBeTrue();
+});
+
+test('backfillHolidays does nothing when there is no holiday in range', function () {
+    $date = workDate();
+
+    $this->service->backfillHolidays([$this->employee->id], $date, $date);
+
+    expect(\App\Models\DailyDtr::where('employee_id', $this->employee->id)->whereDate('work_date', $date)->exists())->toBeFalse();
+});

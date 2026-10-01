@@ -182,4 +182,64 @@ class WorkingHoursService
 
         return Carbon::parse($shift->afternoon_out)->lt(Carbon::parse($shift->morning_in));
     }
+
+    /**
+     * Self-heals a gap in how holidays reach daily_dtr: HolidayController
+     * marks every *currently active* employee the moment a holiday is
+     * declared, but an employee created or activated afterward was never
+     * included in that pass — their row for that date simply never gets
+     * created (nothing else ever calls computeDailyDtr() for a day with no
+     * punches), so it sits blank instead of "Holiday" indefinitely. Called
+     * from the read side (reports, attendance, exports) for whichever
+     * employees/date-range are actually being viewed, so it's self-healing
+     * regardless of when an account was created, without needing to
+     * recompute everyone on every holiday change.
+     *
+     * Cheap in the common case: only recomputes rows that are actually
+     * missing or wrong, not every employee on every call — after the first
+     * time a given employee/date combination is viewed, it's already
+     * correct and this becomes a no-op for it.
+     */
+    public function backfillHolidays(array $employeeIds, string $from, string $to): void
+    {
+        $employeeIds = array_values(array_unique(array_filter($employeeIds)));
+        if (empty($employeeIds)) return;
+
+        // whereDate() on both bounds, not whereBetween() — the stored value
+        // has a time component ('2026-10-05 00:00:00') even though $from/$to
+        // are plain 'Y-m-d' strings, and a plain BETWEEN compares those as
+        // text: '2026-10-05 00:00:00' sorts *after* '2026-10-05', so the
+        // upper bound would silently exclude every holiday. Same quirk
+        // documented in WorkingHoursService::computeDailyDtr()'s whereDate()
+        // comment and DemoAttendanceSeeder.
+        $holidayDates = Holiday::whereDate('date', '>=', $from)
+            ->whereDate('date', '<=', $to)
+            ->pluck('date')
+            ->map(fn($d) => $d->toDateString());
+
+        if ($holidayDates->isEmpty()) return;
+
+        $employees = null;
+
+        foreach ($holidayDates as $date) {
+            $alreadyCorrect = DailyDtr::where('status', 'holiday')
+                ->whereDate('work_date', $date)
+                ->whereIn('employee_id', $employeeIds)
+                ->pluck('employee_id')
+                ->all();
+
+            $missingIds = array_diff($employeeIds, $alreadyCorrect);
+            if (empty($missingIds)) continue;
+
+            // Only loaded once, and only if at least one date actually has
+            // a gap to fill — most calls hit the empty-diff case above and
+            // never need this at all.
+            $employees ??= User::whereIn('id', $employeeIds)->get()->keyBy('id');
+
+            foreach ($missingIds as $id) {
+                $employee = $employees->get($id);
+                if ($employee) $this->computeDailyDtr($employee, $date);
+            }
+        }
+    }
 }

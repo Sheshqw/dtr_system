@@ -95,24 +95,30 @@ class AttendanceController extends Controller
     {
         $date = $request->get('date', today()->toDateString());
 
-        $query = User::with(['department', 'dailyDtr' => fn($q) => $q->whereDate('work_date', $date)])
-            ->where('is_active', true);
-
-        $this->campusScope($request, $query);
+        $baseQuery = User::where('is_active', true);
+        $this->campusScope($request, $baseQuery);
 
         if ($request->filled('department_id')) {
-            $query->where('department_id', $request->department_id);
-        }
-
-        if ($request->filled('status')) {
-            $query->whereHas('dailyDtr', fn($q) => $q->whereDate('work_date', $date)->where('status', $request->status));
+            $baseQuery->where('department_id', $request->department_id);
         }
 
         if ($request->filled('search')) {
             $s = $request->search;
-            $query->where(fn($q) => $q->where('first_name', 'like', "%{$s}%")
+            $baseQuery->where(fn($q) => $q->where('first_name', 'like', "%{$s}%")
                 ->orWhere('last_name', 'like', "%{$s}%")
                 ->orWhere('employee_id', 'like', "%{$s}%"));
+        }
+
+        // Backfill before the status filter below runs — a never-computed
+        // holiday day has no daily_dtr row at all yet, so a "status=holiday"
+        // filter would otherwise exclude an employee before this ever gets
+        // a chance to fix their row.
+        $this->workingHours->backfillHolidays((clone $baseQuery)->pluck('id')->all(), $date, $date);
+
+        $query = (clone $baseQuery)->with(['department', 'dailyDtr' => fn($q) => $q->whereDate('work_date', $date)]);
+
+        if ($request->filled('status')) {
+            $query->whereHas('dailyDtr', fn($q) => $q->whereDate('work_date', $date)->where('status', $request->status));
         }
 
         $employees   = $query->orderBy('last_name')->get();
@@ -261,6 +267,35 @@ class AttendanceController extends Controller
                   ->orWhere('employee_id','like', "%{$s}%")
             );
         }
+
+        // This reads daily_dtr directly, so a day nobody has ever punched
+        // (and that was never backfilled when the holiday was declared —
+        // e.g. the employee was added afterward) wouldn't just show the
+        // wrong status, it wouldn't appear in the list at all. Mirror the
+        // same scope as a User query so the backfill only touches employees
+        // actually visible in this view, then the query above picks up
+        // whatever it just created.
+        $scopedEmployeeIds = User::query()
+            ->when($user->role === 'employee', fn($q) => $q->where('id', $user->id))
+            ->when($user->role === 'department_head', fn($q) => $q->where('department_id', $user->department_id))
+            ->when(! $this->isSuperAdmin($request) && $user->role !== 'employee' && $user->role !== 'department_head', fn($q) => $q->where('campus_id', $user->campus_id))
+            ->when($this->isSuperAdmin($request) && $request->filled('campus_id'), fn($q) => $q->where('campus_id', $request->campus_id))
+            ->when($request->filled('department_id'), fn($q) => $q->where('department_id', $request->department_id))
+            ->when($request->filled('employee_id'), fn($q) => $q->where('id', $request->employee_id))
+            ->when($request->filled('search'), function ($q) use ($request) {
+                $s = $request->search;
+                $q->where(fn($q2) => $q2->where('first_name', 'like', "%{$s}%")
+                    ->orWhere('last_name', 'like', "%{$s}%")
+                    ->orWhere('employee_id', 'like', "%{$s}%"));
+            })
+            ->pluck('id')
+            ->all();
+
+        $this->workingHours->backfillHolidays(
+            $scopedEmployeeIds,
+            Carbon::create($year, $month, 1)->toDateString(),
+            Carbon::create($year, $month)->endOfMonth()->toDateString()
+        );
 
         $holidayNames = Holiday::whereYear('date', $year)
             ->whereMonth('date', $month)
