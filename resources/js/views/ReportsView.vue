@@ -1022,7 +1022,12 @@ const fullMonthRows = computed(() => {
       hours:             Number(rec?.hours) || 0,
       tardiness_minutes: rec?.tardiness_minutes ?? 0,
       overtime_minutes:  rec?.overtime_minutes  ?? 0,
-      leaveEligible:     !isWeekend && (status === 'absent' || status === 'on_leave'),
+      // Eligible whenever there's no evidence of punches: either the day
+      // was already computed as absent, it's already on_leave (so it can
+      // be unmarked), or — the most common real case — nothing has ever
+      // touched this date at all (status is still null) because nothing
+      // automatically marks a never-punched day absent at end-of-day.
+      leaveEligible:     !isWeekend && (status === null || status === 'absent' || status === 'on_leave'),
     });
   }
   return rows;
@@ -1035,7 +1040,7 @@ const selectedLeaveDates = ref(new Set());
 const markingLeave       = ref(false);
 const unmarkingLeave     = ref(false);
 
-const selectedToMark   = computed(() => fullMonthRows.value.filter(r => selectedLeaveDates.value.has(r.isoDate) && r.status === 'absent'));
+const selectedToMark   = computed(() => fullMonthRows.value.filter(r => selectedLeaveDates.value.has(r.isoDate) && r.status !== 'on_leave'));
 const selectedToUnmark = computed(() => fullMonthRows.value.filter(r => selectedLeaveDates.value.has(r.isoDate) && r.status === 'on_leave'));
 
 function toggleLeaveDate(row) {
