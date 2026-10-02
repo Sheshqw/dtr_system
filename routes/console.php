@@ -12,8 +12,12 @@ Artisan::command('inspire', function () {
     $this->comment(Inspiring::quote());
 })->purpose('Display an inspiring quote');
 
-// Pull biometric logs every minute while the scheduler is running
-Schedule::command('biometric:sync')->everyMinute()->withoutOverlapping();
+// NOTE: biometric logs now arrive via ADMS push (BiometricPushController) —
+// the device dials out to us, so there's nothing to poll for over the
+// internet. `php artisan biometric:sync` still exists for the admin's
+// manual "Sync Now" button, used only when the server and device share a
+// LAN; it's deliberately not scheduled here anymore, since a cloud-hosted
+// server can never reach the device's local IP to begin with.
 
 // Automated daily backup at 2:00 AM — keeps last 14 backups per campus
 Schedule::call(function () {
