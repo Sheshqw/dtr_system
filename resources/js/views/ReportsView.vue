@@ -271,7 +271,12 @@
                 <ShieldCheckIcon class="w-5 h-5" />
               </div>
               <div>
-                <h2 class="card-head-title">DTR Print Requests</h2>
+                <h2 class="card-head-title flex items-center gap-2">
+                  DTR Print Requests
+                  <span class="live-indicator" title="Updates automatically — no reload needed">
+                    <span class="live-dot"></span>Live
+                  </span>
+                </h2>
                 <p class="card-head-sub">Approve before an employee can download their official DTR</p>
               </div>
             </div>
@@ -331,6 +336,7 @@
             <div
               v-for="c in pendingConsents" :key="c.id"
               class="pending-row flex items-start justify-between gap-3 px-4 py-3 rounded-lg border border-[#E2E8F0] flex-wrap"
+              :class="{ 'pending-row--new': justArrivedIds.has(c.id) }"
             >
               <div class="flex items-start gap-3 min-w-0">
                 <div class="w-9 h-9 rounded-full bg-gradient-to-br from-[#2E4A8C] to-[#3D5CA3] flex items-center justify-center flex-shrink-0">
@@ -399,7 +405,11 @@
               <div class="history-collapse" :class="showConsentHistory ? 'is-open' : ''">
                 <div class="history-collapse-inner">
                   <div class="history-list">
-                    <div v-for="c in recentConsentDecisions" :key="c.id" class="history-row">
+                    <div
+                      v-for="c in recentConsentDecisions" :key="c.id"
+                      class="history-row"
+                      :class="{ 'history-row--new': justArrivedIds.has(c.id) }"
+                    >
                       <div class="flex items-center gap-2.5 min-w-0">
                         <div class="w-7 h-7 rounded-full bg-gradient-to-br from-[#2E4A8C] to-[#3D5CA3] flex items-center justify-center flex-shrink-0">
                           <span class="text-white text-[10px] font-semibold">{{ initials(c.employee.name) }}</span>
@@ -827,7 +837,7 @@
 </template>
 
 <script setup>
-import { ref, computed, onMounted } from 'vue';
+import { ref, computed, onMounted, onUnmounted } from 'vue';
 import { useRoute } from 'vue-router';
 import axios from 'axios';
 import { useAuthStore } from '@/stores/auth';
@@ -918,6 +928,7 @@ const requestingConsent = ref(false);
 const reviewingId = ref(null);
 const denyingId   = ref(null);
 const denyRemarks = ref('');
+const justArrivedIds = ref(new Set()); // brief highlight for rows that just landed live
 
 const selectedPeriodLabel = computed(() => {
   const m = months.find(x => x.value === month.value)?.label ?? '';
@@ -1272,6 +1283,57 @@ function applyConsentUpdate(updated) {
   // got reviewed should read as the most recent decision, not stay stuck
   // wherever it happened to sit in the list from the original page load.
   consentQueue.value.unshift(updated);
+}
+
+function flashAsNew(id) {
+  justArrivedIds.value.add(id);
+  setTimeout(() => justArrivedIds.value.delete(id), 2500);
+}
+
+// Patches myConsents the same way applyConsentUpdate patches the HR/Admin
+// queue — so an employee sitting on this page sees a decision land without
+// reloading.
+function applyMyConsentUpdate(updated) {
+  if (!updated) return;
+  const idx = myConsents.value.findIndex(c => c.id === updated.id);
+  if (idx !== -1) myConsents.value.splice(idx, 1);
+  myConsents.value.unshift(updated);
+}
+
+// ── Live updates for the print-request queue (Reverb) ────────────────
+// HR/Admin: a new request appears the instant it's submitted, and any
+// request reviewed in another tab/by another reviewer drops out of
+// "pending" immediately, without a page reload.
+// Employee: their own "Print Permission" card reflects a decision live.
+let printConsentChannel = null;
+
+function onPrintRequestedLive(e) {
+  if (!canSelectEmployee.value || !e?.consent) return;
+  // A public channel carries every campus's traffic — only react to the
+  // ones this viewer is actually scoped to see.
+  if (!isSuperAdmin.value && e.campus_code && e.campus_code !== auth.employee?.campus?.code) return;
+  if (consentQueue.value.some(c => c.id === e.consent.id)) return;
+  consentQueue.value.unshift(e.consent);
+  flashAsNew(e.consent.id);
+  toast(`New print request from ${e.consent.employee?.name ?? 'an employee'}.`, 'info', 6000);
+}
+
+function onPrintDecidedLive(e) {
+  if (!e?.consent) return;
+  if (canSelectEmployee.value) {
+    if (!isSuperAdmin.value && e.campus_code && e.campus_code !== auth.employee?.campus?.code) return;
+    applyConsentUpdate(e.consent);
+    flashAsNew(e.consent.id);
+  } else if (e.employee_id === auth.employee?.id) {
+    applyMyConsentUpdate(e.consent);
+  }
+}
+
+function listenForPrintConsents() {
+  if (!window.Echo) return;
+  printConsentChannel = window.Echo.channel('print-consents')
+    .listen('.requested', onPrintRequestedLive)
+    .listen('.decided', onPrintDecidedLive);
 }
 
 async function approveConsent(c) {
@@ -1725,6 +1787,12 @@ onMounted(async () => {
   } else {
     await fetchMyConsents();
   }
+  listenForPrintConsents();
+});
+
+onUnmounted(() => {
+  printConsentChannel?.stopListening('.requested', onPrintRequestedLive);
+  printConsentChannel?.stopListening('.decided', onPrintDecidedLive);
 });
 </script>
 
@@ -1844,6 +1912,43 @@ onMounted(async () => {
   border-color: #C7D2F6;
   box-shadow: 0 2px 10px -4px rgba(27,42,94,0.15);
   transform: translateY(-1px);
+}
+
+/* ── Live indicator (card header) ────────────────────────────────── */
+.live-indicator {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  font-size: 10px;
+  font-weight: 700;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+  color: #15803D;
+  background: #F0FDF4;
+  border: 1px solid #BBF7D0;
+  border-radius: 999px;
+  padding: 2px 8px 2px 6px;
+}
+.live-dot {
+  width: 6px;
+  height: 6px;
+  border-radius: 50%;
+  background: #22C55E;
+  animation: live-pulse 1.8s ease-in-out infinite;
+}
+@keyframes live-pulse {
+  0%, 100% { box-shadow: 0 0 0 0 rgba(34,197,94,0.5); }
+  50% { box-shadow: 0 0 0 4px rgba(34,197,94,0); }
+}
+
+/* ── Rows that just arrived via live update ──────────────────────── */
+.pending-row--new,
+.history-row--new {
+  animation: row-flash-in 2.2s ease-out;
+}
+@keyframes row-flash-in {
+  0% { background: #EFF6FF; border-color: #93C5FD; }
+  100% { background: transparent; border-color: #E2E8F0; }
 }
 
 /* ── Request History (collapsible) ───────────────────────────────── */

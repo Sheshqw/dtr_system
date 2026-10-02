@@ -587,16 +587,39 @@ function listenForPunches() {
     });
 }
 
+// ── Real-time print-request badge ──────────────────────────────────
+// Keeps the sidebar badge accurate the instant a request is submitted
+// or reviewed, instead of waiting on the 60s poll below. ReportsView.vue
+// listens on this same public channel for its own live queue — named
+// callback refs below so unmounting here never rips out that listener
+// (stopListening with no callback clears every handler for the event).
+let printConsentChannel = null;
+const onPrintRequested = (e) => {
+  toast(`New print request from ${e.consent.employee?.name ?? 'an employee'}.`, 'info', 6000);
+  fetchPendingPrintRequests();
+};
+const onPrintDecided = () => fetchPendingPrintRequests();
+
+function listenForPrintConsents() {
+  if (!window.Echo || !isAdminOrHr.value) return;
+  printConsentChannel = window.Echo.channel('print-consents')
+    .listen('.requested', onPrintRequested)
+    .listen('.decided', onPrintDecided);
+}
+
 onMounted(() => {
   fetchPendingPrintRequests();
   badgePollTimer = setInterval(fetchPendingPrintRequests, 60_000);
   listenForPunches();
+  listenForPrintConsents();
 });
 
 onBeforeUnmount(() => {
   clearInterval(badgePollTimer);
   echoChannel?.stopListening('.punched');
   window.Echo?.leave('attendance');
+  printConsentChannel?.stopListening('.requested', onPrintRequested);
+  printConsentChannel?.stopListening('.decided', onPrintDecided);
 });
 </script>
 

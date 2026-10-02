@@ -2,6 +2,8 @@
 
 namespace App\Http\Controllers;
 
+use App\Events\PrintConsentDecided;
+use App\Events\PrintConsentRequested;
 use App\Http\Traits\ScopesByCampus;
 use App\Models\DtrPrintConsent;
 use App\Models\User;
@@ -131,6 +133,13 @@ class DtrPrintConsentController extends Controller
             'status'      => 'pending',
         ]);
 
+        $consent->loadMissing(['employee.department', 'employee.campus']);
+
+        broadcast(new PrintConsentRequested(
+            $this->formatConsent($consent, true),
+            $user->campus?->code,
+        ));
+
         return response()->json([
             'message' => 'Print request submitted. HR/Admin will review it shortly.',
             'consent' => $this->formatConsent($consent, false),
@@ -174,9 +183,18 @@ class DtrPrintConsentController extends Controller
             }
         }
 
+        $fresh = $consent->fresh(['employee.department', 'employee.campus', 'reviewer']);
+        $formatted = $this->formatConsent($fresh, true);
+
+        broadcast(new PrintConsentDecided(
+            $formatted,
+            $fresh->employee_id,
+            $fresh->employee?->campus?->code,
+        ));
+
         return response()->json([
             'message' => $validated['status'] === 'approved' ? 'Print request approved.' : 'Print request denied.',
-            'consent' => $this->formatConsent($consent->fresh(['employee', 'reviewer']), true),
+            'consent' => $formatted,
         ]);
     }
 
