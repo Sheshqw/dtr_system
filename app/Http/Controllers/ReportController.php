@@ -10,6 +10,7 @@ use App\Services\WorkingHoursService;
 use Barryvdh\DomPDF\Facade\Pdf;
 use Carbon\Carbon;
 use Illuminate\Http\Request;
+use Illuminate\Support\Facades\DB;
 
 class ReportController extends Controller
 {
@@ -494,24 +495,35 @@ class ReportController extends Controller
      * has approved a print request for this exact month/year, and only once per
      * approval — it's consumed here so a second download needs a fresh request.
      * Returns the reviewer who approved it, so form48() can show their signature.
+     *
+     * Wrapped in a transaction with lockForUpdate(), same pattern as
+     * WorkingHoursService::recordPunchIfNotDuplicate() — without it, two
+     * near-simultaneous download requests (a double-click, a retried
+     * request) could both read the row as "approved, unused" before either
+     * commits its update, consuming one approval twice. The lock makes the
+     * second request wait for the first to finish, then correctly find
+     * nothing left to consume.
      */
     private function consumeApprovedPrintConsent(User $employee, int $month, int $year): ?User
     {
-        $consent = DtrPrintConsent::with('reviewer')
-            ->where('employee_id', $employee->id)
-            ->where('month', $month)
-            ->where('year', $year)
-            ->where('status', 'approved')
-            ->whereNull('used_at')
-            ->first();
+        return DB::transaction(function () use ($employee, $month, $year) {
+            $consent = DtrPrintConsent::with('reviewer')
+                ->where('employee_id', $employee->id)
+                ->where('month', $month)
+                ->where('year', $year)
+                ->where('status', 'approved')
+                ->whereNull('used_at')
+                ->lockForUpdate()
+                ->first();
 
-        if (! $consent) {
-            abort(403, 'You need HR/Admin approval before downloading your DTR for this period. Submit a print request from the Reports page.');
-        }
+            if (! $consent) {
+                abort(403, 'You need HR/Admin approval before downloading your DTR for this period. Submit a print request from the Reports page.');
+            }
 
-        $consent->update(['used_at' => now()]);
+            $consent->update(['used_at' => now()]);
 
-        return $consent->reviewer;
+            return $consent->reviewer;
+        });
     }
 
     private function authorizeView(User $viewer, User $target): void
