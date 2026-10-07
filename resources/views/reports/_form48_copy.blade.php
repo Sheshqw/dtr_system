@@ -175,7 +175,8 @@
 {{-- ── Campus Director — a separate, final approving signature below
      both the employee and the reviewer, not a stand-in for either. --}}
 @if(!empty($director['name']))
-<div style="margin-top: 9pt; text-align: center;">
+<div style="margin-top: 6pt; text-align: center;">
+  <div class="sig-space"></div>
   <div class="sig-over" style="display: inline-block; min-width: 150pt;"></div>
   <div class="sig-name">{{ $director['name'] }}</div>
   <div class="sig-sub" style="font-weight: bold; text-transform: uppercase;">{{ $director['title'] }}</div>
