@@ -133,8 +133,12 @@
 {{-- ── Signatures ───────────────────────────────── --}}
 <table class="sig-tbl">
   <tr>
-    {{-- Employee signature --}}
+    {{-- Employee signature — the invisible label below matches the height of
+         the reviewer column's "Verified as to..." line, so both signature
+         lines sit level with each other instead of the reviewer's floating
+         higher up the page. --}}
     <td style="width:46%; text-align:center;">
+      <div class="sig-label" style="font-size:6.5pt; text-align:left; margin-bottom:2pt; visibility:hidden;">&nbsp;</div>
       <div class="sig-space"></div>
       <div class="sig-over"></div>
       <div class="sig-sub">Employee Signature</div>

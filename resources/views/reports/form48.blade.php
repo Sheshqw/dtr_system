@@ -132,7 +132,7 @@ html, body {
   margin-top: 5pt;
 }
 .sig-tbl td {
-  vertical-align: bottom;
+  vertical-align: top;
   text-align: center;
   font-size: 7pt;
   padding: 0 2pt;
