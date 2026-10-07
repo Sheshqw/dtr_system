@@ -103,7 +103,6 @@ html, body {
 .c-ut  { width: 20pt; }
 .c-rem { width: 18pt; }
 
-.row-wknd td { background: #f5f5f5; color: #555; }
 .row-wknd .c-day { color: #000; font-weight: bold; }
 
 /* ── Bottom section ───────────────────────────── */
@@ -148,11 +147,11 @@ html, body {
 <body>
 
 @php
-// Shift office hours — H:i for morning (08:00, 12:00), h:i for afternoon (01:00, 05:00)
-$shiftMorIn  = optional($employee->shift)->morning_in    ? \Carbon\Carbon::parse($employee->shift->morning_in)->format('H:i')    : '08:00';
-$shiftMorOut = optional($employee->shift)->morning_out   ? \Carbon\Carbon::parse($employee->shift->morning_out)->format('H:i')   : '12:00';
-$shiftAftIn  = optional($employee->shift)->afternoon_in  ? \Carbon\Carbon::parse($employee->shift->afternoon_in)->format('h:i')  : '01:00';
-$shiftAftOut = optional($employee->shift)->afternoon_out ? \Carbon\Carbon::parse($employee->shift->afternoon_out)->format('h:i') : '05:00';
+// Shift office hours — no leading zero, matching the official form (8:00, 12:00, 1:00, 5:00)
+$shiftMorIn  = optional($employee->shift)->morning_in    ? \Carbon\Carbon::parse($employee->shift->morning_in)->format('G:i')    : '8:00';
+$shiftMorOut = optional($employee->shift)->morning_out   ? \Carbon\Carbon::parse($employee->shift->morning_out)->format('G:i')   : '12:00';
+$shiftAftIn  = optional($employee->shift)->afternoon_in  ? \Carbon\Carbon::parse($employee->shift->afternoon_in)->format('g:i')  : '1:00';
+$shiftAftOut = optional($employee->shift)->afternoon_out ? \Carbon\Carbon::parse($employee->shift->afternoon_out)->format('g:i') : '5:00';
 
 // Totals
 $lateMins = (int)($totals['tardiness_minutes'] ?? 0);

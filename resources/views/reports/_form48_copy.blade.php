@@ -52,7 +52,7 @@
       <th colspan="2">P.M.</th>
       <th class="c-ut">Under</th>
       <th class="c-ut">Over</th>
-      <th rowspan="2" class="c-rem">Remarks</th>
+      <th rowspan="2" class="c-rem">Remark</th>
     </tr>
     <tr>
       <th class="c-tm">In</th>
@@ -76,7 +76,9 @@
         $otMins  = $isWknd ? 0 : (int)($rec?->overtime_minutes  ?? 0);
 
         $remark  = '';
-        if (!$isWknd) {
+        if ($isWknd) {
+            $remark = $date->isSaturday() ? 'SAT' : 'SUN';
+        } else {
             if ($status === 'absent')  $remark = 'ABS';
             elseif ($status === 'holiday') $remark = 'HOL';
             elseif ($status === 'on_leave') $remark = 'LV';
