@@ -156,19 +156,28 @@
           src="{{ \Illuminate\Support\Facades\Storage::disk('public')->path($signingReviewer->signature_path) }}"
           style="height:16pt; max-width:90%; margin:1pt auto 0; display:block;"
         />
-        <div class="sig-over"></div>
+      @else
+        <div class="sig-space"></div>
+      @endif
+      <div class="sig-over"></div>
+      @if(!empty($signingReviewer))
         <div class="sig-name">{{ strtoupper($signingReviewer->full_name) }}</div>
         <div class="sig-sub" style="font-weight:bold; text-transform:uppercase;">
           {{ $signingReviewer->position ?: ucwords(str_replace('_', ' ', $signingReviewer->role)) }}
         </div>
       @else
-        <div class="sig-space"></div>
-        <div class="sig-over"></div>
-        @if(!empty($director['name']))
-          <div class="sig-name">{{ $director['name'] }}</div>
-        @endif
-        <div class="sig-sub" style="font-weight:bold; text-transform:uppercase;">{{ $director['title'] }}</div>
+        <div class="sig-sub" style="font-weight:bold; text-transform:uppercase;">HR Officer</div>
       @endif
     </td>
   </tr>
 </table>
+
+{{-- ── Campus Director — a separate, final approving signature below
+     both the employee and the reviewer, not a stand-in for either. --}}
+@if(!empty($director['name']))
+<div style="margin-top: 9pt; text-align: center;">
+  <div class="sig-over" style="display: inline-block; min-width: 150pt;"></div>
+  <div class="sig-name">{{ $director['name'] }}</div>
+  <div class="sig-sub" style="font-weight: bold; text-transform: uppercase;">{{ $director['title'] }}</div>
+</div>
+@endif
