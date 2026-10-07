@@ -76,7 +76,7 @@
         </div>
 
         <!-- Stats strip -->
-        <div v-if="punchLogs.length" class="grid grid-cols-4 gap-3">
+        <div v-if="punchLogs.length" class="grid grid-cols-2 sm:grid-cols-4 gap-3">
           <div v-for="s in punchStats" :key="s.label" class="stat-tile" :style="statVars(s.color)">
             <div class="stat-tile-icon">
               <component :is="s.icon" class="w-5 h-5" />
@@ -213,7 +213,7 @@
         </div>
 
         <!-- Summary strip -->
-        <div v-if="dailyRecords.length" class="grid grid-cols-4 gap-3">
+        <div v-if="dailyRecords.length" class="grid grid-cols-2 sm:grid-cols-4 gap-3">
           <div v-for="s in dailyStats" :key="s.label" class="stat-tile" :style="statVars(s.color)">
             <div class="stat-tile-icon">
               <component :is="s.icon" class="w-5 h-5" />
