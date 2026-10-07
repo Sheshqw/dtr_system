@@ -103,8 +103,6 @@ html, body {
 .c-ut  { width: 20pt; }
 .c-rem { width: 18pt; }
 
-.row-wknd .c-day { color: #000; font-weight: bold; }
-
 /* ── Bottom section ───────────────────────────── */
 .late-line {
   font-size: 7.5pt;
