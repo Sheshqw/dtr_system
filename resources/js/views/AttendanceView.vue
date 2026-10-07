@@ -114,7 +114,7 @@
           <table class="att-table w-full text-sm">
             <thead class="border-b border-[#E2E8F0]">
               <tr>
-                <th class="th-cell text-left">Employee</th>
+                <th class="th-cell text-left sticky left-0 bg-white z-10 min-w-[170px]">Employee</th>
                 <th class="th-cell text-left">Department</th>
                 <th class="th-cell text-center">Date &amp; Time</th>
                 <th class="th-cell text-center">Type</th>
@@ -132,7 +132,7 @@
                 :class="[log.punch_type === 'IN' ? 'row-status--present' : 'row-status--absent', i % 2 === 1 ? 'bg-[#FAFBFF]' : 'bg-white']"
                 :style="{ animationDelay: i * 20 + 'ms' }"
               >
-                <td class="td-cell">
+                <td class="td-cell sticky left-0 z-10" :class="i % 2 === 1 ? 'bg-[#FAFBFF]' : 'bg-white'">
                   <div class="flex items-center gap-2">
                     <div class="w-7 h-7 rounded-full flex items-center justify-center flex-shrink-0 text-white text-xs font-semibold"
                          :style="avatarStyle(log.name)">
@@ -793,6 +793,7 @@ onMounted(async () => {
   .att-filters > div { width: 100%; }
   .filter-input  { width: 100%; }
   .filter-input.w-44 { width: 100% !important; }
+  .filter-input.w-40 { width: 100% !important; }
 
   /* Table wrapper */
   .att-table-wrap { overflow-x: auto; }
