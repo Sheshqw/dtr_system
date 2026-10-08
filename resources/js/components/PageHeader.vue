@@ -159,7 +159,12 @@ defineProps({
   .ph-title { font-size: 15px; }
   .ph-crumb { font-size: 8.5px; margin-bottom: 2px; }
   .ph-sub   { font-size: 11px; }
-  .ph-actions { width: 100%; }
+  /* .ph-actions has no justify-content of its own (base rule only sets
+     display:flex/align-items/gap), so once it stacks into its own
+     full-width row here, its buttons default to flex-start — stuck on
+     the left edge instead of where a settings/notification cluster is
+     expected. Push the whole group to the right. */
+  .ph-actions { width: 100%; justify-content: flex-end; }
   .ph-actions :deep(button),
   .ph-actions :deep(a[role="button"]) { font-size: 12px !important; padding: 6px 12px !important; }
   .ph-icon-badge { width: 36px; height: 36px; border-radius: 9px; }
