@@ -801,7 +801,8 @@ onMounted(async () => {
      other cell becomes a label/value line using its data-label
      attribute instead of a column header. */
   .att-table-wrap { overflow-x: visible; }
-  .att-table, .daily-table { min-width: 0; width: 100%; }
+  .att-table, .daily-table { display: block; min-width: 0; width: 100%; }
+  .att-table tbody, .daily-table tbody { display: block; }
 
   .att-table thead, .daily-table thead { display: none; }
 

@@ -8,7 +8,7 @@
         <div class="ph-icon-badge" v-if="icon">
           <component :is="icon" class="w-5 h-5" />
         </div>
-        <div>
+        <div class="ph-text">
           <p class="ph-crumb">{{ settings.systemName }} · {{ settings.shortName }}</p>
           <h1 class="ph-title">{{ title }}</h1>
           <p v-if="subtitle" class="ph-sub">{{ subtitle }}</p>
@@ -78,6 +78,13 @@ defineProps({
 
 .ph-left {
   display: flex; align-items: center; gap: 14px;
+  min-width: 0; max-width: 100%;
+}
+.ph-text {
+  min-width: 0;
+}
+.ph-title, .ph-sub, .ph-crumb {
+  overflow-wrap: break-word;
 }
 
 .ph-icon-badge {

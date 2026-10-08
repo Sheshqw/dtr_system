@@ -1821,7 +1821,8 @@ tbody tr:hover { background: #F8FAFF; }
      bordered card, the Employee cell stays as the card's full-width
      header, every other cell becomes a label/value line via its
      data-label attribute instead of a column header. */
-  .emp-table { min-width: 0; width: 100%; }
+  .emp-table { display: block; min-width: 0; width: 100%; }
+  .emp-table tbody { display: block; }
   .emp-table thead { display: none; }
 
   .emp-table tbody tr {

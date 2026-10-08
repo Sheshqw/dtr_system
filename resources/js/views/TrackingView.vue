@@ -997,7 +997,8 @@ onMounted(async () => {
    card, using each cell's data-label in place of a column header. */
 @media (max-width: 640px) {
   .tk-table-scroll { overflow-x: visible; }
-  .tk-tardy-table  { min-width: 0; width: 100%; }
+  .tk-tardy-table  { display: block; min-width: 0; width: 100%; }
+  .tk-tardy-table tbody { display: block; }
   .tk-tardy-table .td-cell p { white-space: normal; }
 
   .tk-tardy-table thead { display: none; }
