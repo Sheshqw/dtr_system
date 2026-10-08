@@ -4,22 +4,25 @@
     <div class="ph-shimmer" aria-hidden="true"></div>
 
     <div class="ph-body">
-      <div class="ph-left">
-        <div class="ph-icon-badge" v-if="icon">
-          <component :is="icon" class="w-5 h-5" />
+      <div class="ph-top-row">
+        <div class="ph-left">
+          <div class="ph-icon-badge" v-if="icon">
+            <component :is="icon" class="w-5 h-5" />
+          </div>
+          <div class="ph-text">
+            <p class="ph-crumb">{{ settings.systemName }} · {{ settings.shortName }}</p>
+            <h1 class="ph-title">{{ title }}</h1>
+          </div>
         </div>
-        <div class="ph-text">
-          <p class="ph-crumb">{{ settings.systemName }} · {{ settings.shortName }}</p>
-          <h1 class="ph-title">{{ title }}</h1>
-          <p v-if="subtitle" class="ph-sub">{{ subtitle }}</p>
+
+        <div class="ph-actions">
+          <slot />
+          <SettingsPopover />
+          <NotificationBell />
         </div>
       </div>
 
-      <div class="ph-actions">
-        <slot />
-        <SettingsPopover />
-        <NotificationBell />
-      </div>
+      <p v-if="subtitle" class="ph-sub">{{ subtitle }}</p>
     </div>
   </div>
 </template>
@@ -71,8 +74,16 @@ defineProps({
 
 .ph-body {
   position: relative;
+  display: flex; flex-direction: column; gap: 4px;
+}
+
+/* Icon+title and the actions cluster share one row whenever they fit,
+   and only wrap onto a second line when a page's buttons genuinely
+   don't fit — the subtitle lives outside this row entirely (below),
+   so it never factors into that wrapping decision. */
+.ph-top-row {
   display: flex; align-items: center;
-  justify-content: space-between; gap: 16px;
+  gap: 16px;
   flex-wrap: wrap;
 }
 
@@ -117,10 +128,17 @@ defineProps({
   line-height: 1.4;
 }
 
-/* Slot actions — buttons inside here get a glass style */
+/* Slot actions — buttons inside here get a glass style. margin-left:auto
+   pushes this to the right whether it's sharing the top row with
+   ph-left or has wrapped onto its own line below it — justify-content
+   on the parent only re-centers a *single* item on a wrapped line, it
+   doesn't push it to an edge, so the auto margin is what's actually
+   doing the alignment work here. */
 .ph-actions {
   flex-shrink: 0;
-  display: flex; align-items: center; gap: 8px;
+  display: flex; align-items: center; justify-content: flex-end; flex-wrap: wrap;
+  gap: 8px;
+  margin-left: auto;
 }
 
 /* Override any btn inside actions slot to fit dark header */
@@ -155,19 +173,11 @@ defineProps({
 /* ── Mobile ─────────────────────────────────────────── */
 @media (max-width: 640px) {
   .ph-wrap { padding: 10px 16px; }
-  .ph-body { flex-direction: column; align-items: flex-start; gap: 6px; }
+  .ph-top-row { gap: 10px; }
   .ph-title { font-size: 15px; }
   .ph-crumb { font-size: 8.5px; margin-bottom: 2px; }
   .ph-sub   { font-size: 11px; }
-  /* .ph-actions has no justify-content of its own (base rule only sets
-     display:flex/align-items/gap), so once it stacks into its own
-     full-width row here, its buttons default to flex-start — stuck on
-     the left edge instead of where a settings/notification cluster is
-     expected. Push the whole group to the right; wrap is needed too —
-     some pages slot in 2-3 buttons here, which would otherwise overflow
-     sideways at 100% width with no room to shrink. Padding/gap pulled
-     in tighter so this second row doesn't add much height on its own. */
-  .ph-actions { width: 100%; justify-content: flex-end; flex-wrap: wrap; gap: 6px; }
+  .ph-actions { gap: 6px; }
   .ph-actions :deep(button),
   .ph-actions :deep(a[role="button"]) { font-size: 12px !important; padding: 5px 10px !important; }
   .ph-icon-badge { width: 32px; height: 32px; border-radius: 8px; }
