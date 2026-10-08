@@ -154,8 +154,8 @@ defineProps({
 
 /* ── Mobile ─────────────────────────────────────────── */
 @media (max-width: 640px) {
-  .ph-wrap { padding: 14px 16px; }
-  .ph-body { flex-direction: column; align-items: flex-start; gap: 10px; }
+  .ph-wrap { padding: 10px 16px; }
+  .ph-body { flex-direction: column; align-items: flex-start; gap: 6px; }
   .ph-title { font-size: 15px; }
   .ph-crumb { font-size: 8.5px; margin-bottom: 2px; }
   .ph-sub   { font-size: 11px; }
@@ -163,10 +163,13 @@ defineProps({
      display:flex/align-items/gap), so once it stacks into its own
      full-width row here, its buttons default to flex-start — stuck on
      the left edge instead of where a settings/notification cluster is
-     expected. Push the whole group to the right. */
-  .ph-actions { width: 100%; justify-content: flex-end; }
+     expected. Push the whole group to the right; wrap is needed too —
+     some pages slot in 2-3 buttons here, which would otherwise overflow
+     sideways at 100% width with no room to shrink. Padding/gap pulled
+     in tighter so this second row doesn't add much height on its own. */
+  .ph-actions { width: 100%; justify-content: flex-end; flex-wrap: wrap; gap: 6px; }
   .ph-actions :deep(button),
-  .ph-actions :deep(a[role="button"]) { font-size: 12px !important; padding: 6px 12px !important; }
-  .ph-icon-badge { width: 36px; height: 36px; border-radius: 9px; }
+  .ph-actions :deep(a[role="button"]) { font-size: 12px !important; padding: 5px 10px !important; }
+  .ph-icon-badge { width: 32px; height: 32px; border-radius: 8px; }
 }
 </style>

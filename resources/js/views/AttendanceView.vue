@@ -5,10 +5,11 @@
       <button
         v-if="(auth.isAdmin || auth.isHrOfficer) && activeTab === 'punches'"
         @click="openAddPunch"
-        class="inline-flex items-center gap-2 px-4 py-2 text-sm font-medium rounded-lg transition-colors ph-btn-primary"
+        title="Add Manual Punch"
+        class="inline-flex items-center gap-2 px-2.5 sm:px-4 py-2 text-sm font-medium rounded-lg transition-colors ph-btn-primary"
       >
         <PlusIcon class="w-4 h-4" />
-        Add Manual Punch
+        <span class="hidden sm:inline">Add Manual Punch</span>
       </button>
     </PageHeader>
 
