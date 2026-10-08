@@ -157,11 +157,11 @@
               v-for="(rec, idx) in tardyRecords" :key="rec.employee_id"
               class="border-b border-[#E2E8F0] last:border-0 hover:bg-[#FAFBFF] transition-colors"
             >
-              <td class="td-cell text-[#6B7A94] font-mono text-xs">
+              <td class="td-cell text-[#6B7A94] font-mono text-xs" data-label="Rank">
                 <span v-if="idx < 3" class="tk-medal" :class="`tk-medal--${idx}`">{{ idx + 1 }}</span>
                 <template v-else>{{ idx + 1 }}</template>
               </td>
-              <td class="td-cell">
+              <td class="td-cell tk-emp-cell">
                 <div class="flex items-center gap-2">
                   <div
                     class="w-8 h-8 rounded-full flex items-center justify-center flex-shrink-0 text-white text-xs font-semibold"
@@ -173,21 +173,21 @@
                   </div>
                 </div>
               </td>
-              <td class="td-cell text-center">
+              <td class="td-cell text-center" data-label="Severity">
                 <span class="inline-flex px-2 py-0.5 text-xs font-semibold rounded-md"
                       :class="severityClass(rec.times_late)">
                   {{ severityLabel(rec.times_late) }}
                 </span>
               </td>
-              <td class="td-cell text-center font-mono font-semibold" :class="tardyColor(rec.times_late)">
+              <td class="td-cell text-center font-mono font-semibold" data-label="Times Late" :class="tardyColor(rec.times_late)">
                 {{ rec.times_late }}×
               </td>
-              <td class="td-cell text-center font-mono" :class="tardyColor(rec.times_late)">
+              <td class="td-cell text-center font-mono" data-label="Total (min)" :class="tardyColor(rec.times_late)">
                 {{ rec.total_minutes }}
               </td>
-              <td class="td-cell text-center font-mono text-[#64748B]">{{ rec.avg_minutes }}</td>
-              <td class="td-cell text-center font-mono text-[#64748B]">{{ rec.max_minutes }}</td>
-              <td class="td-cell">
+              <td class="td-cell text-center font-mono text-[#64748B]" data-label="Avg (min)">{{ rec.avg_minutes }}</td>
+              <td class="td-cell text-center font-mono text-[#64748B]" data-label="Worst (min)">{{ rec.max_minutes }}</td>
+              <td class="td-cell" data-label="Recent Dates">
                 <div class="flex flex-wrap gap-1">
                   <span
                     v-for="d in rec.late_dates" :key="d"
@@ -308,8 +308,8 @@
               v-for="(rec, idx) in bfRecords" :key="rec.employee_id"
               class="border-b border-[#E2E8F0] last:border-0 hover:bg-[#FAFBFF] transition-colors"
             >
-              <td class="td-cell text-[#6B7A94] font-mono text-xs">{{ idx + 1 }}</td>
-              <td class="td-cell">
+              <td class="td-cell text-[#6B7A94] font-mono text-xs" data-label="Rank">{{ idx + 1 }}</td>
+              <td class="td-cell tk-emp-cell">
                 <div class="flex items-center gap-2">
                   <div
                     class="w-8 h-8 rounded-full flex items-center justify-center flex-shrink-0 text-white text-xs font-semibold"
@@ -321,18 +321,18 @@
                   </div>
                 </div>
               </td>
-              <td class="td-cell text-center">
+              <td class="td-cell text-center" data-label="Severity">
                 <span class="inline-flex px-2 py-0.5 text-xs font-semibold rounded-md"
                       :class="bfSeverityClass(rec.bradford_score)">
                   {{ bfSeverityLabel(rec.bradford_score) }}
                 </span>
               </td>
-              <td class="td-cell text-center font-mono">{{ rec.instances }}</td>
-              <td class="td-cell text-center font-mono">{{ rec.total_days }}</td>
-              <td class="td-cell text-center font-mono font-semibold" :class="bfColor(rec.bradford_score)">
+              <td class="td-cell text-center font-mono" data-label="Instances">{{ rec.instances }}</td>
+              <td class="td-cell text-center font-mono" data-label="Total Days">{{ rec.total_days }}</td>
+              <td class="td-cell text-center font-mono font-semibold" data-label="Bradford Score" :class="bfColor(rec.bradford_score)">
                 {{ rec.bradford_score }}
               </td>
-              <td class="td-cell">
+              <td class="td-cell" data-label="Recent Absences">
                 <div class="flex flex-wrap gap-1">
                   <span
                     v-for="d in rec.absence_dates" :key="d"
@@ -989,6 +989,62 @@ onMounted(async () => {
 }
 @media (max-width: 480px) {
   .stat-cards { grid-template-columns: 1fr; }
+}
+
+/* ── Leaderboard / Bradford tables → stacked cards on mobile ─────────
+   Same reasoning as Attendance: a 7-8 column table needing a sideways
+   scroll on a phone is worse than just stacking each row as its own
+   card, using each cell's data-label in place of a column header. */
+@media (max-width: 640px) {
+  .tk-table-scroll { overflow-x: visible; }
+  .tk-tardy-table  { min-width: 0; width: 100%; }
+  .tk-tardy-table .td-cell p { white-space: normal; }
+
+  .tk-tardy-table thead { display: none; }
+
+  .tk-tardy-table tbody tr {
+    display: block;
+    margin-bottom: 10px;
+    border: 1px solid #E2E8F0;
+    border-radius: 10px;
+    padding: 10px 12px;
+  }
+
+  .tk-tardy-table td {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 10px;
+    text-align: left !important;
+    padding: 5px 0;
+    border: none !important;
+  }
+
+  .tk-tardy-table td[data-label]::before {
+    content: attr(data-label);
+    flex-shrink: 0;
+    font-size: 10px;
+    font-weight: 700;
+    text-transform: uppercase;
+    letter-spacing: 0.03em;
+    color: #94A3B8;
+  }
+
+  /* Rank (first, has data-label="Rank") stays a normal label/value row;
+     the Employee cell right after it becomes the card's full-width header. */
+  .tk-tardy-table .tk-emp-cell {
+    display: block;
+    padding: 6px 0 8px;
+    margin-bottom: 4px;
+    border-bottom: 1px solid #F1F5F9 !important;
+  }
+
+  [data-theme="dark"] .tk-tardy-table tbody tr {
+    border-color: rgba(255,255,255,0.08) !important;
+  }
+  [data-theme="dark"] .tk-tardy-table .tk-emp-cell {
+    border-bottom-color: rgba(255,255,255,0.08) !important;
+  }
 }
 
 /* ── Print ───────────────────────────────────────────────────── */

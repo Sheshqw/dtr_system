@@ -1465,7 +1465,20 @@ function buildDeptChart(data) {
       scales: {
         y: {
           grid: { display: false }, border: { display: false },
-          ticks: { font: { ...font, size: 10.5 }, color: tc.yTickColor, padding: 6 },
+          ticks: {
+            font: { ...font, size: 10.5 }, color: tc.yTickColor, padding: 6,
+            // On a narrow mobile canvas, a long department name (e.g.
+            // "Department of Information Technology and Computer Studies")
+            // just gets silently clipped by the canvas instead of wrapping —
+            // Chart.js doesn't wrap axis labels. Abbreviate only when the
+            // canvas is actually narrow; the full name still shows in the
+            // tooltip on tap/hover.
+            callback(value) {
+              const label = this.getLabelForValue(value);
+              const maxLen = this.chart.width < 400 ? 16 : 999;
+              return label.length > maxLen ? label.slice(0, maxLen - 1) + '…' : label;
+            },
+          },
         },
         x: {
           beginAtZero: true,

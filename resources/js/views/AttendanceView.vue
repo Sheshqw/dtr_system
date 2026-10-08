@@ -144,24 +144,24 @@
                     </div>
                   </div>
                 </td>
-                <td class="td-cell text-[#64748B] whitespace-nowrap">{{ log.department }}</td>
-                <td class="td-cell text-center">
+                <td class="td-cell text-[#64748B] whitespace-nowrap" data-label="Department">{{ log.department }}</td>
+                <td class="td-cell text-center" data-label="Date &amp; Time">
                   <p class="font-mono text-[#0F172A] font-medium leading-tight">{{ log.punch_time }}</p>
                   <p class="text-[10px] text-[#6B7A94] leading-tight">{{ formatLogDate(log) }}</p>
                 </td>
-                <td class="td-cell text-center">
+                <td class="td-cell text-center" data-label="Type">
                   <span :class="log.punch_type === 'IN' ? 'badge-in' : 'badge-out'">
                     {{ log.punch_type }}
                   </span>
                 </td>
-                <td class="td-cell text-center">
+                <td class="td-cell text-center" data-label="Source">
                   <span :class="log.source === 'biometric' ? 'badge-bio' : 'badge-manual'">
                     {{ log.source === 'biometric' ? 'Biometric' : 'Manual' }}
                   </span>
                 </td>
-                <td class="td-cell text-[#64748B] font-mono text-xs">{{ log.device_id ?? '—' }}</td>
-                <td class="td-cell text-[#64748B] text-xs max-w-[160px] truncate">{{ log.remarks ?? '—' }}</td>
-                <td v-if="auth.isAdmin || auth.isHrOfficer" class="td-cell text-center">
+                <td class="td-cell text-[#64748B] font-mono text-xs" data-label="Device">{{ log.device_id ?? '—' }}</td>
+                <td class="td-cell text-[#64748B] text-xs max-w-[160px] truncate" data-label="Remarks">{{ log.remarks ?? '—' }}</td>
+                <td v-if="auth.isAdmin || auth.isHrOfficer" class="td-cell text-center" data-label="Action">
                   <button @click="confirmDelete(log)" class="p-1.5 rounded-md text-[#6B7A94] hover:text-[#EF4444] hover:bg-red-50 transition-colors">
                     <Trash2Icon class="w-4 h-4" />
                   </button>
@@ -298,27 +298,27 @@
                       </div>
                     </div>
                   </td>
-                  <td class="td-cell">
+                  <td class="td-cell" data-label="Date">
                     <span class="font-medium text-[#0F172A]">{{ formatDate(rec.work_date) }}</span>
                     <span class="text-[#6B7A94] ml-1">{{ rec.day_name }}</span>
                   </td>
-                  <td class="td-cell text-center font-mono">{{ rec.morning_in ?? '—' }}</td>
-                  <td class="td-cell text-center font-mono">{{ rec.morning_out ?? '—' }}</td>
-                  <td class="td-cell text-center font-mono">{{ rec.afternoon_in ?? '—' }}</td>
-                  <td class="td-cell text-center font-mono">{{ rec.afternoon_out ?? '—' }}</td>
-                  <td class="td-cell text-center font-mono font-medium">
+                  <td class="td-cell text-center font-mono" data-label="AM In">{{ rec.morning_in ?? '—' }}</td>
+                  <td class="td-cell text-center font-mono" data-label="AM Out">{{ rec.morning_out ?? '—' }}</td>
+                  <td class="td-cell text-center font-mono" data-label="PM In">{{ rec.afternoon_in ?? '—' }}</td>
+                  <td class="td-cell text-center font-mono" data-label="PM Out">{{ rec.afternoon_out ?? '—' }}</td>
+                  <td class="td-cell text-center font-mono font-medium" data-label="Hours">
                     {{ rec.hours_rendered > 0 ? Number(rec.hours_rendered).toFixed(2) : '—' }}
                   </td>
-                  <td class="td-cell text-center" :class="rec.tardiness_minutes > 0 ? 'text-amber-600 font-medium' : 'text-[#6B7A94]'">
+                  <td class="td-cell text-center" data-label="Late (min)" :class="rec.tardiness_minutes > 0 ? 'text-amber-600 font-medium' : 'text-[#6B7A94]'">
                     {{ rec.tardiness_minutes > 0 ? rec.tardiness_minutes : '—' }}
                   </td>
-                  <td class="td-cell text-center" :class="rec.overtime_minutes > 0 ? 'text-emerald-600 font-medium' : 'text-[#6B7A94]'">
+                  <td class="td-cell text-center" data-label="OT (min)" :class="rec.overtime_minutes > 0 ? 'text-emerald-600 font-medium' : 'text-[#6B7A94]'">
                     {{ rec.overtime_minutes > 0 ? rec.overtime_minutes : '—' }}
                   </td>
-                  <td class="td-cell text-center" :class="rec.undertime_minutes > 0 ? 'text-red-500 font-medium' : 'text-[#6B7A94]'">
+                  <td class="td-cell text-center" data-label="UT (min)" :class="rec.undertime_minutes > 0 ? 'text-red-500 font-medium' : 'text-[#6B7A94]'">
                     {{ rec.undertime_minutes > 0 ? rec.undertime_minutes : '—' }}
                   </td>
-                  <td class="td-cell text-center">
+                  <td class="td-cell text-center" data-label="Status">
                     <StatusBadge v-if="rec.status !== 'weekend'" :status="rec.status" :holiday-name="rec.holiday_name" />
                     <span v-else class="text-[#6B7A94] text-xs">—</span>
                   </td>
@@ -795,9 +795,62 @@ onMounted(async () => {
   .filter-input.w-44 { width: 100% !important; }
   .filter-input.w-40 { width: 100% !important; }
 
-  /* Table wrapper */
-  .att-table-wrap { overflow-x: auto; }
-  .att-table      { min-width: 620px; }
+  /* Tables → stacked cards, no horizontal scrolling needed ───────────
+     Each row becomes its own bordered card: the Employee cell stays as
+     the card's header (name + avatar, full width, no label), every
+     other cell becomes a label/value line using its data-label
+     attribute instead of a column header. */
+  .att-table-wrap { overflow-x: visible; }
+  .att-table, .daily-table { min-width: 0; width: 100%; }
+
+  .att-table thead, .daily-table thead { display: none; }
+
+  .att-table tbody tr, .daily-table tbody tr {
+    display: block;
+    margin-bottom: 10px;
+    border: 1px solid #E2E8F0;
+    border-radius: 10px;
+    padding: 10px 12px;
+  }
+
+  .att-table td, .daily-table td {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 10px;
+    text-align: left !important;
+    padding: 5px 0;
+    border: none !important;
+    position: static !important; /* undo the sticky-left behavior used on wide screens */
+  }
+
+  .att-table td[data-label]::before, .daily-table td[data-label]::before {
+    content: attr(data-label);
+    flex-shrink: 0;
+    font-size: 10px;
+    font-weight: 700;
+    text-transform: uppercase;
+    letter-spacing: 0.03em;
+    color: #94A3B8;
+  }
+
+  /* The Employee cell (always first, never carries data-label) stays
+     the card's full-width header instead of a label/value row. */
+  .att-table td:first-child, .daily-table td:first-child {
+    display: block;
+    padding: 0 0 8px;
+    margin-bottom: 6px;
+    border-bottom: 1px solid #F1F5F9 !important;
+  }
+
+  [data-theme="dark"] .att-table tbody tr,
+  [data-theme="dark"] .daily-table tbody tr {
+    border-color: rgba(255,255,255,0.08) !important;
+  }
+  [data-theme="dark"] .att-table td:first-child,
+  [data-theme="dark"] .daily-table td:first-child {
+    border-bottom-color: rgba(255,255,255,0.08) !important;
+  }
 
   /* Daily records filters */
   .rec-filters   { flex-direction: column; align-items: stretch; gap: 8px; padding: 12px; }

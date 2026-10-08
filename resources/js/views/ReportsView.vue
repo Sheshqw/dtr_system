@@ -223,7 +223,7 @@
             <template v-else-if="currentPeriodConsent.status === 'pending'">
               <div class="flex items-center gap-3 px-4 py-3 rounded-lg border border-[#FDE68A]" style="background:#FFFBEB;">
                 <ClockIcon class="w-5 h-5 text-[#D97706] flex-shrink-0" />
-                <div>
+                <div class="min-w-0">
                   <p class="text-sm font-semibold text-[#92400E]">Pending HR/Admin review</p>
                   <p class="text-xs text-[#92400E]/80">Submitted {{ currentPeriodConsent.submitted_at }}</p>
                 </div>
@@ -234,7 +234,7 @@
             <template v-else-if="currentPeriodConsent.status === 'approved' && !currentPeriodConsent.used_at">
               <div class="flex items-center gap-3 px-4 py-3 rounded-lg border border-[#BBF7D0]" style="background:#F0FDF4;">
                 <CheckCircle2Icon class="w-5 h-5 text-[#15803D] flex-shrink-0" />
-                <div>
+                <div class="min-w-0">
                   <p class="text-sm font-semibold text-[#15803D]">Approved — you may download your DTR once</p>
                   <p class="text-xs text-[#15803D]/80">Use the Download PDF button above. Reviewed {{ currentPeriodConsent.reviewed_at }}.</p>
                 </div>
@@ -245,7 +245,7 @@
             <template v-else>
               <div class="flex items-center gap-3 px-4 py-3 rounded-lg border border-[#E2E8F0]" style="background:#F8FAFC;">
                 <CheckCircle2Icon class="w-5 h-5 text-[#64748B] flex-shrink-0" />
-                <div>
+                <div class="min-w-0">
                   <p class="text-sm font-semibold text-[#334155]">Already downloaded {{ currentPeriodConsent.used_at }}</p>
                   <p class="text-xs text-[#64748B]">Need another copy? Submit a new request.</p>
                 </div>

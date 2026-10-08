@@ -170,11 +170,11 @@
               class="border-b border-[#E2E8F0] last:border-0 hover:bg-[#F8FAFC] transition-colors"
               :class="{ 'opacity-50': !emp.is_active }"
             >
-              <td v-if="canManage" class="td-cell text-center">
+              <td v-if="canManage" class="td-cell text-center" data-label="Select">
                 <input type="checkbox" :checked="selected.has(emp.id)" @change="toggleSelect(emp.id)" class="rounded border-[#CBD5E1]" />
               </td>
-              <td class="td-cell text-center text-[#6B7A94] font-mono text-xs">{{ (currentPage - 1) * perPage + i + 1 }}</td>
-              <td class="td-cell">
+              <td class="td-cell text-center text-[#6B7A94] font-mono text-xs" data-label="#">{{ (currentPage - 1) * perPage + i + 1 }}</td>
+              <td class="td-cell emp-cell">
                 <div class="flex items-center gap-3">
                   <div class="w-8 h-8 rounded-full overflow-hidden flex-shrink-0 border border-[#E2E8F0]">
                     <img v-if="emp.photo_path" :src="`/storage/${emp.photo_path}`" :alt="emp.name" class="w-full h-full object-cover" />
@@ -191,19 +191,19 @@
                   </div>
                 </div>
               </td>
-              <td class="td-cell">
+              <td class="td-cell" data-label="Staff Type">
                 <StaffTypeBadge v-if="emp.staff_type" :type="emp.staff_type" />
                 <span v-else class="text-xs text-[#6B7A94]">—</span>
               </td>
-              <td class="td-cell text-[#64748B] whitespace-nowrap">{{ emp.department ?? '—' }}</td>
-              <td class="td-cell text-[#64748B]">{{ emp.position ?? '—' }}</td>
-              <td class="td-cell text-center"><RoleBadge :role="emp.role" /></td>
-              <td class="td-cell text-center">
+              <td class="td-cell text-[#64748B] whitespace-nowrap" data-label="Department">{{ emp.department ?? '—' }}</td>
+              <td class="td-cell text-[#64748B]" data-label="Position">{{ emp.position ?? '—' }}</td>
+              <td class="td-cell text-center" data-label="Role"><RoleBadge :role="emp.role" /></td>
+              <td class="td-cell text-center" data-label="Status">
                 <span :class="emp.is_active ? 'badge-green' : 'badge-gray'">
                   {{ emp.is_active ? 'Active' : 'Inactive' }}
                 </span>
               </td>
-              <td class="td-cell text-right" v-if="auth.isAdmin || auth.isHrOfficer">
+              <td class="td-cell text-right" v-if="auth.isAdmin || auth.isHrOfficer" data-label="Actions">
                 <div class="flex items-center justify-end gap-1">
                   <button
                     @click="router.push({ name: 'reports', query: { employee: emp.employee_id } })"
@@ -1815,5 +1815,62 @@ tbody tr:hover { background: #F8FAFF; }
   .fixed.inset-0.z-50 > div:not(.absolute) {
     max-height: 100dvh; border-radius: 0; margin: 0;
   }
+
+  /* Roster table → stacked cards, no horizontal scrolling needed ──────
+     Same pattern as Attendance/Tracking: each row becomes its own
+     bordered card, the Employee cell stays as the card's full-width
+     header, every other cell becomes a label/value line via its
+     data-label attribute instead of a column header. */
+  .emp-table { min-width: 0; width: 100%; }
+  .emp-table thead { display: none; }
+
+  .emp-table tbody tr {
+    display: block;
+    margin-bottom: 10px;
+    border: 1px solid #E2E8F0;
+    border-radius: 10px;
+    padding: 10px 12px;
+  }
+
+  .emp-table td {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 10px;
+    text-align: left !important;
+    padding: 6px 0 !important;
+    border: none !important;
+  }
+
+  .emp-table td[data-label]::before {
+    content: attr(data-label);
+    flex-shrink: 0;
+    font-size: 10px;
+    font-weight: 700;
+    text-transform: uppercase;
+    letter-spacing: 0.03em;
+    color: #94A3B8;
+  }
+
+  .emp-table .emp-cell {
+    display: block;
+    padding: 0 0 8px !important;
+    margin-bottom: 6px;
+    border-bottom: 1px solid #F1F5F9 !important;
+  }
+
+  /* Empty-state row still needs to read as a plain block, not a card */
+  .emp-table tbody tr:has(td[colspan]) {
+    display: block;
+    border: none;
+    padding: 0;
+  }
+  .emp-table tbody tr:has(td[colspan]) td {
+    display: block;
+    padding: 0 !important;
+  }
+
+  [data-theme="dark"] .emp-table tbody tr { border-color: rgba(255,255,255,0.08) !important; }
+  [data-theme="dark"] .emp-table .emp-cell { border-bottom-color: rgba(255,255,255,0.08) !important; }
 }
 </style>
