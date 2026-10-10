@@ -500,7 +500,7 @@ class ReportController extends Controller
 
         if ($period->isHalfMonth() && ! $employee->usesSemiMonthlyDtr()) {
             throw ValidationException::withMessages([
-                'period' => ['Half-month DTRs are only available for COS and Job Order employees.'],
+                'period' => ['Half-month DTRs are only available for Contractual (COS) and Job Order employees.'],
             ]);
         }
 

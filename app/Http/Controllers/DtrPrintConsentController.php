@@ -119,7 +119,7 @@ class DtrPrintConsentController extends Controller
 
         if ($period !== DtrPeriod::FULL && ! $user->usesSemiMonthlyDtr()) {
             throw ValidationException::withMessages([
-                'period' => ['Half-month DTRs are only available for COS and Job Order employees.'],
+                'period' => ['Half-month DTRs are only available for Contractual (COS) and Job Order employees.'],
             ]);
         }
 

@@ -596,7 +596,7 @@
                       <option value="">— Select —</option>
                       <option value="permanent">Permanent</option>
                       <option value="job_order">Job Order</option>
-                      <option value="cos">COS (Contract of Service)</option>
+                      <option value="cos">Contractual (COS)</option>
                       <option value="part-time">Part-time</option>
                       <option value="sa">Student Assistant (SA)</option>
                       <option value="ojt">OJT (On-the-Job Trainee)</option>

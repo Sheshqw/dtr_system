@@ -162,7 +162,7 @@
                   <span class="text-[11px] text-[#6B7A94]">Days {{ opt.range }}</span>
                 </button>
               </div>
-              <p class="text-xs text-[#6B7A94] mt-1.5">COS and Job Order employees print their DTR twice a month — choose which half to generate.</p>
+              <p class="text-xs text-[#6B7A94] mt-1.5">Contractual (COS) and Job Order employees print their DTR twice a month — choose which half to generate.</p>
             </div>
 
             <!-- Actions -->
