@@ -231,7 +231,7 @@
     </aside>
 
     <!-- ── Main content ───────────────────────────────────────────── -->
-    <main class="flex-1 overflow-y-auto relative pt-14 lg:pt-0">
+    <main ref="mainEl" class="flex-1 overflow-y-auto relative pt-14 lg:pt-0">
       <!-- No mode="out-in": that mode makes the incoming page wait for the
            outgoing one's leave transition to fully finish first — clicking
            through several sidebar links quickly interrupts that sequence
@@ -416,6 +416,15 @@ const perms    = usePermissionsStore();
 const palette  = useCommandPalette();
 
 const router = useRouter();
+
+// <main> is the scroll container (not the window), so vue-router's own
+// scroll handling never touches it — without this, opening a page from the
+// sidebar while scrolled down left the new page scrolled down too.
+const mainEl = ref(null);
+const stopScrollReset = router.afterEach((to, from) => {
+  if (to.name !== from.name) mainEl.value?.scrollTo({ top: 0 });
+});
+onBeforeUnmount(stopScrollReset);
 const settings = useSettingsStore();
 const { toast } = useToast();
 const { campus, campusName } = useCampusIdentity();
@@ -809,6 +818,18 @@ onBeforeUnmount(() => {
 }
 .page-leave-active {
   transition: opacity 0.14s ease, transform 0.14s ease;
+  /* Enter and leave run at the same time (see the RouterView note), so take
+     the outgoing page out of the flow — otherwise both pages stack for a
+     moment and the new one pops in below the old, then jumps up. Offset
+     matches <main>'s pt-14 under the mobile top bar. */
+  position: absolute;
+  top: 3.5rem;
+  left: 0;
+  right: 0;
+  pointer-events: none;
+}
+@media (min-width: 1024px) {
+  .page-leave-active { top: 0; }
 }
 .page-enter-from { opacity: 0; transform: translateY(10px) scale(0.995); }
 .page-leave-to   { opacity: 0; transform: translateY(-5px); }

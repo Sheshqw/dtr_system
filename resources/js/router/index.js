@@ -72,6 +72,26 @@ router.afterEach((to) => {
     sessionStorage.removeItem('chunk-reload-pending');
 });
 
+// Warm up every page's code in the background once the user is signed in and
+// the browser is idle, so the first visit to each page opens instantly instead
+// of pausing on a network fetch. One file at a time, so it never competes with
+// the page the user is actually looking at; failures are ignored (the normal
+// navigation path below still loads — and self-heals — on demand).
+let pagesPrefetched = false;
+router.afterEach((to) => {
+    if (pagesPrefetched || to.name === 'login') return;
+    pagesPrefetched = true;
+
+    const whenIdle = window.requestIdleCallback ?? ((cb) => setTimeout(cb, 1500));
+    whenIdle(async () => {
+        for (const route of router.getRoutes()) {
+            const load = route.components?.default;
+            if (typeof load !== 'function' || route.name === 'login') continue;
+            try { await load(); } catch { /* loaded on demand instead */ }
+        }
+    });
+});
+
 // Every page is lazy-loaded (`() => import(...)`), so its JS file is only
 // fetched the first time a browser tab actually visits it. If the app gets
 // rebuilt/redeployed while someone already has it open — the filenames

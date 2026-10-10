@@ -1103,3 +1103,15 @@ input, select, textarea {
 [data-theme="dark"] .filter-label     { color: #9AAAC9 !important; }
 [data-theme="dark"] .tk-stat-value    { color: #E4EAF5 !important; }
 [data-theme="dark"] .tk-stat-label    { color: #B7C3DE !important; }
+
+/* ─── Reduced motion ──────────────────────────────────────────────────────────
+   Respect the OS "reduce motion" setting: page transitions, entrance
+   animations and pulsing dots all settle instantly instead of moving. */
+@media (prefers-reduced-motion: reduce) {
+  *, *::before, *::after {
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.01ms !important;
+    scroll-behavior: auto !important;
+  }
+}
