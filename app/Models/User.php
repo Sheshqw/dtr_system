@@ -26,6 +26,12 @@ class User extends Authenticatable
 
     protected $hidden = ['password', 'remember_token'];
 
+    /**
+     * Contract of Service and Job Order staff are paid semi-monthly, so they
+     * print one DTR per half month (1–15, 16–end) instead of one per month.
+     */
+    public const SEMI_MONTHLY_DTR_STATUSES = ['cos', 'job_order'];
+
     protected function casts(): array
     {
         return [
@@ -43,6 +49,11 @@ class User extends Authenticatable
     {
         $parts = array_filter([$this->first_name, $this->middle_name, $this->last_name, $this->suffix]);
         return trim(implode(' ', $parts));
+    }
+
+    public function usesSemiMonthlyDtr(): bool
+    {
+        return in_array($this->employment_status, self::SEMI_MONTHLY_DTR_STATUSES, true);
     }
 
     /**

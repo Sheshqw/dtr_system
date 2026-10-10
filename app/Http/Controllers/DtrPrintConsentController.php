@@ -8,7 +8,10 @@ use App\Http\Traits\ScopesByCampus;
 use App\Models\DtrPrintConsent;
 use App\Models\User;
 use App\Notifications\PrintConsentReviewed;
+use App\Support\DtrPeriod;
 use Illuminate\Http\Request;
+use Illuminate\Validation\Rule;
+use Illuminate\Validation\ValidationException;
 
 class DtrPrintConsentController extends Controller
 {
@@ -108,12 +111,22 @@ class DtrPrintConsentController extends Controller
         $validated = $request->validate([
             'month'   => 'required|integer|between:1,12',
             'year'    => 'required|integer|between:2020,2099',
+            'period'  => ['nullable', Rule::in(DtrPeriod::KEYS)],
             'purpose' => 'nullable|string|max:255',
         ]);
+
+        $period = $validated['period'] ?? DtrPeriod::FULL;
+
+        if ($period !== DtrPeriod::FULL && ! $user->usesSemiMonthlyDtr()) {
+            throw ValidationException::withMessages([
+                'period' => ['Half-month DTRs are only available for COS and Job Order employees.'],
+            ]);
+        }
 
         $existing = DtrPrintConsent::where('employee_id', $user->id)
             ->where('month', $validated['month'])
             ->where('year', $validated['year'])
+            ->where('period', $period)
             ->where(fn($q) => $q->where('status', 'pending')
                 ->orWhere(fn($q2) => $q2->where('status', 'approved')->whereNull('used_at')))
             ->first();
@@ -129,6 +142,7 @@ class DtrPrintConsentController extends Controller
             'employee_id' => $user->id,
             'month'       => $validated['month'],
             'year'        => $validated['year'],
+            'period'      => $period,
             'purpose'     => $validated['purpose'] ?? null,
             'status'      => 'pending',
         ]);
@@ -204,6 +218,7 @@ class DtrPrintConsentController extends Controller
             'id'               => $c->id,
             'month'            => $c->month,
             'year'             => $c->year,
+            'period'           => $c->period ?? DtrPeriod::FULL,
             'month_label'      => $c->month_label,
             'purpose'          => $c->purpose,
             'status'           => $c->status,

@@ -7,10 +7,13 @@ use App\Models\DailyDtr;
 use App\Models\DtrPrintConsent;
 use App\Models\User;
 use App\Services\WorkingHoursService;
+use App\Support\DtrPeriod;
 use Barryvdh\DomPDF\Facade\Pdf;
 use Carbon\Carbon;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
+use Illuminate\Validation\Rule;
+use Illuminate\Validation\ValidationException;
 
 class ReportController extends Controller
 {
@@ -20,37 +23,20 @@ class ReportController extends Controller
 
     public function form48(Request $request, User $employee)
     {
-        $request->validate([
-            'month' => 'required|integer|between:1,12',
-            'year'  => 'required|integer|between:2020,2099',
-        ]);
-
-        $month = (int) $request->month;
-        $year  = (int) $request->year;
-
         $this->authorizeView($request->user(), $employee);
+        $period = $this->resolvePeriod($request, $employee);
+
+        $month = $period->month;
+        $year  = $period->year;
 
         $signingReviewer = null;
         if (! $this->isPrivileged($request)) {
-            $signingReviewer = $this->consumeApprovedPrintConsent($employee, $month, $year);
+            $signingReviewer = $this->consumeApprovedPrintConsent($employee, $period);
         }
 
         $employee->loadMissing('department', 'shift', 'campus');
 
-        $daysInMonth = Carbon::create($year, $month)->daysInMonth;
-        $monthLabel  = Carbon::create($year, $month)->format('F Y');
-
-        $this->workingHours->backfillHolidays(
-            [$employee->id],
-            Carbon::create($year, $month, 1)->toDateString(),
-            Carbon::create($year, $month, $daysInMonth)->toDateString()
-        );
-
-        $records = DailyDtr::where('employee_id', $employee->id)
-            ->whereYear('work_date', $year)
-            ->whereMonth('work_date', $month)
-            ->orderBy('work_date')
-            ->get()
+        $records = $this->periodRecords($employee, $period)
             ->keyBy(fn($r) => $r->work_date->day);
 
         $totals = [
@@ -62,37 +48,20 @@ class ReportController extends Controller
         ];
 
         $pdf = Pdf::loadView('reports.form48', compact(
-            'employee', 'records', 'daysInMonth', 'monthLabel', 'year', 'month', 'totals', 'signingReviewer'
+            'employee', 'records', 'period', 'year', 'month', 'totals', 'signingReviewer'
         ))->setPaper('a4', 'portrait');
 
-        $filename = "DTR_{$employee->employee_id}_{$year}_{$month}.pdf";
+        $filename = "DTR_{$employee->employee_id}_{$year}_{$month}{$period->filenameSuffix()}.pdf";
 
         return $pdf->download($filename);
     }
 
     public function preview(Request $request, User $employee)
     {
-        $request->validate([
-            'month' => 'required|integer|between:1,12',
-            'year'  => 'required|integer|between:2020,2099',
-        ]);
-
         $this->authorizeView($request->user(), $employee);
+        $period = $this->resolvePeriod($request, $employee);
 
-        $month = (int) $request->month;
-        $year  = (int) $request->year;
-
-        $this->workingHours->backfillHolidays(
-            [$employee->id],
-            Carbon::create($year, $month, 1)->toDateString(),
-            Carbon::create($year, $month)->endOfMonth()->toDateString()
-        );
-
-        $records = DailyDtr::where('employee_id', $employee->id)
-            ->whereYear('work_date', $year)
-            ->whereMonth('work_date', $month)
-            ->orderBy('work_date')
-            ->get();
+        $records = $this->periodRecords($employee, $period);
 
         return response()->json([
             'employee'   => [
@@ -102,8 +71,10 @@ class ReportController extends Controller
                 'position'    => $employee->position,
                 'department'  => $employee->department?->name,
                 'campus'      => $employee->campus?->name ?? 'NEMSU',
+                'semi_monthly_dtr' => $employee->usesSemiMonthlyDtr(),
             ],
-            'month_label'=> Carbon::create($year, $month)->format('F Y'),
+            'month_label'=> $period->label(),
+            'period'     => $period->toArray(),
             'totals'     => [
                 'days_present'      => $records->whereIn('status', ['present', 'late'])->count(),
                 'leave_days'        => $records->where('status', 'on_leave')->count(),
@@ -127,34 +98,17 @@ class ReportController extends Controller
 
     public function exportCsv(Request $request, User $employee): \Symfony\Component\HttpFoundation\StreamedResponse
     {
-        $request->validate([
-            'month' => 'required|integer|between:1,12',
-            'year'  => 'required|integer|between:2020,2099',
-        ]);
-
-        $month = (int) $request->month;
-        $year  = (int) $request->year;
-
         $this->authorizeView($request->user(), $employee);
         if (! $this->isPrivileged($request)) {
             abort(403, 'You can preview your DTR here. Printed or downloaded copies must be requested from HR or Admin.');
         }
+        $period = $this->resolvePeriod($request, $employee);
         $employee->loadMissing('department', 'shift', 'campus');
 
-        $this->workingHours->backfillHolidays(
-            [$employee->id],
-            Carbon::create($year, $month, 1)->toDateString(),
-            Carbon::create($year, $month)->endOfMonth()->toDateString()
-        );
+        $records = $this->periodRecords($employee, $period);
 
-        $records = DailyDtr::where('employee_id', $employee->id)
-            ->whereYear('work_date', $year)
-            ->whereMonth('work_date', $month)
-            ->orderBy('work_date')
-            ->get();
-
-        $monthLabel = Carbon::create($year, $month)->format('F Y');
-        $filename   = "DTR_{$employee->employee_id}_{$year}_{$month}.csv";
+        $monthLabel = $period->label();
+        $filename   = "DTR_{$employee->employee_id}_{$period->year}_{$period->month}{$period->filenameSuffix()}.csv";
 
         return response()->streamDownload(function () use ($employee, $records, $monthLabel) {
             $out = fopen('php://output', 'w');
@@ -504,13 +458,16 @@ class ReportController extends Controller
      * second request wait for the first to finish, then correctly find
      * nothing left to consume.
      */
-    private function consumeApprovedPrintConsent(User $employee, int $month, int $year): ?User
+    private function consumeApprovedPrintConsent(User $employee, DtrPeriod $period): ?User
     {
-        return DB::transaction(function () use ($employee, $month, $year) {
+        return DB::transaction(function () use ($employee, $period) {
+            // Matched on the exact period: approving a COS employee's 1st-half
+            // DTR doesn't also unlock the 2nd half (or the whole month).
             $consent = DtrPrintConsent::with('reviewer')
                 ->where('employee_id', $employee->id)
-                ->where('month', $month)
-                ->where('year', $year)
+                ->where('month', $period->month)
+                ->where('year', $period->year)
+                ->where('period', $period->key)
                 ->where('status', 'approved')
                 ->whereNull('used_at')
                 ->lockForUpdate()
@@ -524,6 +481,44 @@ class ReportController extends Controller
 
             return $consent->reviewer;
         });
+    }
+
+    /**
+     * The DTR span being requested — the whole month by default. Half-month
+     * periods are only for semi-monthly (COS / Job Order) employees; everyone
+     * else keeps one DTR per month.
+     */
+    private function resolvePeriod(Request $request, User $employee): DtrPeriod
+    {
+        $request->validate([
+            'month'  => 'required|integer|between:1,12',
+            'year'   => 'required|integer|between:2020,2099',
+            'period' => ['nullable', Rule::in(DtrPeriod::KEYS)],
+        ]);
+
+        $period = new DtrPeriod((int) $request->year, (int) $request->month, $request->input('period') ?: DtrPeriod::FULL);
+
+        if ($period->isHalfMonth() && ! $employee->usesSemiMonthlyDtr()) {
+            throw ValidationException::withMessages([
+                'period' => ['Half-month DTRs are only available for COS and Job Order employees.'],
+            ]);
+        }
+
+        return $period;
+    }
+
+    private function periodRecords(User $employee, DtrPeriod $period)
+    {
+        $from = $period->start()->toDateString();
+        $to   = $period->end()->toDateString();
+
+        $this->workingHours->backfillHolidays([$employee->id], $from, $to);
+
+        return DailyDtr::where('employee_id', $employee->id)
+            ->whereDate('work_date', '>=', $from)
+            ->whereDate('work_date', '<=', $to)
+            ->orderBy('work_date')
+            ->get();
     }
 
     private function authorizeView(User $viewer, User $target): void

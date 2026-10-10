@@ -105,6 +105,7 @@ class AuthController extends Controller
                 'position'    => $employee->position,
                 'campus_id'   => $employee->campus_id,
                 'campus'      => $employee->campus?->only('id', 'name', 'code'),
+                'semi_monthly_dtr'    => $employee->usesSemiMonthlyDtr(),
                 'feature_permissions' => $this->permissions->effectiveFor($employee),
             ],
         ]);
@@ -279,6 +280,7 @@ class AuthController extends Controller
             'campus'      => $employee->campus?->only('id', 'name', 'code'),
             'department'  => $employee->department?->only('id', 'name', 'code'),
             'shift'       => $employee->shift?->only('id', 'name', 'morning_in', 'afternoon_out'),
+            'semi_monthly_dtr'    => $employee->usesSemiMonthlyDtr(),
             'feature_permissions' => $this->permissions->effectiveFor($employee),
         ]);
     }

@@ -65,7 +65,8 @@
   </thead>
   <tbody>
 
-    @for ($d = 1; $d <= $daysInMonth; $d++)
+    {{-- Only the period's days: the whole month, or one half for COS / Job Order --}}
+    @for ($d = $period->startDay(); $d <= $period->endDay(); $d++)
       @php
         $date    = \Carbon\Carbon::create($year, $month, $d);
         $rec     = $records->get($d);

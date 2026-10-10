@@ -142,6 +142,29 @@
               </div>
             </div>
 
+            <!-- DTR coverage — COS / Job Order employees print one DTR per half month -->
+            <div v-if="isSemiMonthly">
+              <label class="form-label">DTR Coverage</label>
+              <div class="grid grid-cols-3 gap-2" role="radiogroup" aria-label="DTR coverage">
+                <button
+                  v-for="opt in periodOptions"
+                  :key="opt.value"
+                  type="button"
+                  role="radio"
+                  :aria-checked="period === opt.value"
+                  @click="period = opt.value"
+                  class="flex flex-col items-start gap-0.5 px-3 py-2 rounded-lg border text-left transition-colors"
+                  :class="period === opt.value
+                    ? 'border-[#2E4A8C] bg-[#EEF2FF] ring-1 ring-[#2E4A8C]'
+                    : 'border-[#E2E8F0] bg-white hover:border-[#C7D2F6]'"
+                >
+                  <span class="text-[13px] font-semibold leading-tight" :class="period === opt.value ? 'text-[#2E4A8C]' : 'text-[#0F172A]'">{{ opt.label }}</span>
+                  <span class="text-[11px] text-[#6B7A94]">Days {{ opt.range }}</span>
+                </button>
+              </div>
+              <p class="text-xs text-[#6B7A94] mt-1.5">COS and Job Order employees print their DTR twice a month — choose which half to generate.</p>
+            </div>
+
             <!-- Actions -->
             <div class="flex flex-wrap items-center gap-3 pt-1">
               <button
@@ -837,7 +860,7 @@
 </template>
 
 <script setup>
-import { ref, computed, onMounted, onUnmounted } from 'vue';
+import { ref, computed, watch, onMounted, onUnmounted } from 'vue';
 import { useRoute } from 'vue-router';
 import axios from 'axios';
 import { useAuthStore } from '@/stores/auth';
@@ -913,6 +936,40 @@ const exportingBulk = ref(false);
 const now = new Date();
 const month = ref(now.getMonth() + 1);
 const year  = ref(now.getFullYear());
+
+// ── DTR coverage — COS / Job Order staff print one DTR per half month ──
+const period          = ref('full'); // 'full' | 'first' | 'second'
+const selfSemiMonthly = ref(!!auth.employee?.semi_monthly_dtr);
+
+const isSemiMonthly = computed(() =>
+  canSelectEmployee.value ? !!selected.value?.semi_monthly_dtr : selfSemiMonthly.value
+);
+
+const lastDayOfMonth = computed(() => new Date(year.value, month.value, 0).getDate());
+
+const periodOptions = computed(() => [
+  { value: 'first',  label: '1st Half',    range: '1–15' },
+  { value: 'second', label: '2nd Half',    range: `16–${lastDayOfMonth.value}` },
+  { value: 'full',   label: 'Whole Month', range: `1–${lastDayOfMonth.value}` },
+]);
+
+// Semi-monthly staff start on the half they're most likely printing — the
+// current half when looking at this month, otherwise the 1st half.
+function defaultPeriod() {
+  if (!isSemiMonthly.value) return 'full';
+  const isCurrentMonth = month.value === now.getMonth() + 1 && year.value === now.getFullYear();
+  return isCurrentMonth && now.getDate() > 15 ? 'second' : 'first';
+}
+period.value = defaultPeriod();
+watch(isSemiMonthly, () => { period.value = defaultPeriod(); });
+
+const periodParams = computed(() => ({ month: month.value, year: year.value, period: period.value }));
+
+const periodFileSuffix = computed(() => ({
+  first:  '_1-15',
+  second: `_16-${lastDayOfMonth.value}`,
+}[period.value] ?? ''));
+
 const bulkMonth      = ref(now.getMonth() + 1);
 const bulkYear       = ref(now.getFullYear());
 const bulkDepartment = ref('');
@@ -932,11 +989,15 @@ const justArrivedIds = ref(new Set()); // brief highlight for rows that just lan
 
 const selectedPeriodLabel = computed(() => {
   const m = months.find(x => x.value === month.value)?.label ?? '';
+  if (period.value === 'first')  return `${m} 1–15, ${year.value}`;
+  if (period.value === 'second') return `${m} 16–${lastDayOfMonth.value}, ${year.value}`;
   return `${m} ${year.value}`;
 });
 
 const currentPeriodConsent = computed(() =>
-  myConsents.value.find(c => c.month === month.value && c.year === year.value) ?? null
+  myConsents.value.find(c =>
+    c.month === month.value && c.year === year.value && (c.period ?? 'full') === period.value
+  ) ?? null
 );
 
 const canDownloadOwn = computed(() =>
@@ -1003,16 +1064,16 @@ const empResults = computed(() => {
 });
 
 // ── Full month rows (all days, including blanks) ──────────────────
+// Spans exactly the previewed period (whole month or one half), taken from
+// the response itself so the rows always match the data they were built from.
 const fullMonthRows = computed(() => {
   if (!previewData.value) return [];
-  const y = year.value;
-  const m = month.value;
-  const daysInMonth = new Date(y, m, 0).getDate();
+  const { year: y, month: m, start_day: firstDay, end_day: lastDay } = previewData.value.period;
   const recordMap = {};
   for (const r of previewData.value.records) recordMap[r.day] = r;
 
   const rows = [];
-  for (let d = 1; d <= daysInMonth; d++) {
+  for (let d = firstDay; d <= lastDay; d++) {
     const date    = new Date(y, m - 1, d);
     const dow     = date.getDay();
     const isWeekend = dow === 0 || dow === 6;
@@ -1133,6 +1194,14 @@ function hideDropdown() {
   setTimeout(() => { showDropdown.value = false; }, 150);
 }
 
+// A preview only describes the period it was loaded for — drop it when the
+// selection changes so "Download PDF" never acts on a different span than
+// the one on screen.
+watch([month, year, period], () => {
+  previewData.value = null;
+  selectedLeaveDates.value = new Set();
+});
+
 // ── API actions ───────────────────────────────────────────────────
 async function loadPreview() {
   if (!effectiveEmployee.value) return;
@@ -1141,7 +1210,7 @@ async function loadPreview() {
   selectedLeaveDates.value = new Set();
   try {
     const res = await axios.get(`/api/reports/preview/${effectiveEmployee.value.id}`, {
-      params: { month: month.value, year: year.value },
+      params: periodParams.value,
     });
     previewData.value = res.data;
   } catch (err) {
@@ -1156,7 +1225,7 @@ async function download() {
   downloading.value = true;
   try {
     const res = await axios.get(`/api/reports/form48/${effectiveEmployee.value.id}`, {
-      params: { month: month.value, year: year.value },
+      params: periodParams.value,
       responseType: 'blob',
     });
     const contentType = res.headers?.['content-type'] ?? '';
@@ -1168,7 +1237,7 @@ async function download() {
     const link = document.createElement('a');
     link.href  = url;
     const empId = canSelectEmployee.value ? selected.value?.employee_id : auth.employee?.employee_id;
-    link.setAttribute('download', `DTR_${empId ?? 'employee'}_${year.value}_${String(month.value).padStart(2,'0')}.pdf`);
+    link.setAttribute('download', `DTR_${empId ?? 'employee'}_${year.value}_${String(month.value).padStart(2,'0')}${periodFileSuffix.value}.pdf`);
     document.body.appendChild(link);
     link.click();
     link.remove();
@@ -1186,7 +1255,7 @@ async function exportCsv() {
   exportingCsv.value = true;
   try {
     const res = await axios.get(`/api/reports/export/${effectiveEmployee.value.id}`, {
-      params: { month: month.value, year: year.value },
+      params: periodParams.value,
       responseType: 'blob',
     });
     const contentType = res.headers?.['content-type'] ?? '';
@@ -1198,7 +1267,7 @@ async function exportCsv() {
     const link = document.createElement('a');
     link.href  = url;
     const empId = canSelectEmployee.value ? selected.value?.employee_id : auth.employee?.employee_id;
-    link.setAttribute('download', `DTR_${empId ?? 'employee'}_${year.value}_${String(month.value).padStart(2,'0')}.csv`);
+    link.setAttribute('download', `DTR_${empId ?? 'employee'}_${year.value}_${String(month.value).padStart(2,'0')}${periodFileSuffix.value}.csv`);
     document.body.appendChild(link);
     link.click();
     link.remove();
@@ -1237,6 +1306,15 @@ async function exportBulk() {
   }
 }
 
+// The stored login payload can predate a change to the employee's
+// employment status (or the field itself), so re-check it on page load.
+async function refreshSelfSemiMonthly() {
+  try {
+    const res = await axios.get('/api/auth/me');
+    selfSemiMonthly.value = !!res.data?.semi_monthly_dtr;
+  } catch { /* keep the value from login */ }
+}
+
 // ── DTR Print Consent ───────────────────────────────────────────────
 async function fetchMyConsents() {
   try {
@@ -1256,8 +1334,7 @@ async function requestConsent() {
   requestingConsent.value = true;
   try {
     await axios.post('/api/dtr-print-consents', {
-      month: month.value,
-      year: year.value,
+      ...periodParams.value,
       purpose: consentPurpose.value || null,
     });
     toast('Print request submitted. HR/Admin will review it shortly.', 'success');
@@ -1785,7 +1862,7 @@ onMounted(async () => {
     }
     await Promise.all([fetchConsentQueue(), fetchMySignature()]);
   } else {
-    await fetchMyConsents();
+    await Promise.all([fetchMyConsents(), refreshSelfSemiMonthly()]);
   }
   listenForPrintConsents();
 });

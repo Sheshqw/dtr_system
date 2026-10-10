@@ -2,7 +2,7 @@
 
 namespace App\Models;
 
-use Carbon\Carbon;
+use App\Support\DtrPeriod;
 use Illuminate\Database\Eloquent\Model;
 
 class DtrPrintConsent extends Model
@@ -10,7 +10,7 @@ class DtrPrintConsent extends Model
     protected $table = 'dtr_print_consents';
 
     protected $fillable = [
-        'employee_id', 'month', 'year', 'purpose',
+        'employee_id', 'month', 'year', 'period', 'purpose',
         'status', 'reviewed_by', 'reviewed_at', 'reviewer_remarks', 'used_at',
     ];
 
@@ -32,8 +32,14 @@ class DtrPrintConsent extends Model
         return $this->belongsTo(User::class, 'reviewed_by');
     }
 
+    public function dtrPeriod(): DtrPeriod
+    {
+        return new DtrPeriod($this->year, $this->month, $this->period ?? DtrPeriod::FULL);
+    }
+
+    /** "October 2026", or "October 1–15, 2026" for a half-month request. */
     public function getMonthLabelAttribute(): string
     {
-        return Carbon::create($this->year, $this->month)->format('F Y');
+        return $this->dtrPeriod()->label();
     }
 }

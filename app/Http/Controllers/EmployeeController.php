@@ -750,6 +750,7 @@ class EmployeeController extends Controller
             'designation'       => $e->designation,
             'salary'            => $includeSalary ? $e->salary : null,
             'employment_status' => $e->employment_status,
+            'semi_monthly_dtr'  => $e->usesSemiMonthlyDtr(),
             'staff_type'        => $e->staff_type,
             'contact_number'    => $e->contact_number,
             'date_of_birth'     => $e->date_of_birth?->format('Y-m-d'),

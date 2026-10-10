@@ -2,7 +2,7 @@
 <html lang="en">
 <head>
 <meta charset="UTF-8">
-<title>CSC Form 48 – {{ $employee->full_name }} – {{ $monthLabel }}</title>
+<title>CSC Form 48 – {{ $employee->full_name }} – {{ $period->label() }}</title>
 <style>
 * { margin: 0; padding: 0; box-sizing: border-box; }
 html, body {
@@ -157,8 +157,12 @@ $lateMins = (int)($totals['tardiness_minutes'] ?? 0);
 // Employee info (uppercase to match the CSC form convention)
 $empName = strtoupper($employee->full_name);
 
-// "January - 2026" per the CSC form's month/year format
-$monthYearLabel = \Carbon\Carbon::create($year, $month)->format('F') . ' - ' . $year;
+// "January - 2026" per the CSC form's month/year format. A half-month DTR
+// (COS / Job Order) names its days instead: "January 1-15, 2026".
+$monthName      = \Carbon\Carbon::create($year, $month)->format('F');
+$monthYearLabel = $period->isHalfMonth()
+    ? "{$monthName} {$period->startDay()}-{$period->endDay()}, {$year}"
+    : "{$monthName} - {$year}";
 
 // Director by campus code
 $directors = [
