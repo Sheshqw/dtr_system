@@ -1,6 +1,6 @@
 <template>
   <div class="turnstile-wrap">
-    <div ref="container" class="w-full"></div>
+    <div ref="container" class="w-full flex justify-center"></div>
     <p v-if="status === 'loading'" class="turnstile-note">Loading security check…</p>
   </div>
 </template>
@@ -21,6 +21,11 @@ const props = defineProps({
 const emit = defineEmits(['verified', 'expired', 'error']);
 
 const SCRIPT_URL = 'https://challenges.cloudflare.com/turnstile/v0/api.js?render=explicit';
+
+// Turnstile's 'flexible' size never shrinks below 300px, so on narrow phones
+// it would spill out of the login card — use the official compact layout
+// (150×140) there instead.
+const MIN_FLEXIBLE_WIDTH = 300;
 
 // Shared across mounts — the script must only ever be added to the page once.
 let scriptPromise = null;
@@ -57,7 +62,7 @@ onMounted(async () => {
     widgetId = turnstile.render(container.value, {
       sitekey: props.siteKey,
       theme:   props.theme,
-      size:    'flexible',
+      size:    container.value.clientWidth >= MIN_FLEXIBLE_WIDTH ? 'flexible' : 'compact',
       action:  'login',
       callback:           (token) => { status.value = 'ready'; emit('verified', token); },
       'expired-callback': ()      => emit('expired'),
