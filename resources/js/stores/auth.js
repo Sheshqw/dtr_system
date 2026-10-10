@@ -34,8 +34,8 @@ export const useAuthStore = defineStore('auth', () => {
         axios.defaults.headers.common['Authorization'] = `Bearer ${data.token}`;
     }
 
-    async function login(email, password, remember = true) {
-        const res = await axios.post('/api/auth/login', { email, password });
+    async function login(email, password, remember = true, turnstileToken = null) {
+        const res = await axios.post('/api/auth/login', { email, password, turnstile_token: turnstileToken });
         setAuth(res.data, remember);
         return res.data;
     }

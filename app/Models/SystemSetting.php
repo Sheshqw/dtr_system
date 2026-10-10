@@ -12,6 +12,7 @@ class SystemSetting extends Model
         'session_timeout_minutes', 'password_min_length',
         'password_require_number', 'password_require_symbol',
         'max_login_attempts', 'lockout_duration_minutes',
+        'turnstile_enabled',
     ];
 
     protected function casts(): array
@@ -19,6 +20,7 @@ class SystemSetting extends Model
         return [
             'password_require_number' => 'boolean',
             'password_require_symbol' => 'boolean',
+            'turnstile_enabled'       => 'boolean',
         ];
     }
 
@@ -45,6 +47,7 @@ class SystemSetting extends Model
             'password_require_symbol'  => false,
             'max_login_attempts'       => 5,
             'lockout_duration_minutes' => 30,
+            'turnstile_enabled'        => false,
         ]);
     }
 

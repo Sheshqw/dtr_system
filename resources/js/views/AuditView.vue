@@ -22,6 +22,8 @@
         <option value="LOGIN_FAILED">Login Failed</option>
         <option value="LOGIN_BLOCKED">Login Blocked (Locked)</option>
         <option value="ACCOUNT_LOCKED">Account Locked</option>
+        <option value="LOGIN_CAPTCHA_FAILED">Security Check Failed</option>
+        <option value="TURNSTILE_UNAVAILABLE">Security Check Skipped</option>
         <option value="LOGOUT">Logout</option>
         <option value="DTR_MONTH_LOCKED">DTR Month Locked</option>
         <option value="DTR_MONTH_UNLOCKED">DTR Month Unlocked</option>
@@ -169,6 +171,8 @@ const ACTION_META = {
   LOGIN_FAILED:  { icon: ShieldAlertIcon, color: '#D97706', bg: '#FFFBEB', verb: 'failed to log in' },
   LOGIN_BLOCKED: { icon: LockIcon,     color: '#EA580C', bg: '#FFF7ED', verb: 'tried to log in while locked out' },
   ACCOUNT_LOCKED: { icon: LockIcon,    color: '#DC2626', bg: '#FEF2F2', verb: 'was locked out after 5 failed attempts' },
+  LOGIN_CAPTCHA_FAILED:  { icon: ShieldAlertIcon, color: '#DC2626', bg: '#FEF2F2', verb: 'blocked a login that failed the security check' },
+  TURNSTILE_UNAVAILABLE: { icon: ShieldAlertIcon, color: '#64748B', bg: '#F1F5F9', verb: 'skipped the login security check (Cloudflare unreachable)' },
   DTR_MONTH_LOCKED:   { icon: LockIcon,   color: '#B45309', bg: '#FFFBEB', verb: 'locked a month\'s DTR records' },
   DTR_MONTH_UNLOCKED: { icon: UnlockIcon, color: '#2563EB', bg: '#EFF6FF', verb: 'unlocked a month\'s DTR records' },
   MARK_ON_LEAVE:      { icon: CalendarIcon, color: '#4338CA', bg: '#EEF2FF', verb: 'marked a day as On Leave' },
@@ -182,7 +186,7 @@ const ACTION_META = {
 // lock actions join this list too: which month/campus is already spelled
 // out in the reason line below, so "#7" (the lock row's own id) would
 // only add noise.
-const AUTH_ACTIONS = ['LOGIN', 'LOGOUT', 'LOGIN_FAILED', 'LOGIN_BLOCKED', 'ACCOUNT_LOCKED', 'DTR_MONTH_LOCKED', 'DTR_MONTH_UNLOCKED', 'FEATURE_PERMISSION_CHANGED', 'FEATURE_PERMISSION_RESET'];
+const AUTH_ACTIONS = ['LOGIN', 'LOGOUT', 'LOGIN_FAILED', 'LOGIN_BLOCKED', 'ACCOUNT_LOCKED', 'LOGIN_CAPTCHA_FAILED', 'TURNSTILE_UNAVAILABLE', 'DTR_MONTH_LOCKED', 'DTR_MONTH_UNLOCKED', 'FEATURE_PERMISSION_CHANGED', 'FEATURE_PERMISSION_RESET'];
 
 function actionMeta(action) {
   return ACTION_META[action] ?? { icon: ActivityIcon, color: '#64748B', bg: '#F1F5F9', verb: action?.toLowerCase() };

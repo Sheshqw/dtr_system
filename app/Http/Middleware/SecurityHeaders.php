@@ -23,16 +23,20 @@ class SecurityHeaders
         $response->headers->set('Referrer-Policy', 'strict-origin-when-cross-origin');
         $response->headers->set('Permissions-Policy', 'camera=(), microphone=(), geolocation=()');
 
-        // script-src is 'self' only — no unsafe-inline, no external script host —
+        // script-src has no unsafe-inline and only one external host (below),
         // so an injected <script> tag or javascript: URI simply won't execute,
         // even if some future bug lets an attacker get markup into the page.
         // style-src needs unsafe-inline: the app sets a lot of literal
         // style="color:#…" attributes directly, and Google Fonts' stylesheet
         // link needs its own host. connect-src allows any ws(s): host since
         // the Reverb broadcast server's LAN IP changes with the network.
+        // challenges.cloudflare.com is the one external script/frame host:
+        // the Cloudflare Turnstile login widget loads its script from there
+        // and renders inside an iframe from the same origin.
         $response->headers->set('Content-Security-Policy', implode('; ', [
             "default-src 'self'",
-            "script-src 'self'",
+            "script-src 'self' https://challenges.cloudflare.com",
+            "frame-src https://challenges.cloudflare.com",
             "style-src 'self' 'unsafe-inline' https://fonts.googleapis.com",
             "font-src 'self' https://fonts.gstatic.com",
             "img-src 'self' data: blob:",

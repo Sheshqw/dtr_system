@@ -201,6 +201,24 @@
               </span>
             </div>
 
+            <!-- Cloudflare Turnstile bot check (only when enabled in System Settings) -->
+            <div v-if="settings.turnstileEnabled && settings.turnstileSiteKey">
+              <TurnstileWidget
+                ref="turnstileRef"
+                :site-key="settings.turnstileSiteKey"
+                @verified="onTurnstileVerified"
+                @expired="turnstileToken = ''"
+                @error="onTurnstileError"
+              />
+              <!-- If the widget can't load (usually no internet), signing in
+                   stays possible — the server skips the check when it can't
+                   reach Cloudflare either. -->
+              <p v-if="turnstileFailed" class="flex items-center gap-1.5 mt-1.5 text-[11px] font-medium" style="color: #FCD34D;">
+                <TriangleAlertIcon class="w-3 h-3 flex-shrink-0" />
+                Security check couldn't load. Check your internet connection, or try signing in anyway.
+              </p>
+            </div>
+
             <!-- Error -->
             <Transition name="err">
               <div
@@ -218,7 +236,7 @@
             <!-- Submit -->
             <button
               type="submit"
-              :disabled="loading || !form.email || !form.password"
+              :disabled="loading || !form.email || !form.password || awaitingTurnstile"
               class="relative w-full py-3.5 text-sm font-bold rounded-xl overflow-hidden transition-all duration-200 disabled:opacity-45 disabled:cursor-not-allowed group mt-1"
               :style="btnStyle"
             >
@@ -268,6 +286,7 @@ import { ref, reactive, computed } from 'vue';
 import { useRouter, useRoute } from 'vue-router';
 import { useAuthStore } from '@/stores/auth';
 import { useSettingsStore } from '@/stores/settings';
+import TurnstileWidget from '@/components/TurnstileWidget.vue';
 import {
   Mail          as MailIcon,
   Lock          as LockIcon,
@@ -292,6 +311,26 @@ const focused    = ref(null);
 const rememberMe = ref(true);
 const capsLockOn = ref(false);
 
+const turnstileRef    = ref(null);
+const turnstileToken  = ref('');
+const turnstileFailed = ref(false);
+
+// Hold the Sign In button until the bot check passes — unless the widget
+// couldn't load at all, in which case the server decides (see template note).
+const awaitingTurnstile = computed(() =>
+  settings.turnstileEnabled && !!settings.turnstileSiteKey && !turnstileToken.value && !turnstileFailed.value
+);
+
+function onTurnstileVerified(token) {
+  turnstileToken.value  = token;
+  turnstileFailed.value = false;
+}
+
+function onTurnstileError() {
+  turnstileToken.value  = '';
+  turnstileFailed.value = true;
+}
+
 const currentYear = new Date().getFullYear();
 
 function inputStyle(field) {
@@ -315,13 +354,17 @@ async function handleLogin() {
   loading.value = true;
   form.email    = form.email.trim();
   try {
-    await auth.login(form.email, form.password, rememberMe.value);
+    await auth.login(form.email, form.password, rememberMe.value, turnstileToken.value || null);
     const redirect = route.query.redirect;
     router.push(redirect ? String(redirect) : { name: 'dashboard' });
   } catch (e) {
     error.value = e.response?.data?.message
       ?? Object.values(e.response?.data?.errors ?? {})[0]?.[0]
       ?? 'Login failed. Please try again.';
+    // A Turnstile token is single-use — the server already spent this one,
+    // so get a fresh one before the next attempt.
+    turnstileToken.value = '';
+    turnstileRef.value?.reset();
   } finally {
     loading.value = false;
   }

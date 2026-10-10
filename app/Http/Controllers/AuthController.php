@@ -6,6 +6,7 @@ use App\Models\AuditLog;
 use App\Models\SystemSetting;
 use App\Models\User;
 use App\Services\FeaturePermissionService;
+use App\Services\TurnstileService;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\Hash;
@@ -14,8 +15,10 @@ use Illuminate\Validation\ValidationException;
 
 class AuthController extends Controller
 {
-    public function __construct(private FeaturePermissionService $permissions)
-    {
+    public function __construct(
+        private FeaturePermissionService $permissions,
+        private TurnstileService $turnstile,
+    ) {
     }
 
     // Deliberately identical whether the email doesn't exist, the account
@@ -28,7 +31,13 @@ class AuthController extends Controller
         $request->validate([
             'email'    => 'required|email',
             'password' => 'required|string',
+            'turnstile_token' => 'nullable|string|max:2048',
         ]);
+
+        // Before any account lookup: a request that fails the bot check never
+        // touches failed_login_attempts, so a bot can't lock staff out by
+        // spamming wrong passwords at their email addresses.
+        $this->ensureHuman($request);
 
         $employee = User::where('email', $request->email)->first();
 
@@ -191,6 +200,35 @@ class AuthController extends Controller
                 ? "{$count} other session(s) signed out."
                 : 'No other active sessions.',
         ]);
+    }
+
+    /**
+     * Cloudflare Turnstile check — a no-op unless it's configured and enabled
+     * in System Settings. Fails open when Cloudflare can't be reached, so an
+     * internet outage degrades to the normal lockout/rate-limit protections
+     * instead of blocking every login.
+     */
+    private function ensureHuman(Request $request): void
+    {
+        if (! $this->turnstile->isActive()) {
+            return;
+        }
+
+        $result = $this->turnstile->verify($request->input('turnstile_token'), $request->ip());
+
+        if ($result === TurnstileService::UNAVAILABLE) {
+            AuditLog::record('TURNSTILE_UNAVAILABLE', 'employees', null, null, null, 'Security check skipped (Cloudflare unreachable) for login as: ' . $request->email);
+
+            return;
+        }
+
+        if ($result === TurnstileService::FAILED) {
+            AuditLog::record('LOGIN_CAPTCHA_FAILED', 'employees', null, null, null, 'Security check failed for login as: ' . $request->email);
+
+            throw ValidationException::withMessages([
+                'turnstile_token' => ['Security check failed. Please complete the verification and try again.'],
+            ]);
+        }
     }
 
     /**

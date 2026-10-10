@@ -127,6 +127,20 @@
                   <p class="settings-hint">How long the account stays locked before another attempt is allowed.</p>
                 </div>
               </div>
+
+              <div>
+                <label class="settings-check" :style="!form.turnstile_configured ? 'opacity:0.55;cursor:not-allowed;' : ''">
+                  <input v-model="form.turnstile_enabled" type="checkbox" :disabled="!form.turnstile_configured && !form.turnstile_enabled" />
+                  Require Cloudflare Turnstile verification on the login page
+                </label>
+                <p v-if="form.turnstile_configured" class="settings-hint">
+                  Blocks bots and automated password guessing before a password is even checked. Needs internet access —
+                  if Cloudflare can't be reached, sign-in still works and the skipped check is recorded in the audit log.
+                </p>
+                <p v-else class="settings-hint">
+                  Not available yet: add <code>TURNSTILE_SITE_KEY</code> and <code>TURNSTILE_SECRET_KEY</code> to the server's <code>.env</code> file.
+                </p>
+              </div>
             </div>
           </div>
 
@@ -195,6 +209,8 @@ const form = reactive({
   password_require_symbol: false,
   max_login_attempts: 5,
   lockout_duration_minutes: 30,
+  turnstile_enabled: false,
+  turnstile_configured: false,
 });
 
 function applyResponse(data) {
@@ -211,6 +227,8 @@ function applyResponse(data) {
   form.password_require_symbol  = data.password_require_symbol  ?? form.password_require_symbol;
   form.max_login_attempts       = data.max_login_attempts       ?? form.max_login_attempts;
   form.lockout_duration_minutes = data.lockout_duration_minutes ?? form.lockout_duration_minutes;
+  form.turnstile_enabled        = data.turnstile_enabled        ?? form.turnstile_enabled;
+  form.turnstile_configured     = data.turnstile_configured     ?? form.turnstile_configured;
 }
 
 async function load() {
@@ -254,6 +272,7 @@ async function save() {
     fd.append('password_require_symbol', form.password_require_symbol ? '1' : '0');
     fd.append('max_login_attempts', form.max_login_attempts);
     fd.append('lockout_duration_minutes', form.lockout_duration_minutes);
+    fd.append('turnstile_enabled', form.turnstile_enabled ? '1' : '0');
 
     const res = await axios.post('/api/system-settings', fd);
     applyResponse(res.data);

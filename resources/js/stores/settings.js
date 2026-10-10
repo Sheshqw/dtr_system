@@ -11,6 +11,8 @@ export const useSettingsStore = defineStore('settings', () => {
     const shortName   = ref('UDTRMS');
     const tagline     = ref('University Daily Time Record Monitoring System');
     const logoUrl     = ref(DEFAULT_LOGO);
+    const turnstileEnabled = ref(false);
+    const turnstileSiteKey = ref(null);
     const loaded      = ref(false);
 
     async function fetch() {
@@ -20,6 +22,8 @@ export const useSettingsStore = defineStore('settings', () => {
             shortName.value  = res.data.short_name;
             tagline.value    = res.data.tagline;
             logoUrl.value    = res.data.logo_url || DEFAULT_LOGO;
+            turnstileEnabled.value = !!res.data.turnstile?.enabled;
+            turnstileSiteKey.value = res.data.turnstile?.site_key ?? null;
         } catch {
             // Keep defaults — a page with the fallback NEMSU branding is
             // always better than a broken one.
@@ -28,5 +32,5 @@ export const useSettingsStore = defineStore('settings', () => {
         }
     }
 
-    return { systemName, shortName, tagline, logoUrl, loaded, fetch };
+    return { systemName, shortName, tagline, logoUrl, turnstileEnabled, turnstileSiteKey, loaded, fetch };
 });

@@ -3,11 +3,17 @@
 namespace App\Http\Controllers;
 
 use App\Models\SystemSetting;
+use App\Services\TurnstileService;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Storage;
+use Illuminate\Validation\ValidationException;
 
 class SystemSettingController extends Controller
 {
+    public function __construct(private TurnstileService $turnstile)
+    {
+    }
+
     /**
      * Public — the login page needs the current branding before anyone
      * is authenticated, so this intentionally has no auth middleware.
@@ -46,7 +52,16 @@ class SystemSettingController extends Controller
             'password_require_symbol'  => 'required|boolean',
             'max_login_attempts'       => 'required|integer|min:3|max:20',
             'lockout_duration_minutes' => 'required|integer|min:1|max:1440',
+            'turnstile_enabled'        => 'required|boolean',
         ]);
+
+        // Switching it on without keys would show users a widget that can
+        // never load — refuse up front instead.
+        if ($data['turnstile_enabled'] && ! $this->turnstile->isConfigured()) {
+            throw ValidationException::withMessages([
+                'turnstile_enabled' => ['Add TURNSTILE_SITE_KEY and TURNSTILE_SECRET_KEY to the server\'s .env before enabling Cloudflare Turnstile.'],
+            ]);
+        }
 
         $settings = SystemSetting::current();
 
@@ -92,11 +107,21 @@ class SystemSettingController extends Controller
 
     private function formatPublic(SystemSetting $s): array
     {
+        $turnstileActive = $s->turnstile_enabled && $this->turnstile->isConfigured();
+
         return [
             'system_name' => $s->system_name,
             'short_name'  => $s->short_name,
             'tagline'     => $s->tagline,
             'logo_url'    => $s->logo_url,
+
+            // The login page needs these before anyone signs in. The site key
+            // is public by design (it's embedded in the page); the secret key
+            // never leaves the server.
+            'turnstile' => [
+                'enabled'  => $turnstileActive,
+                'site_key' => $turnstileActive ? $this->turnstile->siteKey() : null,
+            ],
         ];
     }
 
@@ -112,6 +137,8 @@ class SystemSettingController extends Controller
             'password_require_symbol'  => $s->password_require_symbol,
             'max_login_attempts'       => $s->max_login_attempts,
             'lockout_duration_minutes' => $s->lockout_duration_minutes,
+            'turnstile_enabled'        => $s->turnstile_enabled,
+            'turnstile_configured'     => $this->turnstile->isConfigured(),
         ]);
     }
 }
