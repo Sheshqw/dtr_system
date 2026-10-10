@@ -100,7 +100,10 @@
                       <span class="text-white text-xs font-semibold">{{ initials(selected.name) }}</span>
                     </div>
                     <div class="flex-1 min-w-0">
-                      <p class="text-sm font-medium text-[#0F172A]">{{ selected.name }}</p>
+                      <p class="text-sm font-medium text-[#0F172A] flex items-center gap-2 flex-wrap">
+                        {{ selected.name }}
+                        <span v-if="selected.semi_monthly_dtr" class="emp-status-pill">{{ employmentLabel(selected.employment_status) }}</span>
+                      </p>
                       <p class="text-xs text-[#64748B]">{{ selected.position }} · {{ selected.department }}</p>
                     </div>
                     <button @click="selected = null; empSearch = ''; previewData = null" class="text-[#6B7A94] hover:text-[#EF4444]">
@@ -118,7 +121,10 @@
                   <span class="text-white text-sm font-bold">{{ initials(auth.employee?.name ?? '') }}</span>
                 </div>
                 <div class="flex-1 min-w-0">
-                  <p class="text-sm font-semibold text-[#0F172A]">{{ auth.employee?.name }}</p>
+                  <p class="text-sm font-semibold text-[#0F172A] flex items-center gap-2 flex-wrap">
+                    {{ auth.employee?.name }}
+                    <span v-if="selfSemiMonthly" class="emp-status-pill">Semi-monthly DTR</span>
+                  </p>
                   <p class="text-xs text-[#64748B]">{{ auth.employee?.position ?? 'Employee' }} · Generating your personal DTR</p>
                 </div>
                 <LockIcon class="w-4 h-4 text-[#2E4A8C] flex-shrink-0" />
@@ -142,28 +148,16 @@
               </div>
             </div>
 
-            <!-- DTR coverage — COS / Job Order employees print one DTR per half month -->
-            <div v-if="isSemiMonthly">
-              <label class="form-label">DTR Coverage</label>
-              <div class="grid grid-cols-3 gap-2" role="radiogroup" aria-label="DTR coverage">
-                <button
-                  v-for="opt in periodOptions"
-                  :key="opt.value"
-                  type="button"
-                  role="radio"
-                  :aria-checked="period === opt.value"
-                  @click="period = opt.value"
-                  class="flex flex-col items-start gap-0.5 px-3 py-2 rounded-lg border text-left transition-colors"
-                  :class="period === opt.value
-                    ? 'border-[#2E4A8C] bg-[#EEF2FF] ring-1 ring-[#2E4A8C]'
-                    : 'border-[#E2E8F0] bg-white hover:border-[#C7D2F6]'"
-                >
-                  <span class="text-[13px] font-semibold leading-tight" :class="period === opt.value ? 'text-[#2E4A8C]' : 'text-[#0F172A]'">{{ opt.label }}</span>
-                  <span class="text-[11px] text-[#6B7A94]">Days {{ opt.range }}</span>
-                </button>
-              </div>
-              <p class="text-xs text-[#6B7A94] mt-1.5">Contractual (COS) and Job Order employees print their DTR twice a month — choose which half to generate.</p>
-            </div>
+            <!-- DTR coverage — Contractual (COS) / Job Order employees print one DTR per half month -->
+            <Transition name="coverage">
+              <DtrPeriodPicker
+                v-if="isSemiMonthly"
+                v-model="period"
+                :month="month"
+                :year="year"
+                :consents="canSelectEmployee ? null : myConsents"
+              />
+            </Transition>
 
             <!-- Actions -->
             <div class="flex flex-wrap items-center gap-3 pt-1">
@@ -217,6 +211,17 @@
           </div>
 
           <div class="bg-white px-6 py-5 space-y-3">
+            <!-- Semi-monthly staff request each half separately — switch here and
+                 see every span's permission status at a glance. -->
+            <DtrPeriodPicker
+              v-if="isSemiMonthly"
+              v-model="period"
+              :month="month"
+              :year="year"
+              :consents="myConsents"
+              compact
+            />
+
             <!-- No request yet (or previous one was denied/used) -->
             <template v-if="!currentPeriodConsent || currentPeriodConsent.status === 'denied'">
               <p v-if="currentPeriodConsent?.status === 'denied'" class="text-sm text-[#B91C1C] bg-[#FEF2F2] border border-[#FECACA] rounded-lg px-3 py-2">
@@ -658,7 +663,12 @@
 
           <!-- Title bar -->
           <div class="doc-title-bar">
-            <h3>Daily Time Record</h3>
+            <h3>
+              Daily Time Record
+              <span v-if="previewData.period?.key !== 'full'" class="doc-period-badge">
+                {{ previewData.period.key === 'first' ? '1st Half' : '2nd Half' }}
+              </span>
+            </h3>
             <p>Period: {{ previewData.month_label }} &nbsp;·&nbsp; Official Hours of Work</p>
           </div>
 
@@ -868,6 +878,7 @@ import { useToast } from '@/composables/useToast';
 import { extractErrorMessage } from '@/composables/useApiError';
 import StatusBadge from '@/components/StatusBadge.vue';
 import PageHeader from '@/components/PageHeader.vue';
+import DtrPeriodPicker from '@/components/DtrPeriodPicker.vue';
 import {
   FileText      as FileTextIcon,
   Search        as SearchIcon,
@@ -947,11 +958,8 @@ const isSemiMonthly = computed(() =>
 
 const lastDayOfMonth = computed(() => new Date(year.value, month.value, 0).getDate());
 
-const periodOptions = computed(() => [
-  { value: 'first',  label: '1st Half',    range: '1–15' },
-  { value: 'second', label: '2nd Half',    range: `16–${lastDayOfMonth.value}` },
-  { value: 'full',   label: 'Whole Month', range: `1–${lastDayOfMonth.value}` },
-]);
+const EMPLOYMENT_LABELS = { cos: 'Contractual (COS)', job_order: 'Job Order' };
+const employmentLabel = (status) => EMPLOYMENT_LABELS[status] ?? 'Semi-monthly DTR';
 
 // Semi-monthly staff start on the half they're most likely printing — the
 // current half when looking at this month, otherwise the 1st half.
@@ -2112,6 +2120,37 @@ onUnmounted(() => {
 }
 .doc-title-bar h3 { font-size: 16px; font-weight: 700; color: #0F172A; letter-spacing: 0.02em; }
 .doc-title-bar p  { font-size: 11.5px; color: #6B7A94; margin-top: 2px; }
+.doc-period-badge {
+  display: inline-block;
+  margin-left: 6px;
+  padding: 1px 8px;
+  border-radius: 999px;
+  font-size: 10.5px;
+  font-weight: 700;
+  letter-spacing: 0.03em;
+  vertical-align: middle;
+  color: #2E4A8C;
+  background: #EEF2FF;
+}
+
+/* Employment pill next to a semi-monthly employee's name */
+.emp-status-pill {
+  display: inline-flex;
+  align-items: center;
+  padding: 1px 8px;
+  border-radius: 999px;
+  font-size: 10.5px;
+  font-weight: 600;
+  color: #B45309;
+  background: #FEF3C7;
+}
+[data-theme="dark"] .doc-title-bar h3   { color: #E4EAF5; }
+[data-theme="dark"] .doc-period-badge { color: #93C5FD; background: rgba(96, 165, 250, 0.14); }
+[data-theme="dark"] .emp-status-pill  { color: #FBBF24; background: rgba(251, 191, 36, 0.12); }
+
+/* The coverage picker slides in when a semi-monthly employee is selected */
+.coverage-enter-active, .coverage-leave-active { transition: opacity 0.22s ease, transform 0.22s cubic-bezier(0.22, 1, 0.36, 1); }
+.coverage-enter-from, .coverage-leave-to { opacity: 0; transform: translateY(-4px); }
 
 .doc-emp-grid {
   display: grid;
