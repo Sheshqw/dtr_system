@@ -19,7 +19,7 @@ class SystemSettingController extends Controller
      * is authenticated, so this intentionally has no auth middleware.
      * Security-policy fields (lockout threshold, session timeout, etc.) would
      * hand an attacker exactly what they need to time around them, so those
-     * are only included when the caller is a signed-in Super Admin/Admin —
+     * are only included when the caller is a signed-in Super Admin —
      * resolved manually here since there's no auth middleware to do it.
      */
     public function show(Request $request)
@@ -27,7 +27,7 @@ class SystemSettingController extends Controller
         $settings = SystemSetting::current();
         $employee = auth('sanctum')->user();
 
-        if ($employee && in_array($employee->role, ['super_admin', 'admin'])) {
+        if ($employee?->role === 'super_admin') {
             return response()->json($this->format($settings));
         }
 
@@ -98,10 +98,15 @@ class SystemSettingController extends Controller
         return response()->json($this->format($settings->fresh()));
     }
 
+    /**
+     * System settings apply to every campus (branding, security policy, the
+     * Turnstile login check), so only the Super Admin may change them — a
+     * campus Admin's authority stops at their own campus.
+     */
     private function gate(Request $request): void
     {
-        if (! in_array($request->user()->role, ['super_admin', 'admin'])) {
-            abort(403, 'Only Super Admin or Admin can change system settings.');
+        if ($request->user()->role !== 'super_admin') {
+            abort(403, 'Only the Super Admin can change system settings.');
         }
     }
 

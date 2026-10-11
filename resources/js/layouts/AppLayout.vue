@@ -543,7 +543,6 @@ const hrItems = [
 const adminOnlyItems = [
   { name: 'departments', label: 'Departments', to: { name: 'departments' }, icon: Building2Icon },
   { name: 'backup',      label: 'Backup',      to: { name: 'backup'      }, icon: DatabaseIcon  },
-  { name: 'settings',    label: 'Settings',    to: { name: 'settings'    }, icon: SettingsIcon  },
 ];
 
 const superAdminItems = [
@@ -552,6 +551,7 @@ const superAdminItems = [
   { name: 'access-control', label: 'Access Control', to: { name: 'access-control' }, icon: LockIcon        },
   { name: 'backup',         label: 'Backup',         to: { name: 'backup'         }, icon: DatabaseIcon    },
   { name: 'system-health',  label: 'System Health',  to: { name: 'system-health'  }, icon: HeartPulseIcon  },
+  { name: 'settings',       label: 'Settings',       to: { name: 'settings'       }, icon: SettingsIcon    },
 ];
 
 const isSuperAdmin = computed(() => auth.employee?.role === 'super_admin');

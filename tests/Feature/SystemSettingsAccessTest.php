@@ -1,0 +1,50 @@
+<?php
+
+use App\Models\SystemSetting;
+use App\Models\User;
+
+function settingsPayload(array $overrides = []): array
+{
+    return array_merge([
+        'system_name'              => 'NEMSU',
+        'short_name'               => 'UDTRMS',
+        'tagline'                  => 'University Daily Time Record Monitoring System',
+        'session_timeout_minutes'  => 1440,
+        'password_min_length'      => 8,
+        'password_require_number'  => true,
+        'password_require_symbol'  => false,
+        'max_login_attempts'       => 5,
+        'lockout_duration_minutes' => 30,
+        'turnstile_enabled'        => false,
+    ], $overrides);
+}
+
+test('only the super admin can change system settings', function () {
+    $this->actingAs(User::factory()->superAdmin()->create(), 'sanctum')
+        ->postJson('/api/system-settings', settingsPayload(['max_login_attempts' => 7]))
+        ->assertOk()
+        ->assertJsonPath('max_login_attempts', 7);
+});
+
+test('a campus admin cannot change system settings or reset the logo', function () {
+    $admin = User::factory()->admin()->create();
+
+    $this->actingAs($admin, 'sanctum')
+        ->postJson('/api/system-settings', settingsPayload(['system_name' => 'Hijacked']))
+        ->assertForbidden();
+
+    $this->actingAs($admin, 'sanctum')
+        ->postJson('/api/system-settings/reset-logo')
+        ->assertForbidden();
+
+    expect(SystemSetting::current()->system_name)->toBe('NEMSU');
+});
+
+test('a campus admin only receives the public branding, not the security policy', function () {
+    $this->actingAs(User::factory()->admin()->create(), 'sanctum')
+        ->getJson('/api/system-settings')
+        ->assertOk()
+        ->assertJsonStructure(['system_name', 'short_name', 'tagline', 'turnstile'])
+        ->assertJsonMissingPath('max_login_attempts')
+        ->assertJsonMissingPath('turnstile_enabled');
+});

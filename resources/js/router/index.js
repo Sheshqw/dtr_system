@@ -29,7 +29,7 @@ const routes = [
             { path: 'audit',         name: 'audit',         component: () => import('@/views/AuditView.vue'),         meta: { title: 'Audit Trail' } },
             { path: 'system-health', name: 'system-health', component: () => import('@/views/SystemHealthView.vue'), meta: { title: 'System Health', requiresFeature: 'system_health' } },
             { path: 'access-control', name: 'access-control', component: () => import('@/views/AccessControlView.vue'), meta: { title: 'Access Control' } },
-            { path: 'settings',      name: 'settings',      component: () => import('@/views/SystemSettingsView.vue'), meta: { title: 'System Settings' } },
+            { path: 'settings',      name: 'settings',      component: () => import('@/views/SystemSettingsView.vue'), meta: { title: 'System Settings', roles: ['super_admin'] } },
             { path: 'biometric',     name: 'biometric',     component: () => import('@/views/BiometricView.vue'),     meta: { title: 'Biometric' } },
             { path: ':pathMatch(.*)*', name: 'not-found', redirect: { name: 'dashboard' } },
         ],
@@ -49,6 +49,12 @@ router.beforeEach((to) => {
     }
 
     if (to.meta.guest && auth.token) {
+        return { name: 'dashboard' };
+    }
+
+    // Pages limited to specific roles (the API enforces this too; this just
+    // keeps a typed-in URL from opening a page that would only show errors).
+    if (to.meta.roles && !to.meta.roles.includes(auth.employee?.role)) {
         return { name: 'dashboard' };
     }
 

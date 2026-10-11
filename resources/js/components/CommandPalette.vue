@@ -136,7 +136,7 @@ const PAGES = [
   { name: 'campuses',       label: 'Campuses',       icon: MapPinIcon,          roles: ['super_admin'] },
   { name: 'admin-accounts', label: 'Admin Accounts', icon: ShieldCheckIcon,     roles: ['super_admin'] },
   { name: 'system-health',  label: 'System Health',  icon: HeartPulseIcon,      roles: ['super_admin'] },
-  { name: 'settings',       label: 'Settings',       icon: SettingsIcon,        roles: ['super_admin', 'admin'] },
+  { name: 'settings',       label: 'Settings',       icon: SettingsIcon,        roles: ['super_admin'] },
 ];
 
 const availablePages = computed(() => {
