@@ -950,7 +950,9 @@ const year  = ref(now.getFullYear());
 
 // ── DTR coverage — COS / Job Order staff print one DTR per half month ──
 const period          = ref('full'); // 'full' | 'first' | 'second'
-const selfSemiMonthly = ref(!!auth.employee?.semi_monthly_dtr);
+// Kept current by AppLayout's refreshAccess() on load, so a changed
+// employment status shows up without signing out.
+const selfSemiMonthly = computed(() => !!auth.employee?.semi_monthly_dtr);
 
 const isSemiMonthly = computed(() =>
   canSelectEmployee.value ? !!selected.value?.semi_monthly_dtr : selfSemiMonthly.value
@@ -1312,15 +1314,6 @@ async function exportBulk() {
   } finally {
     exportingBulk.value = false;
   }
-}
-
-// The stored login payload can predate a change to the employee's
-// employment status (or the field itself), so re-check it on page load.
-async function refreshSelfSemiMonthly() {
-  try {
-    const res = await axios.get('/api/auth/me');
-    selfSemiMonthly.value = !!res.data?.semi_monthly_dtr;
-  } catch { /* keep the value from login */ }
 }
 
 // ── DTR Print Consent ───────────────────────────────────────────────
@@ -1870,7 +1863,7 @@ onMounted(async () => {
     }
     await Promise.all([fetchConsentQueue(), fetchMySignature()]);
   } else {
-    await Promise.all([fetchMyConsents(), refreshSelfSemiMonthly()]);
+    await fetchMyConsents();
   }
   listenForPrintConsents();
 });

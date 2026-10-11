@@ -83,6 +83,7 @@ import { ref, computed, watch, nextTick, onMounted, onBeforeUnmount } from 'vue'
 import { useRouter } from 'vue-router';
 import axios from 'axios';
 import { useAuthStore } from '@/stores/auth';
+import { usePermissionsStore } from '@/stores/permissions';
 import { useCommandPalette } from '@/composables/useCommandPalette';
 import { useDebounce } from '@/composables/useDebounce';
 import { useAvatarColor } from '@/composables/useAvatarColor';
@@ -109,6 +110,7 @@ import {
 const { isOpen, close, toggle } = useCommandPalette();
 const router  = useRouter();
 const auth    = useAuthStore();
+const perms   = usePermissionsStore();
 const { avatarStyle } = useAvatarColor();
 
 const query      = ref('');
@@ -120,28 +122,33 @@ const searching  = ref(false);
 
 const debouncedQuery = useDebounce(query, 220);
 
-// ── Page directory — mirrors the sidebar's own role gating ─────────────
+// ── Page directory — mirrors the sidebar's role gating, plus the same
+// per-employee feature grants the router enforces (meta.requiresFeature),
+// so the palette never offers a page that would just bounce the user. ──
 const PAGES = [
   { name: 'dashboard',      label: 'Dashboard',      icon: LayoutDashboardIcon, roles: 'all' },
   { name: 'attendance',     label: 'Attendance',     icon: ClockIcon,           roles: 'all' },
-  { name: 'employees',      label: 'Employee Logs',  icon: UsersIcon,           roles: 'all' },
-  { name: 'tracking',       label: 'Tracking',       icon: BarChart2Icon,       roles: 'all' },
+  { name: 'employees',      label: 'Employee Logs',  icon: UsersIcon,           roles: 'all', feature: 'dtr_records.view_all' },
+  { name: 'tracking',       label: 'Tracking',       icon: BarChart2Icon,       roles: 'all', feature: 'tracking_analytics' },
   { name: 'reports',        label: 'Reports',        icon: FileTextIcon,        roles: 'all' },
-  { name: 'holidays',       label: 'Holidays',       icon: CalendarIcon,        roles: ['super_admin', 'admin', 'hr_officer'] },
+  { name: 'holidays',       label: 'Holidays',       icon: CalendarIcon,        roles: ['super_admin', 'admin', 'hr_officer'], feature: 'holiday_calendar' },
   { name: 'audit',          label: 'Audit Trail',    icon: ShieldCheckIcon,     roles: ['super_admin', 'admin', 'hr_officer'] },
   { name: 'biometric',      label: 'Biometric',      icon: WifiIcon,            roles: ['super_admin', 'admin', 'hr_officer'] },
-  { name: 'shifts',         label: 'Shifts',         icon: TimerIcon,           roles: ['super_admin', 'admin'] },
+  { name: 'shifts',         label: 'Shifts',         icon: TimerIcon,           roles: ['super_admin', 'admin'], feature: 'shift_management' },
   { name: 'departments',    label: 'Departments',    icon: Building2Icon,       roles: ['super_admin', 'admin'] },
   { name: 'backup',         label: 'Backup',         icon: DatabaseIcon,        roles: ['super_admin', 'admin'] },
   { name: 'campuses',       label: 'Campuses',       icon: MapPinIcon,          roles: ['super_admin'] },
   { name: 'admin-accounts', label: 'Admin Accounts', icon: ShieldCheckIcon,     roles: ['super_admin'] },
-  { name: 'system-health',  label: 'System Health',  icon: HeartPulseIcon,      roles: ['super_admin'] },
+  { name: 'system-health',  label: 'System Health',  icon: HeartPulseIcon,      roles: ['super_admin'], feature: 'system_health' },
   { name: 'settings',       label: 'Settings',       icon: SettingsIcon,        roles: ['super_admin'] },
 ];
 
 const availablePages = computed(() => {
   const role = auth.employee?.role;
-  return PAGES.filter(p => p.roles === 'all' || p.roles.includes(role));
+  return PAGES.filter(p =>
+    (p.roles === 'all' || p.roles.includes(role)) &&
+    (!p.feature || perms.can(p.feature))
+  );
 });
 
 const matchedPages = computed(() => {

@@ -144,9 +144,12 @@ Route::middleware('auth:sanctum')->group(function () {
     Route::patch('/my-signature',  [SignatureController::class, 'toggle']);
     Route::delete('/my-signature', [SignatureController::class, 'destroy']);
 
-    // Tracking
-    Route::get('/tracking/tardiness',       [TrackingController::class, 'tardiness']);
-    Route::get('/tracking/bradford-factor', [TrackingController::class, 'bradfordFactor']);
+    // Tracking & analytics — granted by role default (off for employees) and
+    // overridable per employee by the Super Admin in Access Control.
+    Route::middleware('feature:tracking_analytics')->group(function () {
+        Route::get('/tracking/tardiness',       [TrackingController::class, 'tardiness']);
+        Route::get('/tracking/bradford-factor', [TrackingController::class, 'bradfordFactor']);
+    });
 
     // Analytics (dashboard charts)
     Route::get('/analytics/trend',       [AnalyticsController::class, 'trend']);

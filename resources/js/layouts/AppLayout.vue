@@ -526,7 +526,7 @@ const navItems = [
   { name: 'dashboard',   label: 'Dashboard',    to: { name: 'dashboard'   }, icon: LayoutDashboardIcon },
   { name: 'attendance',  label: 'Attendance',   to: { name: 'attendance'  }, icon: ClockIcon           },
   { name: 'employees',   label: 'Employee Logs', to: { name: 'employees'   }, icon: UsersIcon, requiresFeature: 'dtr_records.view_all' },
-  { name: 'tracking',    label: 'Tracking',     to: { name: 'tracking'    }, icon: BarChart2Icon       },
+  { name: 'tracking',    label: 'Tracking',     to: { name: 'tracking'    }, icon: BarChart2Icon, requiresFeature: 'tracking_analytics' },
   { name: 'reports',     label: 'Reports',      to: { name: 'reports'     }, icon: FileTextIcon        },
 ];
 const visibleNavItems = computed(() =>
@@ -621,7 +621,19 @@ onMounted(() => {
   badgePollTimer = setInterval(fetchPendingPrintRequests, 60_000);
   listenForPunches();
   listenForPrintConsents();
+  refreshFeatureAccess();
 });
+
+// Pull the latest feature grants on load, and leave the current page if
+// access to it was revoked since sign-in (the router guard only runs on
+// navigation, not on a grant that changes underneath an open page).
+async function refreshFeatureAccess() {
+  await auth.refreshAccess();
+  const required = router.currentRoute.value.meta?.requiresFeature;
+  if (required && !perms.can(required)) {
+    router.replace({ name: 'dashboard' });
+  }
+}
 
 onBeforeUnmount(() => {
   clearInterval(badgePollTimer);

@@ -40,6 +40,26 @@ export const useAuthStore = defineStore('auth', () => {
         return res.data;
     }
 
+    // The login payload is cached in storage, so feature grants the Super
+    // Admin changes in Access Control (or an employment-status change) would
+    // otherwise only take effect at the next sign-in. Refresh just those
+    // fields from the server; the rest of the cached profile stays as is.
+    async function refreshAccess() {
+        if (!token.value || !employee.value) return;
+        try {
+            const res = await axios.get('/api/auth/me');
+            employee.value = {
+                ...employee.value,
+                feature_permissions: res.data.feature_permissions,
+                semi_monthly_dtr:    res.data.semi_monthly_dtr,
+            };
+            const storage = localStorage.getItem('dtr_token') ? localStorage : sessionStorage;
+            storage.setItem('dtr_employee', JSON.stringify(employee.value));
+        } catch {
+            // Keep the cached grants — the server enforces them regardless.
+        }
+    }
+
     async function logout() {
         try {
             await axios.post('/api/auth/logout');
@@ -59,5 +79,5 @@ export const useAuthStore = defineStore('auth', () => {
         axios.defaults.headers.common['Authorization'] = `Bearer ${token.value}`;
     }
 
-    return { token, employee, isAuthenticated, isSuperAdmin, isAdmin, isHrOfficer, isDeptHead, login, logout };
+    return { token, employee, isAuthenticated, isSuperAdmin, isAdmin, isHrOfficer, isDeptHead, login, logout, refreshAccess };
 });
