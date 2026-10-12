@@ -54,7 +54,7 @@ defineProps({
   50%       { transform: translateY(-6px); }
 }
 
-:global([data-theme="dark"]) .es-icon-ring { background: rgba(99,102,241,0.12); border-color: rgba(99,102,241,0.22); }
-:global([data-theme="dark"]) .es-title     { color: #E2E8F0; }
-:global([data-theme="dark"]) .es-body      { color: #64748B; }
+[data-theme="dark"] .es-icon-ring { background: rgba(99,102,241,0.12); border-color: rgba(99,102,241,0.22); }
+[data-theme="dark"] .es-title     { color: #E2E8F0; }
+[data-theme="dark"] .es-body      { color: #64748B; }
 </style>
