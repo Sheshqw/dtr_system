@@ -1,0 +1,60 @@
+<!doctype html>
+<!--
+  Static fallback served directly by the web server (nginx) when PHP is down
+  or not responding (502 Bad Gateway / 504 Gateway Timeout), i.e. when
+  Laravel can't render its own error pages. Must stay fully self-contained:
+  plain HTML/CSS, no PHP, no build assets. It re-checks every 30 seconds.
+  Wired up in the nginx vhost with:
+      error_page 502 504 /errors/unavailable.html;
+-->
+<html lang="en">
+<head>
+    <script src="/theme-init.js"></script>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <meta name="robots" content="noindex" />
+    <meta http-equiv="refresh" content="30" />
+    <title>Temporarily unavailable — UDTRMS</title>
+    <link rel="icon" href="/nemsu.png" />
+    <style>
+        :root { --bg: #F4F6FB; --card: #FFFFFF; --border: #E2E8F0; --text: #0F172A; --muted: #5B6B86; --navy: #2E4A8C; --gold: #C9A227; }
+        [data-theme="dark"] { --bg: #121B2E; --card: #1C2A44; --border: rgba(255,255,255,0.10); --text: #E4EAF5; --muted: #9AAAC9; }
+        * { box-sizing: border-box; }
+        html, body { margin: 0; height: 100%; }
+        body {
+            display: flex; flex-direction: column; align-items: center; justify-content: center;
+            min-height: 100%; padding: 24px 16px; background: var(--bg); color: var(--text);
+            font-family: "IBM Plex Sans", "Segoe UI", system-ui, -apple-system, Roboto, Arial, sans-serif;
+        }
+        .brand { display: flex; align-items: center; gap: 10px; margin-bottom: 20px; color: var(--muted); font-size: 12px; font-weight: 600; letter-spacing: 0.08em; text-transform: uppercase; }
+        .brand img { width: 34px; height: 34px; border-radius: 50%; box-shadow: 0 0 0 2px var(--gold); }
+        .card { width: 100%; max-width: 460px; overflow: hidden; text-align: center; background: var(--card); border: 1px solid var(--border); border-radius: 18px; box-shadow: 0 18px 50px rgba(15,23,42,0.10); }
+        .bar { height: 4px; background: linear-gradient(90deg, var(--navy) 0%, var(--navy) 55%, var(--gold) 100%); }
+        .body { padding: 34px 30px 30px; }
+        .pill { display: inline-flex; align-items: center; gap: 8px; padding: 6px 14px; margin-bottom: 16px; border-radius: 999px; font-size: 13px; font-weight: 700; color: #B45309; background: rgba(180,83,9,0.12); }
+        .dot { width: 8px; height: 8px; border-radius: 50%; background: currentColor; animation: pulse 1.6s ease-in-out infinite; }
+        @keyframes pulse { 50% { opacity: 0.3; } }
+        h1 { margin: 0 0 10px; font-size: 22px; }
+        p { margin: 0 auto; max-width: 360px; font-size: 14.5px; line-height: 1.6; color: var(--muted); }
+        .btn { display: inline-block; margin-top: 26px; padding: 10px 18px; border-radius: 10px; font-size: 14px; font-weight: 600; text-decoration: none; color: #fff; background: var(--navy); }
+        .foot { margin-top: 18px; font-size: 12px; color: var(--muted); }
+        @media (prefers-reduced-motion: reduce) { .dot { animation: none; } }
+    </style>
+</head>
+<body>
+    <div class="brand">
+        <img src="/nemsu.png" alt="" />
+        <span>NEMSU · Daily Time Record System</span>
+    </div>
+    <main class="card">
+        <div class="bar"></div>
+        <div class="body">
+            <div class="pill"><span class="dot"></span>Temporarily unavailable</div>
+            <h1>The system will be right back</h1>
+            <p>The server is restarting or briefly overloaded. Your saved attendance records are not affected. This page checks again automatically every 30 seconds.</p>
+            <a class="btn" href="/">Try again now</a>
+        </div>
+    </main>
+    <div class="foot">North Eastern Mindanao State University</div>
+</body>
+</html>
