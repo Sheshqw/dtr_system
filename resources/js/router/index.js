@@ -31,7 +31,7 @@ const routes = [
             { path: 'access-control', name: 'access-control', component: () => import('@/views/AccessControlView.vue'), meta: { title: 'Access Control' } },
             { path: 'settings',      name: 'settings',      component: () => import('@/views/SystemSettingsView.vue'), meta: { title: 'System Settings', roles: ['super_admin'] } },
             { path: 'biometric',     name: 'biometric',     component: () => import('@/views/BiometricView.vue'),     meta: { title: 'Biometric' } },
-            { path: ':pathMatch(.*)*', name: 'not-found', redirect: { name: 'dashboard' } },
+            { path: ':pathMatch(.*)*', name: 'not-found', component: () => import('@/views/NotFoundView.vue'), meta: { title: 'Page not found' } },
         ],
     },
 ];
