@@ -65,21 +65,28 @@
   </thead>
   <tbody>
 
-    {{-- Only the period's days: the whole month, or one half for COS / Job Order --}}
-    @for ($d = $period->startDay(); $d <= $period->endDay(); $d++)
+    {{-- Always the full month's rows, matching the pre-printed paper form —
+         for a half-month (COS / Job Order) DTR, only the requested half's
+         rows carry data; the other half still appears, just blank. --}}
+    @php $daysInMonth = \Carbon\Carbon::create($year, $month)->daysInMonth; @endphp
+    @for ($d = 1; $d <= $daysInMonth; $d++)
       @php
-        $date    = \Carbon\Carbon::create($year, $month, $d);
-        $rec     = $records->get($d);
-        $isWknd  = $date->isWeekend();
-        $status  = $rec?->status ?? ($isWknd ? 'weekend' : 'absent');
+        $date     = \Carbon\Carbon::create($year, $month, $d);
+        $isWknd   = $date->isWeekend();
+        $inPeriod = $d >= $period->startDay() && $d <= $period->endDay();
+        $rec      = $inPeriod ? $records->get($d) : null;
+        $status   = $inPeriod ? ($rec?->status ?? ($isWknd ? 'weekend' : 'absent')) : null;
 
-        $utMins  = $isWknd ? 0 : (int)($rec?->undertime_minutes ?? 0);
-        $otMins  = $isWknd ? 0 : (int)($rec?->overtime_minutes  ?? 0);
+        $utMins  = ($inPeriod && ! $isWknd) ? (int)($rec?->undertime_minutes ?? 0) : 0;
+        $otMins  = ($inPeriod && ! $isWknd) ? (int)($rec?->overtime_minutes  ?? 0) : 0;
 
+        // Weekend labeling is just the calendar, not attendance data — shown
+        // for every row regardless of which half was requested. ABS/HOL/LV
+        // only make sense for a day actually covered by this DTR.
         $remark  = '';
         if ($isWknd) {
             $remark = $date->isSaturday() ? 'SAT' : 'SUN';
-        } else {
+        } elseif ($inPeriod) {
             if ($status === 'absent')  $remark = 'ABS';
             elseif ($status === 'holiday') $remark = 'HOL';
             elseif ($status === 'on_leave') $remark = 'LV';
@@ -88,7 +95,7 @@
       <tr class="{{ $isWknd ? 'row-wknd' : '' }}">
         <td class="c-day">{{ $d }}</td>
 
-        @if ($isWknd)
+        @if ($isWknd || ! $inPeriod)
           <td class="c-tm"></td>
           <td class="c-tm"></td>
           <td class="c-tm"></td>
