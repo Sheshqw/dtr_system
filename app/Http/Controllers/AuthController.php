@@ -151,6 +151,8 @@ class AuthController extends Controller
      */
     public function sessions(Request $request)
     {
+        $this->ensureCanManageSessions($request);
+
         $currentId = $request->user()->currentAccessToken()->id;
 
         $sessions = $request->user()->tokens()
@@ -173,6 +175,8 @@ class AuthController extends Controller
      */
     public function revokeSession(Request $request, int $tokenId)
     {
+        $this->ensureCanManageSessions($request);
+
         $currentId = $request->user()->currentAccessToken()->id;
 
         if ($tokenId === $currentId) {
@@ -193,6 +197,8 @@ class AuthController extends Controller
      */
     public function revokeOtherSessions(Request $request)
     {
+        $this->ensureCanManageSessions($request);
+
         $currentId = $request->user()->currentAccessToken()->id;
         $count     = $request->user()->tokens()->where('id', '!=', $currentId)->delete();
 
@@ -201,6 +207,17 @@ class AuthController extends Controller
                 ? "{$count} other session(s) signed out."
                 : 'No other active sessions.',
         ]);
+    }
+
+    /**
+     * Session management is hidden from Faculty / Staff accounts in the UI;
+     * this keeps the endpoints closed to them too.
+     */
+    private function ensureCanManageSessions(Request $request): void
+    {
+        if ($request->user()->role === 'employee') {
+            abort(403, 'Faculty and staff accounts cannot manage active sessions.');
+        }
     }
 
     /**

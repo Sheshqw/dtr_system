@@ -115,6 +115,31 @@ test('logout revokes the current access token', function () {
     expect($user->tokens()->count())->toBe(0);
 });
 
+test('faculty and staff accounts cannot view or revoke active sessions', function () {
+    $user  = User::factory()->create(['role' => 'employee']);
+    $token = $user->createToken('this-device')->plainTextToken;
+    $other = $user->createToken('other-device');
+
+    $this->withHeader('Authorization', "Bearer {$token}");
+
+    $this->getJson('/api/auth/sessions')->assertStatus(403);
+    $this->deleteJson("/api/auth/sessions/{$other->accessToken->id}")->assertStatus(403);
+    $this->postJson('/api/auth/sessions/revoke-others')->assertStatus(403);
+
+    expect($user->tokens()->count())->toBe(2);
+});
+
+test('non-employee roles can still manage active sessions', function () {
+    $user  = User::factory()->create(['role' => 'hr_officer']);
+    $token = $user->createToken('this-device')->plainTextToken;
+    $user->createToken('other-device');
+
+    $this->withHeader('Authorization', "Bearer {$token}")
+        ->getJson('/api/auth/sessions')
+        ->assertStatus(200)
+        ->assertJsonCount(2);
+});
+
 test('an unauthenticated request is rejected with json, never a redirect', function () {
     $response = $this->getJson('/api/auth/me');
 

@@ -217,7 +217,7 @@
               {{ roleLabel(auth.employee?.role) }}
             </p>
           </div>
-          <button @click="openSessions" class="changepwd-btn flex-shrink-0 p-1.5 rounded-md transition-colors" title="Active sessions" aria-label="Active sessions">
+          <button v-if="auth.employee?.role !== 'employee'" @click="openSessions" class="changepwd-btn flex-shrink-0 p-1.5 rounded-md transition-colors" title="Active sessions" aria-label="Active sessions">
             <MonitorSmartphoneIcon class="w-4 h-4" />
           </button>
           <button @click="pwdModal = true" class="changepwd-btn flex-shrink-0 p-1.5 rounded-md transition-colors" title="Change password" aria-label="Change password">
