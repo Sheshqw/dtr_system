@@ -211,9 +211,11 @@
 
 <script setup>
 import { ref, computed, onMounted } from 'vue';
+import { storeToRefs } from 'pinia';
 import axios from 'axios';
 import { useToast } from '@/composables/useToast';
 import { useAuthStore } from '@/stores/auth';
+import { useReferenceDataStore } from '@/stores/referenceData';
 import { useAvatarColor } from '@/composables/useAvatarColor';
 import PageHeader from '@/components/PageHeader.vue';
 import {
@@ -223,12 +225,11 @@ import {
 } from 'lucide-vue-next';
 
 const { toast } = useToast();
-const auth = useAuthStore();
+const auth    = useAuthStore();
+const refData = useReferenceDataStore();
 const { avatarStyle } = useAvatarColor();
 
-const departments  = ref([]);
-const employees    = ref([]);
-const campuses     = ref([]);
+const { departments, employees, campuses } = storeToRefs(refData);
 const loading      = ref(false);
 const delTarget    = ref(null);
 const deleting     = ref(false);
@@ -252,14 +253,13 @@ const visibleDepts = computed(() => {
 async function load() {
   loading.value = true;
   try {
-    const [deptRes, empRes, campRes] = await Promise.all([
-      axios.get('/api/departments'),
-      axios.get('/api/employees'),
-      auth.isSuperAdmin ? axios.get('/api/campuses') : Promise.resolve({ data: [] }),
+    // Departments is always a fresh pull — this page is its source of
+    // truth. Employees/campuses are just reference data for the dropdowns.
+    await Promise.all([
+      refData.fetchDepartments(true),
+      refData.fetchEmployees(),
+      auth.isSuperAdmin ? refData.fetchCampuses() : Promise.resolve(),
     ]);
-    departments.value = deptRes.data;
-    employees.value   = empRes.data;
-    campuses.value    = campRes.data;
   } finally {
     loading.value = false;
   }

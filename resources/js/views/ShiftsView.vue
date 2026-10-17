@@ -217,8 +217,10 @@
 
 <script setup>
 import { ref, onMounted } from 'vue';
+import { storeToRefs } from 'pinia';
 import axios from 'axios';
 import { useToast } from '@/composables/useToast';
+import { useReferenceDataStore } from '@/stores/referenceData';
 import PageHeader from '@/components/PageHeader.vue';
 import EmptyState from '@/components/EmptyState.vue';
 import {
@@ -244,7 +246,8 @@ function staffTypeLabel(val) {
   return staffTypeOptions.find(s => s.value === val)?.label ?? val;
 }
 
-const shifts  = ref([]);
+const refData = useReferenceDataStore();
+const { shifts } = storeToRefs(refData);
 const loading = ref(false);
 const delTarget = ref(null);
 const deleting  = ref(false);
@@ -254,9 +257,7 @@ const form  = ref({ name: '', staff_type: '', morning_in: '08:00', morning_out: 
 async function load() {
   loading.value = true;
   try {
-    const res = await axios.get('/api/shifts');
-    // Enrich with employee count if not present
-    shifts.value = res.data;
+    await refData.fetchShifts(true); // fresh — this page is the source of truth
   } finally {
     loading.value = false;
   }

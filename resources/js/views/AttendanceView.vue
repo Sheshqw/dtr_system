@@ -425,11 +425,13 @@
 
 <script setup>
 import { ref, reactive, computed, onMounted, watch } from 'vue';
+import { storeToRefs } from 'pinia';
 import axios from 'axios';
 import StatusBadge    from '@/components/StatusBadge.vue';
 import PageHeader     from '@/components/PageHeader.vue';
 import EmptyState     from '@/components/EmptyState.vue';
 import { useAuthStore }   from '@/stores/auth';
+import { useReferenceDataStore } from '@/stores/referenceData';
 import { useToast }       from '@/composables/useToast';
 import { useAvatarColor } from '@/composables/useAvatarColor';
 
@@ -459,6 +461,7 @@ import {
 } from 'lucide-vue-next';
 
 const auth = useAuthStore();
+const refData = useReferenceDataStore();
 
 // ── Tabs ──────────────────────────────────────────
 const tabs = [
@@ -468,8 +471,7 @@ const tabs = [
 const activeTab = ref('punches');
 
 // ── Shared reference data ──────────────────────────
-const employees  = ref([]);
-const departments = ref([]);
+const { employees, departments } = storeToRefs(refData);
 
 const now = new Date();
 const months = [
@@ -733,12 +735,7 @@ function formatLogDate(log) {
 
 // ── Init ───────────────────────────────────────────
 onMounted(async () => {
-  const [empRes, deptRes] = await Promise.all([
-    axios.get('/api/employees'),
-    axios.get('/api/departments'),
-  ]);
-  employees.value   = empRes.data;
-  departments.value = deptRes.data;
+  await Promise.all([refData.fetchEmployees(), refData.fetchDepartments()]);
   await Promise.all([loadPunches(), loadDaily()]);
 });
 </script>

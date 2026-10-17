@@ -871,9 +871,11 @@
 
 <script setup>
 import { ref, computed, watch, onMounted, onUnmounted } from 'vue';
+import { storeToRefs } from 'pinia';
 import { useRoute } from 'vue-router';
 import axios from 'axios';
 import { useAuthStore } from '@/stores/auth';
+import { useReferenceDataStore } from '@/stores/referenceData';
 import { useToast } from '@/composables/useToast';
 import { extractErrorMessage } from '@/composables/useApiError';
 import StatusBadge from '@/components/StatusBadge.vue';
@@ -908,6 +910,7 @@ import {
 } from 'lucide-vue-next';
 
 const auth = useAuthStore();
+const refData = useReferenceDataStore();
 const route = useRoute();
 const { toast } = useToast();
 
@@ -932,7 +935,7 @@ const isOwnRecord = computed(() =>
   !!effectiveEmployee.value && !!auth.employee && effectiveEmployee.value.id === auth.employee.id
 );
 
-const employees         = ref([]);
+const { employees } = storeToRefs(refData);
 const loadingEmployees  = ref(false);
 const empSearch    = ref('');
 const showDropdown = ref(false);
@@ -984,7 +987,7 @@ const bulkMonth      = ref(now.getMonth() + 1);
 const bulkYear       = ref(now.getFullYear());
 const bulkDepartment = ref('');
 const bulkStaffType  = ref('');
-const departments    = ref([]);
+const { departments } = storeToRefs(refData);
 
 // ── DTR Print Consent (employees need HR/Admin sign-off to download) ──
 const myConsents       = ref([]);   // employee's own requests, newest first
@@ -1846,12 +1849,7 @@ onMounted(async () => {
   if (canSelectEmployee.value) {
     loadingEmployees.value = true;
     try {
-      const [empRes, deptRes] = await Promise.all([
-        axios.get('/api/employees'),
-        axios.get('/api/departments'),
-      ]);
-      employees.value   = empRes.data;
-      departments.value = deptRes.data;
+      await Promise.all([refData.fetchEmployees(), refData.fetchDepartments()]);
 
       // Pre-select employee if navigated from Employees page (Quick Form 48)
       if (route.query.employee) {

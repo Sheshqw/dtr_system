@@ -95,7 +95,9 @@
 
 <script setup>
 import { ref, reactive, computed, onMounted } from 'vue';
+import { storeToRefs } from 'pinia';
 import axios from 'axios';
+import { useReferenceDataStore } from '@/stores/referenceData';
 import PageHeader from '@/components/PageHeader.vue';
 import { useAvatarColor } from '@/composables/useAvatarColor';
 import RoleBadge from '@/components/RoleBadge.vue';
@@ -113,14 +115,16 @@ import {
 const { toast } = useToast();
 const { avatarStyle } = useAvatarColor();
 
-const accounts = ref([]);
-const campuses = ref([]);
+const refData = useReferenceDataStore();
+const { campuses } = storeToRefs(refData);
 const loading  = ref(false);
 
 const filters = reactive({ search: '', campus: '', role: '' });
 usePersistedFilters('admin-accounts-filters', filters, ['search']);
 
 const PRIVILEGED = ['super_admin', 'admin', 'hr_officer', 'department_head'];
+
+const accounts = computed(() => refData.employees.filter(e => PRIVILEGED.includes(e.role)));
 
 const filtered = computed(() => {
   let list = accounts.value;
@@ -151,12 +155,12 @@ function initials(name) {
 async function load() {
   loading.value = true;
   try {
-    const [empRes, campRes] = await Promise.all([
-      axios.get('/api/employees'),
-      axios.get('/api/campuses'),
+    // Fresh — this page manages roles/activation for exactly these
+    // accounts, so a stale cache could hide a change made elsewhere.
+    await Promise.all([
+      refData.fetchEmployees(true),
+      refData.fetchCampuses(),
     ]);
-    accounts.value = empRes.data.filter(e => PRIVILEGED.includes(e.role));
-    campuses.value = campRes.data;
   } catch (e) {
     toast(e.response?.data?.message ?? 'Could not load admin accounts. Please refresh the page.', 'error');
   } finally {

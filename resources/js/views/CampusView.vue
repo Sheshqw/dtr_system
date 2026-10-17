@@ -159,12 +159,14 @@
 
 <script setup>
 import { ref, reactive, onMounted } from 'vue';
+import { storeToRefs } from 'pinia';
 import axios from 'axios';
 import { Plus as PlusIcon, Pencil as PencilIcon, Trash2 as Trash2Icon, MapPin as MapPinIcon, X as XIcon, Loader2 as Loader2Icon } from 'lucide-vue-next';
 import { useToast } from '@/composables/useToast';
 import { useConfirm } from '@/composables/useConfirm';
 import { themeForCampusCode } from '@/composables/useCampusIdentity';
 import { useThemeStore } from '@/stores/theme';
+import { useReferenceDataStore } from '@/stores/referenceData';
 import PageHeader from '@/components/PageHeader.vue';
 
 const theme = useThemeStore();
@@ -182,7 +184,8 @@ function campusBadgeStyle(code) {
 const { toast }   = useToast();
 const { confirm } = useConfirm();
 
-const campuses  = ref([]);
+const refData = useReferenceDataStore();
+const { campuses } = storeToRefs(refData);
 const loading   = ref(false);
 const saving    = ref(false);
 const formError = ref('');
@@ -193,8 +196,7 @@ const form  = reactive({ name: '', code: '', address: '', is_active: true });
 async function load() {
   loading.value = true;
   try {
-    const res = await axios.get('/api/campuses');
-    campuses.value = res.data;
+    await refData.fetchCampuses(true); // fresh — this page is the source of truth
   } finally {
     loading.value = false;
   }

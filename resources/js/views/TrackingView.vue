@@ -354,8 +354,10 @@
 
 <script setup>
 import { ref, reactive, computed, onMounted, onBeforeUnmount, watch, nextTick } from 'vue';
+import { storeToRefs } from 'pinia';
 import axios from 'axios';
 import { useAuthStore } from '@/stores/auth';
+import { useReferenceDataStore } from '@/stores/referenceData';
 import { useThemeStore } from '@/stores/theme';
 import { useCountUp } from '@/composables/useCountUp';
 import PageHeader from '@/components/PageHeader.vue';
@@ -381,9 +383,10 @@ import {
 
 const auth  = useAuthStore();
 const theme = useThemeStore();
+const refData = useReferenceDataStore();
 
 const activeTab   = ref('tardiness');
-const departments = ref([]);
+const { departments } = storeToRefs(refData);
 
 const now    = new Date();
 const months = [
@@ -869,8 +872,7 @@ function printReport() {
 
 onMounted(async () => {
   try {
-    const res = await axios.get('/api/departments');
-    departments.value = res.data;
+    await refData.fetchDepartments();
   } catch { /* departments stays empty */ }
   await loadTardiness();
 });

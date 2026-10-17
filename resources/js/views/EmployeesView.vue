@@ -989,9 +989,11 @@
 
 <script setup>
 import { ref, reactive, computed, watch, onMounted, onUnmounted } from 'vue';
+import { storeToRefs } from 'pinia';
 import { useRouter, useRoute } from 'vue-router';
 import axios from 'axios';
 import { useAuthStore } from '@/stores/auth';
+import { useReferenceDataStore } from '@/stores/referenceData';
 import { useToast } from '@/composables/useToast';
 import { extractErrorMessage } from '@/composables/useApiError';
 import { useUnsavedGuard } from '@/composables/useUnsavedGuard';
@@ -1035,6 +1037,7 @@ import {
 } from 'lucide-vue-next';
 
 const auth        = useAuthStore();
+const refData     = useReferenceDataStore();
 const router      = useRouter();
 const route       = useRoute();
 const { toast }   = useToast();
@@ -1042,9 +1045,7 @@ const unsavedGuard = useUnsavedGuard();
 
 const canManage = computed(() => auth.isAdmin || auth.isHrOfficer);
 
-const employees   = ref([]);
-const departments = ref([]);
-const shifts      = ref([]);
+const { employees, departments, shifts } = storeToRefs(refData);
 const loading     = ref(false);
 const saving      = ref(false);
 const error       = ref('');
@@ -1693,14 +1694,15 @@ async function activate(emp) {
 async function load() {
   loading.value = true;
   try {
-    const [empRes, deptRes, shiftRes] = await Promise.all([
-      axios.get('/api/employees'),
-      axios.get('/api/departments'),
-      axios.get('/api/shifts'),
+    // Employees is always a fresh pull — this page is the roster's source
+    // of truth, so a cache left over from browsing another page first
+    // could show stale active/inactive status. Departments/shifts barely
+    // change, so the shared cache is fine for those.
+    await Promise.all([
+      refData.fetchEmployees(true),
+      refData.fetchDepartments(),
+      refData.fetchShifts(),
     ]);
-    employees.value   = empRes.data;
-    departments.value = deptRes.data;
-    shifts.value      = shiftRes.data;
   } finally {
     loading.value = false;
   }

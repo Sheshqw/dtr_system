@@ -1,6 +1,7 @@
 import { defineStore } from 'pinia';
 import { ref, computed } from 'vue';
 import axios from 'axios';
+import { useReferenceDataStore } from '@/stores/referenceData';
 
 export const useAuthStore = defineStore('auth', () => {
     const token    = ref(localStorage.getItem('dtr_token') || sessionStorage.getItem('dtr_token') || null);
@@ -71,6 +72,9 @@ export const useAuthStore = defineStore('auth', () => {
             sessionStorage.removeItem('dtr_token');
             sessionStorage.removeItem('dtr_employee');
             delete axios.defaults.headers.common['Authorization'];
+            // A second account signing in on the same browser session must
+            // never see the previous user's cached, campus-scoped lists.
+            useReferenceDataStore().reset();
         }
     }
 
