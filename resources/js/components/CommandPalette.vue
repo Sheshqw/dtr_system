@@ -136,7 +136,7 @@ const PAGES = [
   { name: 'biometric',      label: 'Biometric',      icon: WifiIcon,            roles: ['super_admin', 'admin', 'hr_officer'] },
   { name: 'shifts',         label: 'Shifts',         icon: TimerIcon,           roles: ['super_admin', 'admin'], feature: 'shift_management' },
   { name: 'departments',    label: 'Departments',    icon: Building2Icon,       roles: ['super_admin', 'admin'] },
-  { name: 'backup',         label: 'Backup',         icon: DatabaseIcon,        roles: ['super_admin', 'admin'] },
+  { name: 'backup',         label: 'Backup',         icon: DatabaseIcon,        roles: ['super_admin', 'admin', 'hr_officer'] },
   { name: 'campuses',       label: 'Campuses',       icon: MapPinIcon,          roles: ['super_admin'] },
   { name: 'admin-accounts', label: 'Admin Accounts', icon: ShieldCheckIcon,     roles: ['super_admin'] },
   { name: 'system-health',  label: 'System Health',  icon: HeartPulseIcon,      roles: ['super_admin'], feature: 'system_health' },

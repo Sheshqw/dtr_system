@@ -538,18 +538,20 @@ const hrItems = [
   { name: 'holidays',  label: 'Holidays',    to: { name: 'holidays'  }, icon: CalendarIcon    },
   { name: 'audit',     label: 'Audit Trail', to: { name: 'audit'     }, icon: ShieldCheckIcon },
   { name: 'biometric', label: 'Biometric',   to: { name: 'biometric' }, icon: WifiIcon        },
+  // Shown once here for every role that can back up (Super Admin, Admin,
+  // HR Officer) — it used to sit in both the Administration and Super
+  // Admin groups, so a Super Admin saw it twice.
+  { name: 'backup',    label: 'Backup',      to: { name: 'backup'    }, icon: DatabaseIcon    },
 ];
 
 const adminOnlyItems = [
   { name: 'departments', label: 'Departments', to: { name: 'departments' }, icon: Building2Icon },
-  { name: 'backup',      label: 'Backup',      to: { name: 'backup'      }, icon: DatabaseIcon  },
 ];
 
 const superAdminItems = [
   { name: 'campuses',       label: 'Campuses',       to: { name: 'campuses'       }, icon: MapPinIcon      },
   { name: 'admin-accounts', label: 'Admin Accounts', to: { name: 'admin-accounts' }, icon: ShieldCheckIcon },
   { name: 'access-control', label: 'Access Control', to: { name: 'access-control' }, icon: LockIcon        },
-  { name: 'backup',         label: 'Backup',         to: { name: 'backup'         }, icon: DatabaseIcon    },
   { name: 'system-health',  label: 'System Health',  to: { name: 'system-health'  }, icon: HeartPulseIcon  },
   { name: 'settings',       label: 'Settings',       to: { name: 'settings'       }, icon: SettingsIcon    },
 ];

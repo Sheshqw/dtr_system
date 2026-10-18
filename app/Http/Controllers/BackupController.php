@@ -338,10 +338,14 @@ class BackupController extends Controller
         return str_starts_with(strtolower($filename), "backup_{$userCode}_");
     }
 
+    /**
+     * Who can list, create and download backups (of their own campus,
+     * unless Super Admin). Restoring and deleting stay Super Admin only.
+     */
     private function gate(\App\Models\User $user): void
     {
-        if (! in_array($user->role, ['super_admin', 'admin'])) {
-            abort(403, 'Only Super Admin or Admin can manage backups.');
+        if (! in_array($user->role, ['super_admin', 'admin', 'hr_officer'])) {
+            abort(403, 'Only Super Admin, Admin, or HR Officer can manage backups.');
         }
     }
 
