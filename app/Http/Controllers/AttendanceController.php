@@ -127,10 +127,14 @@ class AttendanceController extends Controller
 
         $employees   = $query->orderBy('last_name')->get();
         $holidayName = Holiday::whereDate('date', $date)->value('name');
+        // A weekend nobody punched on never gets a daily_dtr row, so without
+        // this it fell through to 'absent' — computeDailyDtr() would have
+        // marked the same day 'weekend'.
+        $fallback    = Carbon::parse($date)->isWeekend() ? 'weekend' : 'absent';
 
-        $rows = $employees->map(function (User $emp) use ($date, $holidayName) {
+        $rows = $employees->map(function (User $emp) use ($date, $holidayName, $fallback) {
             $dtr    = $emp->dailyDtr->first();
-            $status = $dtr?->status ?? 'absent';
+            $status = $dtr?->status ?? $fallback;
             return [
                 'id'              => $emp->id,
                 'employee_id'     => $emp->employee_id,
@@ -162,8 +166,22 @@ class AttendanceController extends Controller
     {
         $this->authorizeViewEmployee($request->user(), $employee);
 
-        $month = $request->get('month', now()->month);
-        $year  = $request->get('year', now()->year);
+        $request->validate([
+            'month' => 'nullable|integer|between:1,12',
+            'year'  => 'nullable|integer|between:2000,2100',
+        ]);
+
+        $month = (int) $request->get('month', now()->month);
+        $year  = (int) $request->get('year', now()->year);
+
+        // Same holiday auto-heal as today()/daily(), so the month view never
+        // shows a declared holiday as a missing (absent) day.
+        $monthStart = Carbon::create($year, $month, 1);
+        $this->workingHours->backfillHolidays(
+            [$employee->id],
+            $monthStart->toDateString(),
+            $monthStart->copy()->endOfMonth()->toDateString(),
+        );
 
         $records = DailyDtr::where('employee_id', $employee->id)
             ->whereYear('work_date', $year)

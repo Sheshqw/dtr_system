@@ -353,6 +353,9 @@
         </div>
       </div>
 
+      <!-- ══ My Attendance Insights (own records only) ═══════════════ -->
+      <MyAttendanceInsights v-if="ownRecordsOnly" ref="insightsRef" :hero-gradient="campus.heroGradient" />
+
       <!-- ══ Attendance log table ════════════════════════════════════ -->
       <!-- Campus-wide sections (this table + analytics) are hidden from anyone
            limited to their own records; the backend scopes/denies them too. -->
@@ -825,6 +828,7 @@ import { useSortable }         from '@/composables/useSortable';
 import SortIcon                from '@/components/SortIcon.vue';
 import StatusBadge             from '@/components/StatusBadge.vue';
 import NotificationBell        from '@/components/NotificationBell.vue';
+import MyAttendanceInsights    from '@/components/MyAttendanceInsights.vue';
 import axios from 'axios';
 import {
   RefreshCw    as RefreshCwIcon,
@@ -883,6 +887,7 @@ const isAdminOrHr = computed(() =>
 const isSuperAdmin = computed(() => auth.employee?.role === 'super_admin');
 // Faculty / Staff by default — they get only their own "My DTR Status" card.
 const ownRecordsOnly = computed(() => !perms.can('dtr_records.view_all'));
+const insightsRef    = ref(null);
 
 const myTodayRow = computed(() =>
   store.rows.find(r => r.employee_id === auth.employee?.employee_id) ?? null
@@ -1029,10 +1034,12 @@ async function checkDeviceStatus() {
     const res = await axios.get('/api/biometric/status');
     deviceOnline.value  = res.data?.adms_online ?? false;
     lastSynced.value    = res.data?.adms_last_seen ?? null;
-  } catch {
-    deviceOnline.value = false;
-  } finally {
     deviceChecked.value = true;
+  } catch (e) {
+    // 403 = this role can't read device status (e.g. Faculty / Staff) —
+    // hide the pill rather than claim the device is offline.
+    deviceOnline.value  = false;
+    deviceChecked.value = e.response?.status !== 403;
   }
 }
 
@@ -1046,6 +1053,8 @@ async function refresh() {
   const requests = [store.fetchToday({ search: filters.search, status: backendStatus })];
   // The day-over-day deltas and charts only feed the campus-wide sections.
   if (!ownRecordsOnly.value) requests.push(loadPreviousDaySummary(), loadDateAnalytics());
+  // The insights card loads itself on mount — only later refreshes reload it.
+  else if (insightsRef.value && lastRefreshed.value) requests.push(insightsRef.value.load());
   await Promise.all(requests);
   lastRefreshed.value = new Date().toLocaleTimeString('en-PH', { hour: '2-digit', minute: '2-digit' });
 }
