@@ -44,7 +44,7 @@
               class="filter-input"
             />
           </div>
-          <div>
+          <div v-if="!ownRecordsOnly">
             <label class="block text-[10px] font-semibold text-[#64748B] uppercase tracking-wide mb-1">Employee</label>
             <select v-model="punchFilters.employee_id" class="filter-input w-44">
               <option value="">All Employees</option>
@@ -197,7 +197,7 @@
               <option v-for="d in departments" :key="d.id" :value="d.id">{{ d.name }}</option>
             </select>
           </div>
-          <div v-if="auth.isAdmin || auth.isHrOfficer || auth.isDeptHead">
+          <div v-if="!ownRecordsOnly && (auth.isAdmin || auth.isHrOfficer || auth.isDeptHead)">
             <label class="block text-[10px] font-semibold text-[#64748B] uppercase tracking-wide mb-1">Employee</label>
             <select v-model="dailyFilters.employee_id" class="filter-input w-44">
               <option value="">All Employees</option>
@@ -431,6 +431,7 @@ import StatusBadge    from '@/components/StatusBadge.vue';
 import PageHeader     from '@/components/PageHeader.vue';
 import EmptyState     from '@/components/EmptyState.vue';
 import { useAuthStore }   from '@/stores/auth';
+import { usePermissionsStore } from '@/stores/permissions';
 import { useReferenceDataStore } from '@/stores/referenceData';
 import { useToast }       from '@/composables/useToast';
 import { useAvatarColor } from '@/composables/useAvatarColor';
@@ -461,6 +462,11 @@ import {
 } from 'lucide-vue-next';
 
 const auth = useAuthStore();
+const perms = usePermissionsStore();
+// Faculty / Staff by default: no employee picker, and the roster endpoint
+// (/api/employees) is closed to them — the backend already limits their
+// logs and records to their own.
+const ownRecordsOnly = computed(() => !perms.can('dtr_records.view_all'));
 const refData = useReferenceDataStore();
 
 // ── Tabs ──────────────────────────────────────────
@@ -735,7 +741,10 @@ function formatLogDate(log) {
 
 // ── Init ───────────────────────────────────────────
 onMounted(async () => {
-  await Promise.all([refData.fetchEmployees(), refData.fetchDepartments()]);
+  await Promise.all([
+    ownRecordsOnly.value ? null : refData.fetchEmployees(),
+    refData.fetchDepartments(),
+  ]);
   await Promise.all([loadPunches(), loadDaily()]);
 });
 </script>

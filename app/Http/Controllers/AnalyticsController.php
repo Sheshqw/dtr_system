@@ -17,6 +17,8 @@ class AnalyticsController extends Controller
 
     public function trend(Request $request)
     {
+        $this->denyOwnRecordsOnly($request);
+
         $campusId  = $this->resolvedCampusId($request);
         $numDays   = max(7, min(90, (int) $request->get('days', 30)));
         $from      = now()->subDays($numDays - 1)->toDateString();
@@ -59,6 +61,8 @@ class AnalyticsController extends Controller
 
     public function departments(Request $request)
     {
+        $this->denyOwnRecordsOnly($request);
+
         $campusId = $this->resolvedCampusId($request);
         $date     = $request->input('date', now()->format('Y-m-d'));
         $cacheKey = "analytics_departments_{$date}_" . ($campusId ?? 'all');
@@ -104,6 +108,8 @@ class AnalyticsController extends Controller
      */
     public function staffTypes(Request $request)
     {
+        $this->denyOwnRecordsOnly($request);
+
         $campusId = $this->resolvedCampusId($request);
         $date     = $request->input('date', now()->format('Y-m-d'));
         $cacheKey = "analytics_staff_types_{$date}_" . ($campusId ?? 'all');
@@ -187,5 +193,16 @@ class AnalyticsController extends Controller
         });
 
         return response()->json($result);
+    }
+
+    /**
+     * These charts aggregate a whole campus, so they're closed to anyone
+     * limited to their own records (Faculty / Staff by default).
+     */
+    private function denyOwnRecordsOnly(Request $request): void
+    {
+        if ($this->seesOwnRecordsOnly($request)) {
+            abort(403, 'You can only view your own attendance records.');
+        }
     }
 }

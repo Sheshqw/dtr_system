@@ -98,6 +98,10 @@ class AttendanceController extends Controller
         $baseQuery = User::where('is_active', true);
         $this->campusScope($request, $baseQuery);
 
+        if ($this->seesOwnRecordsOnly($request)) {
+            $baseQuery->where('id', $request->user()->id);
+        }
+
         if ($request->filled('department_id')) {
             $baseQuery->where('department_id', $request->department_id);
         }
@@ -190,7 +194,7 @@ class AttendanceController extends Controller
             ->whereDate('punch_time', $date)
             ->orderBy('punch_time');
 
-        if ($user->role === 'employee') {
+        if ($this->seesOwnRecordsOnly($request)) {
             $query->where('employee_id', $user->id);
         } elseif ($user->role === 'department_head') {
             $query->whereHas('employee', fn($q) => $q->where('department_id', $user->department_id));
@@ -241,7 +245,9 @@ class AttendanceController extends Controller
             ->whereYear('work_date', $year)
             ->whereMonth('work_date', $month);
 
-        if ($user->role === 'employee') {
+        $ownOnly = $this->seesOwnRecordsOnly($request);
+
+        if ($ownOnly) {
             $query->where('employee_id', $user->id);
         } elseif ($user->role === 'department_head') {
             $query->whereHas('employee', fn($q) => $q->where('department_id', $user->department_id));
@@ -276,9 +282,9 @@ class AttendanceController extends Controller
         // actually visible in this view, then the query above picks up
         // whatever it just created.
         $scopedEmployeeIds = User::query()
-            ->when($user->role === 'employee', fn($q) => $q->where('id', $user->id))
-            ->when($user->role === 'department_head', fn($q) => $q->where('department_id', $user->department_id))
-            ->when(! $this->isSuperAdmin($request) && $user->role !== 'employee' && $user->role !== 'department_head', fn($q) => $q->where('campus_id', $user->campus_id))
+            ->when($ownOnly, fn($q) => $q->where('id', $user->id))
+            ->when(! $ownOnly && $user->role === 'department_head', fn($q) => $q->where('department_id', $user->department_id))
+            ->when(! $ownOnly && ! $this->isSuperAdmin($request) && $user->role !== 'department_head', fn($q) => $q->where('campus_id', $user->campus_id))
             ->when($this->isSuperAdmin($request) && $request->filled('campus_id'), fn($q) => $q->where('campus_id', $request->campus_id))
             ->when($request->filled('department_id'), fn($q) => $q->where('department_id', $request->department_id))
             ->when($request->filled('employee_id'), fn($q) => $q->where('id', $request->employee_id))

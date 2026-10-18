@@ -61,7 +61,7 @@
     <div class="dash-body">
 
       <!-- ══ Summary panel ═══════════════════════════════════════════ -->
-      <div class="summary-panel">
+      <div v-if="!ownRecordsOnly" class="summary-panel">
 
         <!-- ── Gradient hero header ─────────────────────────────── -->
         <div class="summary-hero" :style="{ background: campus.heroGradient }">
@@ -280,7 +280,7 @@
       </div>
 
       <!-- ══ My Personal DTR Status (regular employees only) ══════════ -->
-      <div v-if="!isAdminOrHr" class="bg-white rounded-xl overflow-hidden" style="border:1px solid #E5E7EB;">
+      <div v-if="!isAdminOrHr || ownRecordsOnly" class="bg-white rounded-xl overflow-hidden" style="border:1px solid #E5E7EB;">
         <!-- Card header -->
         <div class="px-5 py-3.5 flex items-center gap-3" style="background:linear-gradient(135deg,#2E4A8C,#3D5CA3);border-radius:0.75rem 0.75rem 0 0;">
           <div class="w-8 h-8 rounded-lg flex items-center justify-center flex-shrink-0" style="background:rgba(255,255,255,0.15);">
@@ -354,7 +354,9 @@
       </div>
 
       <!-- ══ Attendance log table ════════════════════════════════════ -->
-      <div class="panel">
+      <!-- Campus-wide sections (this table + analytics) are hidden from anyone
+           limited to their own records; the backend scopes/denies them too. -->
+      <div v-if="!ownRecordsOnly" class="panel">
 
         <!-- Gradient title band -->
         <div class="panel-hero" :style="{ background: campus.heroGradient }">
@@ -513,7 +515,7 @@
       </div>
 
       <!-- ══ Analytics section ══════════════════════════════════════ -->
-      <div class="analytics-card">
+      <div v-if="!ownRecordsOnly" class="analytics-card">
 
         <!-- Gradient hero header -->
         <div class="analytics-hero" :style="{ background: campus.heroGradient }">
@@ -812,6 +814,7 @@ import { ref, reactive, computed, onMounted, onBeforeUnmount, watch } from 'vue'
 import { useRouter }           from 'vue-router';
 import { useAttendanceStore }  from '@/stores/attendance';
 import { useAuthStore }        from '@/stores/auth';
+import { usePermissionsStore } from '@/stores/permissions';
 import { useSettingsStore }    from '@/stores/settings';
 import { useThemeStore }       from '@/stores/theme';
 import { useDebounce }         from '@/composables/useDebounce';
@@ -853,6 +856,7 @@ Chart.register(LineController, BarController, CategoryScale, LinearScale, PointE
 const store  = useAttendanceStore();
 const theme  = useThemeStore();
 const auth   = useAuthStore();
+const perms  = usePermissionsStore();
 const settings = useSettingsStore();
 const router = useRouter();
 const { campus, campusCode, campusName } = useCampusIdentity();
@@ -877,6 +881,8 @@ const isAdminOrHr = computed(() =>
   ['super_admin', 'admin', 'hr_officer'].includes(auth.employee?.role)
 );
 const isSuperAdmin = computed(() => auth.employee?.role === 'super_admin');
+// Faculty / Staff by default — they get only their own "My DTR Status" card.
+const ownRecordsOnly = computed(() => !perms.can('dtr_records.view_all'));
 
 const myTodayRow = computed(() =>
   store.rows.find(r => r.employee_id === auth.employee?.employee_id) ?? null
@@ -1037,11 +1043,10 @@ async function refresh() {
   // backend only knows the literal statuses, so send it unfiltered and let
   // the computed narrow it down locally.
   const backendStatus = filters.status === 'present_incl_late' ? '' : filters.status;
-  await Promise.all([
-    store.fetchToday({ search: filters.search, status: backendStatus }),
-    loadPreviousDaySummary(),
-    loadDateAnalytics(),
-  ]);
+  const requests = [store.fetchToday({ search: filters.search, status: backendStatus })];
+  // The day-over-day deltas and charts only feed the campus-wide sections.
+  if (!ownRecordsOnly.value) requests.push(loadPreviousDaySummary(), loadDateAnalytics());
+  await Promise.all(requests);
   lastRefreshed.value = new Date().toLocaleTimeString('en-PH', { hour: '2-digit', minute: '2-digit' });
 }
 
@@ -1604,7 +1609,7 @@ onMounted(async () => {
   // alongside it here, rather than fetching the date-scoped ones twice.
   analyticsLoading.value = true;
   try {
-    await Promise.all([refresh(), loadTrendAnalytics()]);
+    await Promise.all([refresh(), ownRecordsOnly.value ? null : loadTrendAnalytics()]);
   } finally {
     analyticsLoading.value = false;
   }

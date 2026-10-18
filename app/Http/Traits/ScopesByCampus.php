@@ -2,6 +2,7 @@
 
 namespace App\Http\Traits;
 
+use App\Services\FeaturePermissionService;
 use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Http\Request;
 
@@ -44,6 +45,16 @@ trait ScopesByCampus
     protected function isPrivileged(Request $request): bool
     {
         return in_array($request->user()->role, ['super_admin', 'admin', 'hr_officer']);
+    }
+
+    /**
+     * True when the acting user may only see their own attendance records —
+     * i.e. they don't hold "dtr_records.view_all" (off by default for
+     * Faculty / Staff, overridable per employee in Access Control).
+     */
+    protected function seesOwnRecordsOnly(Request $request): bool
+    {
+        return ! app(FeaturePermissionService::class)->can($request->user(), 'dtr_records.view_all');
     }
 
     /**
