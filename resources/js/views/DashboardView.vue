@@ -279,8 +279,9 @@
         <span class="ca-action">Review now →</span>
       </div>
 
-      <!-- ══ My Personal DTR Status (regular employees only) ══════════ -->
-      <div v-if="!isAdminOrHr || ownRecordsOnly" class="bg-white rounded-xl overflow-hidden" style="border:1px solid #E5E7EB;">
+      <!-- ══ My Personal DTR Status (department heads) ════════════════ -->
+      <!-- Faculty / Staff get the richer MyAttendanceDashboard below instead. -->
+      <div v-if="!isAdminOrHr && !ownRecordsOnly" class="bg-white rounded-xl overflow-hidden" style="border:1px solid #E5E7EB;">
         <!-- Card header -->
         <div class="px-5 py-3.5 flex items-center gap-3" style="background:linear-gradient(135deg,#2E4A8C,#3D5CA3);border-radius:0.75rem 0.75rem 0 0;">
           <div class="w-8 h-8 rounded-lg flex items-center justify-center flex-shrink-0" style="background:rgba(255,255,255,0.15);">
@@ -353,8 +354,14 @@
         </div>
       </div>
 
-      <!-- ══ My Attendance Insights (own records only) ═══════════════ -->
-      <MyAttendanceInsights v-if="ownRecordsOnly" ref="insightsRef" :hero-gradient="campus.heroGradient" />
+      <!-- ══ Personal dashboard: today + insights (own records only) ═══ -->
+      <MyAttendanceDashboard
+        v-if="ownRecordsOnly"
+        ref="insightsRef"
+        :today-row="myTodayRow"
+        :pending-print-requests="pendingPrintRequests"
+        :hero-gradient="campus.heroGradient"
+      />
 
       <!-- ══ Attendance log table ════════════════════════════════════ -->
       <!-- Campus-wide sections (this table + analytics) are hidden from anyone
@@ -828,7 +835,7 @@ import { useSortable }         from '@/composables/useSortable';
 import SortIcon                from '@/components/SortIcon.vue';
 import StatusBadge             from '@/components/StatusBadge.vue';
 import NotificationBell        from '@/components/NotificationBell.vue';
-import MyAttendanceInsights    from '@/components/MyAttendanceInsights.vue';
+import MyAttendanceDashboard   from '@/components/MyAttendanceDashboard.vue';
 import axios from 'axios';
 import {
   RefreshCw    as RefreshCwIcon,

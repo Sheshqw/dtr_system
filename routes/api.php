@@ -20,6 +20,7 @@ use App\Http\Controllers\AlertController;
 use App\Http\Controllers\SystemSettingController;
 use App\Http\Controllers\SignatureController;
 use App\Http\Controllers\FeaturePermissionController;
+use App\Http\Controllers\MyAttendanceController;
 use Illuminate\Support\Facades\Route;
 
 // Public — rate-limited to 10 attempts per minute to prevent brute-force
@@ -77,6 +78,9 @@ Route::middleware('auth:sanctum')->group(function () {
     // Self-service "Mark as On Leave" — any authenticated user, own record only
     Route::post('/attendance/on-leave',          [AttendanceController::class, 'markOnLeave']);
     Route::post('/attendance/on-leave/unmark',   [AttendanceController::class, 'unmarkOnLeave']);
+
+    // Personal dashboard analytics — always the signed-in user's own records
+    Route::get('/me/attendance-summary',         [MyAttendanceController::class, 'summary']);
 
     // Employees — viewing the full roster is a distinct, revocable permission
     // from managing it (store/update/destroy already require Super Admin,

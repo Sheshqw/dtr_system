@@ -14,7 +14,7 @@
       </div>
 
       <div class="mi-month" role="group" aria-label="Choose month">
-        <button class="mi-month-btn" @click="shiftMonth(-1)" aria-label="Previous month">
+        <button class="mi-month-btn" :disabled="!canGoBack" @click="shiftMonth(-1)" aria-label="Previous month">
           <ChevronLeftIcon class="w-4 h-4" />
         </button>
         <span class="mi-month-label" aria-live="polite">{{ monthLabel }}</span>
@@ -44,7 +44,18 @@
         </div>
         <div class="min-w-0">
           <p class="mi-kpi-label">Attendance rate</p>
-          <p class="mi-kpi-value">{{ stats.rate === null ? '—' : stats.rate + '%' }}</p>
+          <p class="mi-kpi-value">
+            {{ stats.rate === null ? '—' : stats.rate + '%' }}
+            <span
+              v-if="rateDelta"
+              class="mi-delta"
+              :class="rateDelta.value > 0 ? 'mi-delta--up' : rateDelta.value < 0 ? 'mi-delta--down' : 'mi-delta--flat'"
+              :title="`Compared with ${rateDelta.label}`"
+            >
+              {{ rateDelta.value > 0 ? '▲' : rateDelta.value < 0 ? '▼' : '•' }}
+              {{ Math.abs(rateDelta.value) }} pts
+            </span>
+          </p>
           <p class="mi-kpi-sub">
             {{ stats.workingDays ? `${stats.present} of ${stats.workingDays} working days` : 'No working days yet' }}
           </p>
@@ -106,7 +117,7 @@
               role="gridcell"
               class="mi-day"
               :class="[`mi-day--${d.status}`, { 'mi-day--selected': selectedDate === d.date, 'mi-day--now': d.date === todayStr }]"
-              :disabled="d.status === 'upcoming'"
+              :disabled="d.status === 'upcoming' || d.status === 'none'"
               :aria-label="dayAriaLabel(d)"
               :aria-pressed="selectedDate === d.date"
               @click="selectedDate = d.date"
@@ -145,27 +156,36 @@
         <p class="mi-footnote">A past weekday with no punches counts as absent.</p>
       </div>
 
-      <!-- ── Arrival times chart ──────────────────────────────────── -->
+      <!-- ── Daily chart: arrival times or hours worked ───────────── -->
       <div class="mi-card">
-        <div class="mi-card-head">
-          <SunriseIcon class="mi-card-icon" />
-          <div>
-            <h3 class="mi-card-title">Arrival times</h3>
-            <p class="mi-card-sub">
-              Your morning time-in per day{{ shiftStart !== null ? ' · dashed line is your shift start' : '' }}
-            </p>
+        <div class="mi-card-head mi-card-head--split">
+          <div class="mi-card-head">
+            <component :is="chartMode === 'arrival' ? SunriseIcon : TimerIcon" class="mi-card-icon" />
+            <div>
+              <h3 class="mi-card-title">{{ chartMode === 'arrival' ? 'Arrival times' : 'Hours worked' }}</h3>
+              <p class="mi-card-sub">{{ chartSubtitle }}</p>
+            </div>
+          </div>
+          <div class="mi-seg" role="tablist" aria-label="Chart view">
+            <button
+              v-for="m in CHART_MODES" :key="m.key"
+              type="button" role="tab"
+              class="mi-seg-btn" :class="{ 'mi-seg-btn--on': chartMode === m.key }"
+              :aria-selected="chartMode === m.key"
+              @click="chartMode = m.key"
+            >{{ m.label }}</button>
           </div>
         </div>
 
         <div class="mi-chart">
-          <canvas v-show="arrivals.length" ref="chartCanvas" role="img" :aria-label="`Arrival times for ${monthLabel}`"></canvas>
-          <div v-if="!arrivals.length && !loading" class="mi-chart-empty">
+          <canvas v-show="workedDays.length" ref="chartCanvas" role="img" :aria-label="`${chartMode === 'arrival' ? 'Arrival times' : 'Hours worked'} for ${monthLabel}`"></canvas>
+          <div v-if="!workedDays.length && !loading" class="mi-chart-empty">
             <SunriseIcon class="w-5 h-5" />
-            <p>No time-in records for {{ monthLabel }} yet.</p>
+            <p>No worked days in {{ monthLabel }} yet.</p>
           </div>
         </div>
 
-        <div v-if="arrivals.length" class="mi-chart-stats">
+        <div v-if="workedDays.length && chartMode === 'arrival'" class="mi-chart-stats">
           <div>
             <span class="mi-cs-label">Avg. time in</span>
             <span class="mi-cs-value">{{ fmtClock(stats.avgArrival) }}</span>
@@ -179,6 +199,83 @@
             <span class="mi-cs-value">{{ fmtClock(stats.latest) }}</span>
           </div>
         </div>
+        <div v-else-if="workedDays.length" class="mi-chart-stats">
+          <div>
+            <span class="mi-cs-label">Avg. per day</span>
+            <span class="mi-cs-value">{{ fmtHours(stats.hours / stats.present) }}</span>
+          </div>
+          <div>
+            <span class="mi-cs-label">Full days</span>
+            <span class="mi-cs-value">{{ requiredHours ? `${stats.fullDays} of ${stats.present}` : '—' }}</span>
+          </div>
+          <div>
+            <span class="mi-cs-label">Undertime</span>
+            <span class="mi-cs-value">{{ stats.undertime ? fmtMinutes(stats.undertime) : 'None' }}</span>
+          </div>
+        </div>
+      </div>
+
+    </div>
+
+    <!-- ── Trends & patterns (from the summary endpoint) ──────────── -->
+    <div class="mi-section-label">
+      <TrendingUpIcon class="w-3.5 h-3.5" />
+      <span>Trends &amp; patterns · {{ trendRangeLabel }}</span>
+    </div>
+
+    <div class="mi-grid mi-grid--trends">
+
+      <div class="mi-card">
+        <div class="mi-card-head">
+          <BarChart2Icon class="mi-card-icon" />
+          <div>
+            <h3 class="mi-card-title">Monthly trend</h3>
+            <p class="mi-card-sub">Attendance rate per month (bars) and late days (line)</p>
+          </div>
+        </div>
+        <div class="mi-chart mi-chart--short">
+          <canvas v-show="trendMonths.length" ref="trendCanvas" role="img" aria-label="Monthly attendance trend"></canvas>
+          <div v-if="!trendMonths.length" class="mi-chart-empty">
+            <BarChart2Icon class="w-5 h-5" />
+            <p>{{ summary ? 'No months to show yet.' : 'Loading your trend…' }}</p>
+          </div>
+        </div>
+      </div>
+
+      <div class="mi-card">
+        <div class="mi-card-head">
+          <FlameIcon class="mi-card-icon" />
+          <div>
+            <h3 class="mi-card-title">Punctuality</h3>
+            <p class="mi-card-sub">On-time streaks and late arrivals by weekday</p>
+          </div>
+        </div>
+
+        <div class="mi-streaks">
+          <div class="mi-streak">
+            <span class="mi-streak-value">{{ summary?.streak?.current ?? '—' }}</span>
+            <span class="mi-streak-label">Current on-time streak <small>(working days)</small></span>
+          </div>
+          <div class="mi-streak">
+            <span class="mi-streak-value">{{ summary?.streak?.best ?? '—' }}</span>
+            <span class="mi-streak-label">Best streak · {{ trendRangeLabel }}</span>
+          </div>
+        </div>
+
+        <ul class="mi-weekdays">
+          <li v-for="w in weekdayRows" :key="w.dow" class="mi-wd">
+            <span class="mi-wd-label">{{ w.label }}</span>
+            <span class="mi-wd-track" :title="`${w.late} late of ${w.worked} worked`">
+              <span class="mi-wd-fill" :style="{ width: w.worked ? (w.late / maxWeekdayLate) * 100 + '%' : '0%' }"></span>
+            </span>
+            <span class="mi-wd-meta">
+              <strong>{{ w.late }}</strong> late of {{ w.worked }}
+              <span class="mi-wd-avg">· avg in {{ fmtClock(w.avg_arrival) }}</span>
+            </span>
+          </li>
+        </ul>
+
+        <p class="mi-insight">{{ punctualityInsight }}</p>
       </div>
 
     </div>
@@ -197,18 +294,25 @@ import {
   ChevronRight as ChevronRightIcon,
   CalendarDays as CalendarDaysIcon,
   Sunrise      as SunriseIcon,
+  Timer        as TimerIcon,
+  TrendingUp   as TrendingUpIcon,
+  Flame        as FlameIcon,
   UserCheck    as UserCheckIcon,
   Clock        as ClockIcon,
   Hourglass    as HourglassIcon,
 } from 'lucide-vue-next';
 import {
-  Chart, LineController, CategoryScale, LinearScale, PointElement, LineElement, Tooltip, Filler,
+  Chart, LineController, BarController, CategoryScale, LinearScale,
+  PointElement, LineElement, BarElement, Tooltip, Filler,
 } from 'chart.js';
 
-Chart.register(LineController, CategoryScale, LinearScale, PointElement, LineElement, Tooltip, Filler);
+Chart.register(LineController, BarController, CategoryScale, LinearScale, PointElement, LineElement, BarElement, Tooltip, Filler);
 
-defineProps({
+const props = defineProps({
   heroGradient: { type: String, default: '#1B2A5E' },
+  // /api/me/attendance-summary — shift, tracking start, monthly trend,
+  // streaks and weekday pattern. Loaded by the parent; null while loading.
+  summary:      { type: Object, default: null },
 });
 
 const auth  = useAuthStore();
@@ -220,6 +324,8 @@ const RING           = 2 * Math.PI * 18;
 const MONTH_NAMES    = ['January', 'February', 'March', 'April', 'May', 'June', 'July',
                         'August', 'September', 'October', 'November', 'December'];
 const SHORT_MONTHS   = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'];
+const WEEKDAY_NAMES  = { 1: 'Monday', 2: 'Tuesday', 3: 'Wednesday', 4: 'Thursday', 5: 'Friday' };
+const CHART_MODES    = [{ key: 'arrival', label: 'Arrival' }, { key: 'hours', label: 'Hours' }];
 
 // ── Local-date helpers (never through toISOString(), which shifts to UTC) ──
 const pad = (n) => String(n).padStart(2, '0');
@@ -236,14 +342,21 @@ const isCurrentMonth = computed(() =>
 );
 const monthLabel = computed(() => `${MONTH_NAMES[view.month - 1]} ${view.year}`);
 
+// First day attendance counts for this employee (hire date, or first record).
+const since = computed(() => props.summary?.since ?? null);
+const canGoBack = computed(() =>
+  !since.value || `${view.year}-${pad(view.month)}` > since.value.slice(0, 7)
+);
+
 function shiftMonth(step) {
+  if (step < 0 && !canGoBack.value) return;
   const d = new Date(view.year, view.month - 1 + step, 1);
   if (step > 0 && d > now) return;
   view.year  = d.getFullYear();
   view.month = d.getMonth() + 1;
 }
 
-// ── Data ─────────────────────────────────────────────────────────
+// ── Month data ───────────────────────────────────────────────────
 const records = ref([]);
 const loading = ref(false);
 const error   = ref(false);
@@ -273,9 +386,10 @@ async function load() {
   buildChart();
 }
 
-// One entry per calendar day. Days without a daily_dtr row are filled in
-// the same way the server computes them: weekends are 'weekend', a past
-// weekday with no punches is 'absent', and today stays open until it ends.
+// One entry per calendar day, classified exactly like the server's
+// summary endpoint: a daily_dtr status wins; otherwise weekends are
+// 'weekend' and past weekdays 'absent'; today stays open until it has a
+// punch; days before the employee's tracking start don't count ('none').
 const days = computed(() => {
   // work_date arrives as '2026-10-05T00:00:00.000000Z' — only the date part matters.
   const byDate = new Map(records.value.map(r => [String(r.work_date).slice(0, 10), r]));
@@ -289,6 +403,7 @@ const days = computed(() => {
 
     let status;
     if (date > todayStr)                                            status = 'upcoming';
+    else if (since.value && date < since.value)                     status = 'none';
     else if (date === todayStr && (!rec || rec.status === 'absent')) status = 'today';
     else if (rec?.status)                                           status = rec.status;
     else if (dow === 0 || dow === 6)                                status = 'weekend';
@@ -305,39 +420,59 @@ const counts = computed(() => days.value.reduce((acc, d) => {
   return acc;
 }, {}));
 
-const arrivals = computed(() => days.value
-  .filter(d => d.rec?.morning_in && ['present', 'late'].includes(d.status))
+const workedDays = computed(() => days.value.filter(d => d.rec && ['present', 'late'].includes(d.status)));
+const arrivals   = computed(() => workedDays.value
+  .filter(d => d.rec.morning_in)
   .map(d => ({ ...d, minutes: toMinutes(d.rec.morning_in) }))
 );
 
+// Shift from the summary endpoint (the login payload doesn't carry it).
+const shift         = computed(() => props.summary?.shift ?? null);
+const shiftStart    = computed(() => (shift.value?.morning_in ? toMinutes(shift.value.morning_in) : null));
+const requiredHours = computed(() => (shift.value?.required_hours ? Number(shift.value.required_hours) : null));
+
 const stats = computed(() => {
-  const c        = counts.value;
-  const onTime   = c.present ?? 0;
-  const late     = c.late ?? 0;
-  const present  = onTime + late;
-  const absent   = c.absent ?? 0;
-  const working  = present + absent; // leave, holidays and weekends don't count against you
-  const worked   = days.value.filter(d => ['present', 'late'].includes(d.status));
-  const mins     = arrivals.value.map(a => a.minutes);
+  const c       = counts.value;
+  const onTime  = c.present ?? 0;
+  const late    = c.late ?? 0;
+  const present = onTime + late;
+  const absent  = c.absent ?? 0;
+  const working = present + absent; // leave, holidays and weekends don't count against you
+  const worked  = workedDays.value;
+  const mins    = arrivals.value.map(a => a.minutes);
 
   return {
     onTime, late, present, absent,
     workingDays: working,
     rate:       working ? Math.round(present / working * 100) : null,
-    tardiness:  worked.reduce((s, d) => s + (d.rec?.tardiness_minutes ?? 0), 0),
-    hours:      worked.reduce((s, d) => s + Number(d.rec?.hours_rendered ?? 0), 0),
+    tardiness:  worked.reduce((s, d) => s + (d.rec.tardiness_minutes ?? 0), 0),
+    undertime:  worked.reduce((s, d) => s + (d.rec.undertime_minutes ?? 0), 0),
+    hours:      worked.reduce((s, d) => s + Number(d.rec.hours_rendered ?? 0), 0),
+    fullDays:   requiredHours.value
+      ? worked.filter(d => Number(d.rec.hours_rendered ?? 0) >= requiredHours.value).length
+      : 0,
     avgArrival: mins.length ? Math.round(mins.reduce((a, b) => a + b, 0) / mins.length) : null,
     earliest:   mins.length ? Math.min(...mins) : null,
     latest:     mins.length ? Math.max(...mins) : null,
   };
 });
 
-const rateColor = computed(() => {
-  const r = stats.value.rate;
-  if (r === null) return '#94A3B8';
+const rateColor = computed(() => tierColor(stats.value.rate));
+function tierColor(r) {
+  if (r === null || r === undefined) return '#94A3B8';
   if (r >= 75) return '#16A34A';
   if (r >= 50) return '#D97706';
   return '#DC2626';
+}
+
+// Rate vs the previous month — a rate compares fairly even while the
+// current month is only partly through, unlike raw day counts.
+const rateDelta = computed(() => {
+  const months = props.summary?.months ?? [];
+  const prev   = new Date(view.year, view.month - 2, 1);
+  const p      = months.find(m => m.year === prev.getFullYear() && m.month === prev.getMonth() + 1);
+  if (!p || p.rate === null || stats.value.rate === null) return null;
+  return { value: stats.value.rate - p.rate, label: `${MONTH_NAMES[p.month - 1]} (${p.rate}%)` };
 });
 
 const legend = computed(() => [
@@ -350,6 +485,32 @@ const legend = computed(() => [
 
 const selectedDate = ref(todayStr);
 const selectedDay  = computed(() => days.value.find(d => d.date === selectedDate.value) ?? null);
+
+// ── Trends & patterns ────────────────────────────────────────────
+const trendMonths = computed(() => props.summary?.months ?? []);
+const trendRangeLabel = computed(() => {
+  const n = trendMonths.value.length;
+  return n > 1 ? `last ${n} months` : 'this month';
+});
+const weekdayRows    = computed(() => props.summary?.weekdays ?? []);
+const maxWeekdayLate = computed(() => Math.max(1, ...weekdayRows.value.map(w => w.late)));
+const punctualityInsight = computed(() => {
+  const rows = weekdayRows.value;
+  if (!rows.length) return '';
+  const totalLate = rows.reduce((s, w) => s + w.late, 0);
+  const worked    = rows.reduce((s, w) => s + w.worked, 0);
+  if (!worked) return 'No worked days recorded yet.';
+  if (!totalLate) return `No late arrivals in the ${trendRangeLabel.value}. Keep it up!`;
+  const worst = rows.reduce((a, b) => (b.late > a.late ? b : a));
+  return `You were late most often on ${WEEKDAY_NAMES[worst.dow]}s (${worst.late} of ${worst.worked} days).`;
+});
+
+const chartSubtitle = computed(() => {
+  if (chartMode.value === 'arrival') {
+    return `Your morning time-in per day${shiftStart.value !== null ? ' · dashed line is your shift start' : ''}`;
+  }
+  return `Hours rendered per day${requiredHours.value ? ` · dashed line is your required ${requiredHours.value} h` : ''}`;
+});
 
 // ── Formatting ───────────────────────────────────────────────────
 function toMinutes(t) {
@@ -376,6 +537,7 @@ function fmtHours(h) {
 const STATUS_LABELS = {
   present: 'Present', late: 'Late', absent: 'Absent', on_leave: 'On leave',
   holiday: 'Holiday', weekend: 'Weekend', today: 'Today, no punch yet', upcoming: 'Upcoming',
+  none: 'Before your start date',
 };
 function longDate(date) {
   const [y, m, d] = date.split('-').map(Number);
@@ -387,30 +549,49 @@ function dayAriaLabel(d) {
   return parts.join(', ');
 }
 
-// ── Arrival chart ────────────────────────────────────────────────
+// ── Charts ───────────────────────────────────────────────────────
 const chartCanvas = ref(null);
-let chart = null;
+const trendCanvas = ref(null);
+const chartMode   = ref('arrival');
+let chart      = null;
+let trendChart = null;
 
-// Shift start from the profile ('08:00:00' or '06:00'), when one is assigned.
-const shiftStart = computed(() => {
-  const t = auth.employee?.shift?.morning_in;
-  return t ? toMinutes(t) : null;
-});
+function palette() {
+  const dark = theme.isDark;
+  return {
+    dark,
+    grid: dark ? 'rgba(255,255,255,0.06)' : 'rgba(226,232,240,0.7)',
+    tick: dark ? '#94A3B8' : '#6B7A94',
+    gold: dark ? 'rgba(201,162,39,0.75)' : '#C9A227',
+  };
+}
+const statusColor = (s) => (s === 'late' ? '#D97706' : '#16A34A');
+const tooltipBase = { backgroundColor: '#1A2444', padding: 10, cornerRadius: 6 };
 
 function buildChart() {
   chart?.destroy();
   chart = null;
-  if (!chartCanvas.value || !arrivals.value.length) return;
+  if (!chartCanvas.value || !workedDays.value.length) return;
+  chart = chartMode.value === 'arrival' ? arrivalChart() : hoursChart();
+}
 
-  const dark   = theme.isDark;
-  const grid   = dark ? 'rgba(255,255,255,0.06)' : 'rgba(226,232,240,0.7)';
-  const tick   = dark ? '#94A3B8' : '#6B7A94';
+function referenceLine(label, length, value, color) {
+  return {
+    type: 'line', label,
+    data: Array(length).fill(value),
+    borderColor: color, borderDash: [6, 4], borderWidth: 1.5,
+    pointRadius: 0, pointHoverRadius: 0, fill: false,
+  };
+}
+
+function arrivalChart() {
+  const { dark, grid, tick, gold } = palette();
   const points = arrivals.value;
+  if (!points.length) return null;
   const values = points.map(p => p.minutes);
   if (shiftStart.value !== null) values.push(shiftStart.value);
   const yMin = Math.floor((Math.min(...values) - 20) / 30) * 30;
   const yMax = Math.ceil((Math.max(...values) + 20) / 30) * 30;
-  const pointColor = points.map(p => (p.status === 'late' ? '#D97706' : '#16A34A'));
 
   const datasets = [{
     label: 'Time in',
@@ -420,37 +601,23 @@ function buildChart() {
     tension: 0.3,
     pointRadius: 4.5,
     pointHoverRadius: 6.5,
-    pointBackgroundColor: pointColor,
+    pointBackgroundColor: points.map(p => statusColor(p.status)),
     pointBorderColor: dark ? '#1C2A44' : '#fff',
     pointBorderWidth: 1.5,
   }];
-  if (shiftStart.value !== null) {
-    datasets.push({
-      label: 'Shift start',
-      data: points.map(() => shiftStart.value),
-      borderColor: dark ? 'rgba(201,162,39,0.75)' : '#C9A227',
-      borderDash: [6, 4],
-      borderWidth: 1.5,
-      pointRadius: 0,
-      pointHoverRadius: 0,
-      fill: false,
-    });
-  }
+  if (shiftStart.value !== null) datasets.push(referenceLine('Shift start', points.length, shiftStart.value, gold));
 
-  chart = new Chart(chartCanvas.value, {
+  return new Chart(chartCanvas.value, {
     type: 'line',
     data: { labels: points.map(p => `${SHORT_MONTHS[view.month - 1]} ${p.day}`), datasets },
     options: {
-      responsive: true,
-      maintainAspectRatio: false,
+      responsive: true, maintainAspectRatio: false,
       animation: { duration: 500 },
       interaction: { mode: 'nearest', intersect: false },
       plugins: {
         legend: { display: false },
         tooltip: {
-          backgroundColor: '#1A2444',
-          padding: 10,
-          cornerRadius: 6,
+          ...tooltipBase,
           filter: item => item.datasetIndex === 0,
           callbacks: {
             label: (ctx) => {
@@ -461,27 +628,125 @@ function buildChart() {
         },
       },
       scales: {
-        x: {
-          grid: { display: false },
-          border: { display: false },
-          ticks: { color: tick, font: { size: 10 }, maxRotation: 0, autoSkip: true, maxTicksLimit: 8 },
+        x: { grid: { display: false }, border: { display: false }, ticks: { color: tick, font: { size: 10 }, maxRotation: 0, autoSkip: true, maxTicksLimit: 8 } },
+        y: { min: yMin, max: yMax, grid: { color: grid, drawTicks: false }, border: { display: false }, ticks: { color: tick, font: { size: 10 }, stepSize: 30, callback: v => fmtClock(v) } },
+      },
+    },
+  });
+}
+
+function hoursChart() {
+  const { grid, tick, gold } = palette();
+  const rows   = workedDays.value;
+  const hours  = rows.map(d => Number(d.rec.hours_rendered ?? 0));
+  const yMax   = Math.ceil(Math.max(requiredHours.value ?? 0, ...hours) + 1);
+
+  const datasets = [{
+    type: 'bar',
+    label: 'Hours',
+    data: hours,
+    backgroundColor: rows.map(d => statusColor(d.status) + 'CC'),
+    borderRadius: 4,
+    maxBarThickness: 18,
+  }];
+  if (requiredHours.value) datasets.push(referenceLine('Required', rows.length, requiredHours.value, gold));
+
+  return new Chart(chartCanvas.value, {
+    type: 'bar',
+    data: { labels: rows.map(d => `${SHORT_MONTHS[view.month - 1]} ${d.day}`), datasets },
+    options: {
+      responsive: true, maintainAspectRatio: false,
+      animation: { duration: 500 },
+      plugins: {
+        legend: { display: false },
+        tooltip: {
+          ...tooltipBase,
+          filter: item => item.datasetIndex === 0,
+          callbacks: { label: (ctx) => ` ${fmtHours(ctx.parsed.y)} (${rows[ctx.dataIndex].status === 'late' ? 'Late' : 'On time'})` },
         },
-        y: {
-          min: yMin,
-          max: yMax,
-          grid: { color: grid, drawTicks: false },
-          border: { display: false },
-          ticks: { color: tick, font: { size: 10 }, stepSize: 30, callback: v => fmtClock(v) },
+      },
+      scales: {
+        x: { grid: { display: false }, border: { display: false }, ticks: { color: tick, font: { size: 10 }, maxRotation: 0, autoSkip: true, maxTicksLimit: 8 } },
+        y: { min: 0, max: yMax, grid: { color: grid, drawTicks: false }, border: { display: false }, ticks: { color: tick, font: { size: 10 }, stepSize: 2, callback: v => `${v} h` } },
+      },
+    },
+  });
+}
+
+function buildTrendChart() {
+  trendChart?.destroy();
+  trendChart = null;
+  const months = trendMonths.value;
+  if (!trendCanvas.value || !months.length) return;
+  const { grid, tick } = palette();
+
+  trendChart = new Chart(trendCanvas.value, {
+    type: 'bar',
+    data: {
+      labels: months.map(m => SHORT_MONTHS[m.month - 1]),
+      datasets: [
+        {
+          type: 'bar',
+          label: 'Attendance rate',
+          data: months.map(m => m.rate),
+          backgroundColor: months.map(m => tierColor(m.rate) + 'CC'),
+          borderRadius: 5,
+          maxBarThickness: 34,
+          yAxisID: 'y',
+          order: 2,
         },
+        {
+          type: 'line',
+          label: 'Late days',
+          data: months.map(m => m.late),
+          borderColor: '#D97706',
+          backgroundColor: '#D97706',
+          borderWidth: 2,
+          tension: 0.3,
+          pointRadius: 3.5,
+          yAxisID: 'y1',
+          order: 1,
+        },
+      ],
+    },
+    options: {
+      responsive: true, maintainAspectRatio: false,
+      animation: { duration: 500 },
+      interaction: { mode: 'index', intersect: false },
+      plugins: {
+        legend: { display: false },
+        tooltip: {
+          ...tooltipBase,
+          callbacks: {
+            title: items => months[items[0].dataIndex].label,
+            label: (ctx) => {
+              const m = months[ctx.dataIndex];
+              return ctx.datasetIndex === 0
+                ? ` Attendance ${m.rate === null ? '—' : m.rate + '%'} (${m.present} of ${m.working_days} days)`
+                : ` Late ${m.late} day${m.late === 1 ? '' : 's'}`;
+            },
+          },
+        },
+      },
+      scales: {
+        x:  { grid: { display: false }, border: { display: false }, ticks: { color: tick, font: { size: 10 } } },
+        y:  { min: 0, max: 100, grid: { color: grid, drawTicks: false }, border: { display: false }, ticks: { color: tick, font: { size: 10 }, stepSize: 25, callback: v => `${v}%` } },
+        y1: { position: 'right', min: 0, suggestedMax: 5, grid: { display: false }, border: { display: false }, ticks: { color: '#D97706', font: { size: 10 }, precision: 0 } },
       },
     },
   });
 }
 
 watch(() => [view.year, view.month], load);
-watch(() => theme.isDark, buildChart);
+watch(chartMode, buildChart);
+watch(() => props.summary, async () => {
+  await nextTick();
+  buildTrendChart();
+  buildChart(); // the shift reference lines come from the summary
+});
+watch(() => theme.isDark, () => { buildChart(); buildTrendChart(); });
 onMounted(load);
-onBeforeUnmount(() => chart?.destroy());
+onBeforeUnmount(() => { chart?.destroy(); trendChart?.destroy(); });
 
 // The dashboard's Refresh button and live punch updates reload this too.
 defineExpose({ load });
@@ -735,10 +1000,110 @@ defineExpose({ load });
 .mi-cs-label { font-size: 10.5px; font-weight: 600; color: var(--mi-muted); text-transform: uppercase; letter-spacing: 0.04em; }
 .mi-cs-value { font-size: 15px; font-weight: 800; color: var(--mi-ink); font-variant-numeric: tabular-nums; }
 
+/* ── Days before the employee's start date ────────────────────── */
+.mi-day--none { background: transparent; color: var(--mi-faint); opacity: 0.55; }
+
+/* ── Month-over-month delta chip ──────────────────────────────── */
+.mi-delta {
+  display: inline-flex; align-items: center; gap: 2px;
+  margin-left: 6px;
+  padding: 1px 6px;
+  border-radius: 999px;
+  font-size: 10.5px; font-weight: 700;
+  vertical-align: middle;
+}
+.mi-delta--up   { background: var(--st-present-bg); color: var(--st-present-fg); }
+.mi-delta--down { background: var(--st-absent-bg);  color: var(--st-absent-fg); }
+.mi-delta--flat { background: var(--st-weekend-bg); color: var(--mi-muted); }
+
+/* ── Chart view toggle ────────────────────────────────────────── */
+.mi-card-head--split { justify-content: space-between; flex-wrap: wrap; gap: 10px; }
+.mi-card-head--split > .mi-card-head { margin-bottom: 0; }
+.mi-seg {
+  display: inline-flex;
+  padding: 3px;
+  border-radius: 9px;
+  background: var(--mi-soft);
+  border: 1px solid var(--mi-border);
+}
+.mi-seg-btn {
+  padding: 4px 12px;
+  border-radius: 6px;
+  font-size: 11.5px; font-weight: 600;
+  color: var(--mi-muted);
+  transition: background 0.15s ease, color 0.15s ease;
+}
+.mi-seg-btn--on {
+  background: var(--mi-card);
+  color: var(--mi-ink);
+  box-shadow: 0 1px 3px rgba(15, 23, 42, 0.12);
+}
+
+/* ── Trends & patterns ────────────────────────────────────────── */
+.mi-section-label {
+  display: flex; align-items: center; gap: 6px;
+  padding: 4px 20px 0;
+  font-size: 11px; font-weight: 700;
+  color: var(--mi-muted);
+  text-transform: uppercase; letter-spacing: 0.06em;
+}
+.mi-grid--trends { grid-template-columns: minmax(0, 7fr) minmax(0, 5fr); }
+.mi-chart--short { height: 230px; min-height: 0; }
+
+.mi-streaks {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 8px;
+}
+.mi-streak {
+  display: flex; flex-direction: column; gap: 2px;
+  padding: 10px 12px;
+  border-radius: 10px;
+  background: var(--mi-soft);
+  border: 1px solid var(--mi-border);
+}
+.mi-streak-value { font-size: 22px; font-weight: 800; color: var(--mi-ink); line-height: 1.1; font-variant-numeric: tabular-nums; }
+.mi-streak-label { font-size: 11px; color: var(--mi-muted); }
+.mi-streak-label small { font-size: 10px; }
+
+.mi-weekdays { display: flex; flex-direction: column; gap: 8px; margin-top: 14px; }
+.mi-wd {
+  display: grid;
+  grid-template-columns: 34px minmax(0, 1fr) auto;
+  align-items: center;
+  gap: 10px;
+}
+.mi-wd-label { font-size: 11.5px; font-weight: 700; color: var(--mi-ink); }
+.mi-wd-track {
+  height: 8px;
+  border-radius: 999px;
+  background: var(--mi-soft);
+  border: 1px solid var(--mi-border);
+  overflow: hidden;
+}
+.mi-wd-fill {
+  display: block; height: 100%;
+  border-radius: 999px;
+  background: linear-gradient(90deg, #F59E0B, #D97706);
+  transition: width 0.5s ease;
+}
+.mi-wd-meta { font-size: 11px; color: var(--mi-muted); white-space: nowrap; font-variant-numeric: tabular-nums; }
+.mi-wd-meta strong { color: var(--mi-ink); }
+
+.mi-insight {
+  margin-top: 14px;
+  padding: 10px 12px;
+  border-radius: 10px;
+  font-size: 12px;
+  color: var(--mi-ink);
+  background: var(--mi-soft);
+  border-left: 3px solid #C9A227;
+}
+
 /* ── Responsive ───────────────────────────────────────────────── */
 @media (max-width: 1100px) {
   .mi-kpis { grid-template-columns: repeat(2, minmax(0, 1fr)); }
-  .mi-grid { grid-template-columns: minmax(0, 1fr); }
+  .mi-grid, .mi-grid--trends { grid-template-columns: minmax(0, 1fr); }
 }
 @media (max-width: 640px) {
   .mi-hero  { padding: 12px 14px; }
@@ -755,6 +1120,10 @@ defineExpose({ load });
   .mi-day   { font-size: 12px; border-radius: 7px; min-height: 0; }
   .mi-chart { height: 220px; min-height: 0; }
   .mi-cs-value { font-size: 13.5px; }
+  .mi-section-label { padding: 2px 14px 0; }
+  .mi-chart--short { height: 200px; }
+  .mi-wd { grid-template-columns: 30px minmax(0, 1fr); }
+  .mi-wd-meta { grid-column: 2; margin-top: -4px; }
 }
 @media (max-width: 360px) {
   .mi-detail-grid { grid-template-columns: repeat(2, minmax(0, 1fr)); }

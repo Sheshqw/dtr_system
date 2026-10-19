@@ -142,6 +142,11 @@ class AttendanceController extends Controller
                 'department'      => $emp->department?->name ?? '—',
                 'time_in'         => $dtr?->morning_in,
                 'time_out'        => $dtr?->afternoon_out ?? $dtr?->morning_out,
+                // The four raw punches, for the personal dashboard's timeline.
+                'morning_in'      => $dtr?->morning_in,
+                'morning_out'     => $dtr?->morning_out,
+                'afternoon_in'    => $dtr?->afternoon_in,
+                'afternoon_out'   => $dtr?->afternoon_out,
                 'status'          => $status,
                 'holiday_name'    => $status === 'holiday' ? $holidayName : null,
                 'hours_rendered'  => $dtr?->hours_rendered ?? 0,
