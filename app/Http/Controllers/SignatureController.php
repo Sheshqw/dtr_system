@@ -89,7 +89,7 @@ class SignatureController extends Controller
     private function assertPrivileged(Request $request): void
     {
         if (! $this->isPrivileged($request)) {
-            abort(403, 'Only Admins and HR Officers review print requests, so only they have a signature to manage.');
+            abort(403, 'Only HR Officers, Campus Admins, and the Super Admin review print requests, so only they have a signature to manage.');
         }
     }
 }

@@ -345,7 +345,7 @@ class BackupController extends Controller
     private function gate(\App\Models\User $user): void
     {
         if (! in_array($user->role, ['super_admin', 'admin', 'hr_officer'])) {
-            abort(403, 'Only Super Admin, Admin, or HR Officer can manage backups.');
+            abort(403, 'Only a Super Admin, Campus Admin, or HR Officer can manage backups.');
         }
     }
 

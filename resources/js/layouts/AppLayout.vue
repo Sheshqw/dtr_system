@@ -509,7 +509,7 @@ async function revokeOtherSessions() {
 // ── Role labels ───────────────────────────────────────────────────
 const ROLE_LABELS = {
   super_admin:     'Super Admin',
-  admin:           'Admin',
+  admin:           'Campus Admin',
   hr_officer:      'HR Officer',
   department_head: 'Department Head',
   employee:        'Faculty / Staff',

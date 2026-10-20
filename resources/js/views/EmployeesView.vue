@@ -73,7 +73,7 @@
       </select>
       <select v-model="filters.role" class="select-sm">
         <option value="">All Roles</option>
-        <option value="admin">Admin</option>
+        <option value="admin">Campus Admin</option>
         <option value="hr_officer">HR Officer</option>
         <option value="department_head">Department Head</option>
         <option value="employee">Faculty / Staff</option>
@@ -383,7 +383,7 @@
                       <option value="employee">Faculty / Staff</option>
                       <option value="department_head">Department Head</option>
                       <option value="hr_officer">HR Officer</option>
-                      <option value="admin">Admin</option>
+                      <option value="admin">Campus Admin</option>
                     </select>
                   </div>
                   <div class="col-span-2">
@@ -587,7 +587,7 @@
                       v-model.number="form.salary"
                       type="number" min="0" step="0.01"
                       class="form-input"
-                      placeholder="Confidential — visible to Admin/HR only"
+                      placeholder="Confidential — visible to HR Officers and admins only"
                     />
                   </div>
                   <div>

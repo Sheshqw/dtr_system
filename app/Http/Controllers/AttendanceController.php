@@ -26,7 +26,7 @@ class AttendanceController extends Controller
     public function punch(Request $request)
     {
         if (! $this->isPrivileged($request)) {
-            abort(403, 'Only the biometric bridge or Super Admin/Admin/HR Officer can submit punches.');
+            abort(403, 'Only the biometric bridge or a Super Admin, Campus Admin, or HR Officer can submit punches.');
         }
 
         $request->validate([

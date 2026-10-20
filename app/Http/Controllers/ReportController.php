@@ -100,7 +100,7 @@ class ReportController extends Controller
     {
         $this->authorizeView($request->user(), $employee);
         if (! $this->isPrivileged($request)) {
-            abort(403, 'You can preview your DTR here. Printed or downloaded copies must be requested from HR or Admin.');
+            abort(403, 'You can preview your DTR here. Printed or downloaded copies must be requested from your HR Officer or Campus Admin.');
         }
         $period = $this->resolvePeriod($request, $employee);
         $employee->loadMissing('department', 'shift', 'campus');
@@ -474,7 +474,7 @@ class ReportController extends Controller
                 ->first();
 
             if (! $consent) {
-                abort(403, 'You need HR/Admin approval before downloading your DTR for this period. Submit a print request from the Reports page.');
+                abort(403, 'You need HR Officer or Campus Admin approval before downloading your DTR for this period. Submit a print request from the Reports page.');
             }
 
             $consent->update(['used_at' => now()]);

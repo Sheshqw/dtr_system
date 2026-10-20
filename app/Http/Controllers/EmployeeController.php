@@ -713,7 +713,7 @@ class EmployeeController extends Controller
     private function requirePrivileged(Request $request): void
     {
         if (! $this->isPrivileged($request)) {
-            abort(403, 'Only Super Admin, Admin, or HR Officer can manage employee accounts.');
+            abort(403, 'Only a Super Admin, Campus Admin, or HR Officer can manage employee accounts.');
         }
     }
 

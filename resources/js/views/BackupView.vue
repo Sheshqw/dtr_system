@@ -59,7 +59,7 @@
         <div class="flex items-start gap-3 px-4 py-3 rounded-xl" style="background:#EFF6FF;border:1px solid #BFDBFE;">
           <InfoIcon class="w-4 h-4 mt-0.5 flex-shrink-0" style="color:#3B82F6;" />
           <div class="text-sm" style="color:#1D4ED8;">
-            <strong>Admin</strong> and <strong>HR Officer</strong> backups include your campus data only. &nbsp;
+            <strong>Campus Admin</strong> and <strong>HR Officer</strong> backups include your campus data only. &nbsp;
             <strong>Super Admin</strong> backups include all campuses. &nbsp;
             Backups are saved to <code class="font-mono px-1 rounded" style="background:#DBEAFE;">storage/app/backups/</code> on the server.
             <span class="font-semibold">Download a copy regularly</span> and store it in a safe location.

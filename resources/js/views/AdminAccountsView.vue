@@ -17,7 +17,7 @@
       <select v-model="filters.role" class="select-sm">
         <option value="">All Roles</option>
         <option value="super_admin">Super Admin</option>
-        <option value="admin">Admin</option>
+        <option value="admin">Campus Admin</option>
         <option value="hr_officer">HR Officer</option>
         <option value="department_head">Department Head</option>
       </select>

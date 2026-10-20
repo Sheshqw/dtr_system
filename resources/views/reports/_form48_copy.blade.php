@@ -170,12 +170,16 @@
       <div class="sig-over"></div>
       @if(!empty($signingReviewer))
         <div class="sig-name">{{ strtoupper($signingReviewer->full_name) }}</div>
-        <div class="sig-sub" style="font-weight:bold; text-transform:uppercase;">
-          {{ $signingReviewer->position ?: ucwords(str_replace('_', ' ', $signingReviewer->role)) }}
-        </div>
-      @else
-        <div class="sig-sub" style="font-weight:bold; text-transform:uppercase;">HR Officer</div>
       @endif
+      {{-- The verifying office on Form 48 is always HR, whoever in the system
+           approved the print request. Only an HR Officer's own position title
+           (e.g. "HRMO III") may stand in for it; a Campus Admin or Super Admin
+           approver still prints as "HR Officer". --}}
+      <div class="sig-sub" style="font-weight:bold; text-transform:uppercase;">
+        {{ (! empty($signingReviewer) && $signingReviewer->role === 'hr_officer' && $signingReviewer->position)
+            ? $signingReviewer->position
+            : 'HR Officer' }}
+      </div>
     </td>
   </tr>
 </table>

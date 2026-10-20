@@ -229,7 +229,7 @@ const { toast }   = useToast();
 const { confirm } = useConfirm();
 
 const ROLE_LABELS = {
-  super_admin: 'Super Admin', admin: 'Admin', hr_officer: 'HR Officer',
+  super_admin: 'Super Admin', admin: 'Campus Admin', hr_officer: 'HR Officer',
   department_head: 'Department Head', employee: 'Faculty / Staff',
 };
 function roleLabel(role) { return ROLE_LABELS[role] ?? role; }

@@ -186,7 +186,7 @@ class SystemHealthService
         $this->record(
             severity: 'warning',
             type: 'data_integrity',
-            message: "{$missing} campus(es) have no active Admin account assigned.",
+            message: "{$missing} campus(es) have no active Campus Admin account assigned.",
             file: 'campuses',
         );
 

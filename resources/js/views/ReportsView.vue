@@ -129,7 +129,7 @@
                 </div>
                 <LockIcon class="w-4 h-4 text-[#2E4A8C] flex-shrink-0" />
               </div>
-              <p class="text-xs text-[#6B7A94] -mt-1">You can preview your own DTR here. Printed or downloaded copies must be requested from HR or Admin.</p>
+              <p class="text-xs text-[#6B7A94] -mt-1">You can preview your own DTR here. Printed or downloaded copies must be requested from your HR Officer or Campus Admin.</p>
             </template>
 
             <!-- Month / Year -->
@@ -205,7 +205,7 @@
               </div>
               <div>
                 <h2 class="card-head-title">Print Permission — {{ selectedPeriodLabel }}</h2>
-                <p class="card-head-sub">Get HR/Admin sign-off to download an official, printable copy</p>
+                <p class="card-head-sub">Get HR Officer or Campus Admin sign-off to download an official, printable copy</p>
               </div>
             </div>
           </div>
@@ -228,7 +228,7 @@
                 Your last request for this period was denied<span v-if="currentPeriodConsent.reviewer_remarks">: “{{ currentPeriodConsent.reviewer_remarks }}”</span>. You may request again below.
               </p>
               <p class="text-sm text-[#475569]">
-                To download or print your official DTR for <strong>{{ selectedPeriodLabel }}</strong>, submit a request — HR or Admin must approve it first.
+                To download or print your official DTR for <strong>{{ selectedPeriodLabel }}</strong>, submit a request — your HR Officer or Campus Admin must approve it first.
               </p>
               <input
                 v-model="consentPurpose"
@@ -252,7 +252,7 @@
               <div class="flex items-center gap-3 px-4 py-3 rounded-lg border border-[#FDE68A]" style="background:#FFFBEB;">
                 <ClockIcon class="w-5 h-5 text-[#D97706] flex-shrink-0" />
                 <div class="min-w-0">
-                  <p class="text-sm font-semibold text-[#92400E]">Pending HR/Admin review</p>
+                  <p class="text-sm font-semibold text-[#92400E]">Pending HR Officer or Campus Admin review</p>
                   <p class="text-xs text-[#92400E]/80">Submitted {{ currentPeriodConsent.submitted_at }}</p>
                 </div>
               </div>
@@ -1341,7 +1341,7 @@ async function requestConsent() {
       ...periodParams.value,
       purpose: consentPurpose.value || null,
     });
-    toast('Print request submitted. HR/Admin will review it shortly.', 'success');
+    toast('Print request submitted. Your HR Officer or Campus Admin will review it shortly.', 'success');
     consentPurpose.value = '';
     await fetchMyConsents();
   } catch (err) {
