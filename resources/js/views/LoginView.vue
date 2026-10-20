@@ -38,9 +38,9 @@
 
     <!-- Decorative rings (top-right) -->
     <div class="absolute -top-24 -right-24 pointer-events-none">
-      <div class="ring ring-1"></div>
-      <div class="ring ring-2"></div>
-      <div class="ring ring-3"></div>
+      <div class="deco-ring deco-ring-1"></div>
+      <div class="deco-ring deco-ring-2"></div>
+      <div class="deco-ring deco-ring-3"></div>
     </div>
 
     <!-- Coastal wave layers (bottom) -->
@@ -54,12 +54,6 @@
               fill="rgba(0,87,168,0.20)"/>
       </svg>
     </div>
-
-    <!-- Gold shimmer line -->
-    <div
-      class="absolute left-0 right-0 h-px pointer-events-none"
-      style="top: 38%; background: linear-gradient(90deg, transparent 5%, rgba(201, 162, 39,0.14) 35%, rgba(201, 162, 39,0.26) 50%, rgba(201, 162, 39,0.14) 65%, transparent 95%);"
-    ></div>
 
     <!-- ── Centered card wrapper ───────────────────────────────────────────── -->
     <div class="relative w-full max-w-[460px] card-float">
@@ -419,14 +413,16 @@ async function handleLogin() {
 }
 
 /* ── Decorative rings ─────────────────────────────────────────────────────── */
-.ring {
+/* Not ".ring": that name collides with Tailwind's ring utilities, which
+   drew a dark outline over these faint circles. */
+.deco-ring {
   position: absolute;
   border-radius: 50%;
   border: 1px solid rgba(255,255,255,0.06);
 }
-.ring-1 { width: 260px; height: 260px; top: 0;    left: 0;    }
-.ring-2 { width: 400px; height: 400px; top: -70px; left: -70px; border-color: rgba(201, 162, 39,0.07); }
-.ring-3 { width: 540px; height: 540px; top: -140px; left: -140px; border-color: rgba(255,255,255,0.03); }
+.deco-ring-1 { width: 260px; height: 260px; top: 0;    left: 0;    }
+.deco-ring-2 { width: 400px; height: 400px; top: -70px; left: -70px; border-color: rgba(201, 162, 39,0.07); }
+.deco-ring-3 { width: 540px; height: 540px; top: -140px; left: -140px; border-color: rgba(255,255,255,0.03); }
 
 /* ── Card float ───────────────────────────────────────────────────────────── */
 .card-float {
