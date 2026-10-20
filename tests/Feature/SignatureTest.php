@@ -41,8 +41,8 @@ test('toggling a signature on without one uploaded fails', function () {
         ->assertStatus(422);
 });
 
-test('an admin can toggle their uploaded signature off and back on', function () {
-    $admin = User::factory()->admin()->create(['campus_id' => $this->campus->id]);
+test('an hr officer can toggle their uploaded signature off and back on', function () {
+    $admin = User::factory()->hrOfficer()->create(['campus_id' => $this->campus->id]);
 
     $this->actingAs($admin, 'sanctum')->postJson('/api/my-signature', [
         'signature' => UploadedFile::fake()->image('sig.png', 200, 80),

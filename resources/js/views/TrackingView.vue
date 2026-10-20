@@ -38,7 +38,7 @@
             <option v-for="y in years" :key="y" :value="y">{{ y }}</option>
           </select>
         </div>
-        <div v-if="auth.isAdmin || auth.isHrOfficer">
+        <div v-if="auth.isPrivileged">
           <label class="filter-label">Department</label>
           <select v-model="tardyFilters.department_id" class="filter-input w-44">
             <option value="">All Departments</option>
@@ -218,7 +218,7 @@
             <option :value="365">Last 12 Months</option>
           </select>
         </div>
-        <div v-if="auth.isAdmin || auth.isHrOfficer">
+        <div v-if="auth.isPrivileged">
           <label class="filter-label">Department</label>
           <select v-model="bfFilters.department_id" class="filter-input w-44">
             <option value="">All Departments</option>

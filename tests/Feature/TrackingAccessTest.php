@@ -53,8 +53,8 @@ test('an employee granted tracking by the super admin can open it, seeing only t
         ->assertJsonPath('0.employee_id', $employee->employee_id);
 });
 
-test('department heads, hr officers and admins keep tracking by default', function () {
-    foreach (['departmentHead', 'hrOfficer', 'admin'] as $state) {
+test('hr officers and the super admin keep tracking by default', function () {
+    foreach (['hrOfficer', 'superAdmin'] as $state) {
         $user = User::factory()->{$state}()->create(['campus_id' => $this->campus->id]);
 
         foreach (trackingUrls($this->month, $this->year) as $url) {
@@ -63,8 +63,8 @@ test('department heads, hr officers and admins keep tracking by default', functi
     }
 });
 
-test('revoking tracking from an admin in access control blocks it', function () {
-    $admin = User::factory()->admin()->create(['campus_id' => $this->campus->id]);
+test('revoking tracking from an hr officer in access control blocks it', function () {
+    $admin = User::factory()->hrOfficer()->create(['campus_id' => $this->campus->id]);
     setTrackingGrant($admin, false);
 
     foreach (trackingUrls($this->month, $this->year) as $url) {

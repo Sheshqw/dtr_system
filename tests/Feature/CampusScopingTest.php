@@ -10,8 +10,8 @@ beforeEach(function () {
 
 // ── Employee management ─────────────────────────────────────────────────
 
-test('an admin cannot update an employee from another campus', function () {
-    $admin        = User::factory()->admin()->create(['campus_id' => $this->campusA->id]);
+test('an hr officer cannot update an employee from another campus', function () {
+    $admin        = User::factory()->hrOfficer()->create(['campus_id' => $this->campusA->id]);
     $otherEmployee = User::factory()->create(['campus_id' => $this->campusB->id, 'first_name' => 'Original']);
 
     $this->actingAs($admin, 'sanctum')
@@ -21,8 +21,8 @@ test('an admin cannot update an employee from another campus', function () {
     expect($otherEmployee->fresh()->first_name)->toBe('Original');
 });
 
-test('an admin can update an employee within their own campus', function () {
-    $admin    = User::factory()->admin()->create(['campus_id' => $this->campusA->id]);
+test('an hr officer can update an employee within their own campus', function () {
+    $admin    = User::factory()->hrOfficer()->create(['campus_id' => $this->campusA->id]);
     $employee = User::factory()->create(['campus_id' => $this->campusA->id, 'first_name' => 'Original']);
 
     $this->actingAs($admin, 'sanctum')
@@ -43,25 +43,39 @@ test('a super admin can update an employee in any campus', function () {
     expect($employee->fresh()->first_name)->toBe('Updated');
 });
 
-test('an hr officer cannot promote an employee to admin', function () {
+test('an hr officer cannot promote an employee to super admin', function () {
     $hr       = User::factory()->hrOfficer()->create(['campus_id' => $this->campusA->id]);
     $employee = User::factory()->create(['campus_id' => $this->campusA->id, 'role' => 'employee']);
 
     $this->actingAs($hr, 'sanctum')
-        ->putJson("/api/employees/{$employee->id}", ['role' => 'admin'])
+        ->putJson("/api/employees/{$employee->id}", ['role' => 'super_admin'])
         ->assertStatus(422)
         ->assertJsonValidationErrors('role');
 
     expect($employee->fresh()->role)->toBe('employee');
 });
 
-test('an admin can promote an employee to admin within their own campus', function () {
-    $admin    = User::factory()->admin()->create(['campus_id' => $this->campusA->id]);
+test('an hr officer can make an employee an hr officer within their own campus', function () {
+    $hr       = User::factory()->hrOfficer()->create(['campus_id' => $this->campusA->id]);
     $employee = User::factory()->create(['campus_id' => $this->campusA->id, 'role' => 'employee']);
 
-    $this->actingAs($admin, 'sanctum')
-        ->putJson("/api/employees/{$employee->id}", ['role' => 'admin'])
+    $this->actingAs($hr, 'sanctum')
+        ->putJson("/api/employees/{$employee->id}", ['role' => 'hr_officer'])
         ->assertStatus(200);
 
-    expect($employee->fresh()->role)->toBe('admin');
+    expect($employee->fresh()->role)->toBe('hr_officer');
+});
+
+test('the removed admin and department head roles can no longer be assigned, even by a super admin', function () {
+    $super    = User::factory()->superAdmin()->create();
+    $employee = User::factory()->create(['campus_id' => $this->campusA->id, 'role' => 'employee']);
+
+    foreach (['admin', 'department_head'] as $role) {
+        $this->actingAs($super, 'sanctum')
+            ->putJson("/api/employees/{$employee->id}", ['role' => $role])
+            ->assertStatus(422)
+            ->assertJsonValidationErrors('role');
+    }
+
+    expect($employee->fresh()->role)->toBe('employee');
 });

@@ -52,11 +52,11 @@ class CampusAdminSeeder extends Seeder
                     'last_name'         => $info['name'][1],
                     'email'             => $info['email'],
                     'password'          => Hash::make('Admin@1234'),
-                    'role'              => 'admin',
+                    'role'              => 'hr_officer',
                     'campus_id'         => $campus->id,
                     'department_id'     => $dept->id,
                     'shift_id'          => $shift?->id,
-                    'position'          => 'Campus Administrator',
+                    'position'          => null,
                     'employment_status' => 'permanent',
                     'is_active'         => true,
                 ]

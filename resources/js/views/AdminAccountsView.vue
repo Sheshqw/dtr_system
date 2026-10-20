@@ -1,7 +1,7 @@
 <template>
   <div class="flex flex-col h-full">
 
-    <PageHeader title="Admin Accounts" subtitle="All privileged accounts across every campus" :icon="ShieldCheckIcon" />
+    <PageHeader title="Privileged Accounts" subtitle="All privileged accounts across every campus" :icon="ShieldCheckIcon" />
 
     <!-- Filters -->
     <div class="px-6 py-3 border-b border-[#E2E8F0] bg-white flex flex-wrap items-center gap-3">
@@ -17,9 +17,7 @@
       <select v-model="filters.role" class="select-sm">
         <option value="">All Roles</option>
         <option value="super_admin">Super Admin</option>
-        <option value="admin">Campus Admin</option>
         <option value="hr_officer">HR Officer</option>
-        <option value="department_head">Department Head</option>
       </select>
       <span class="ml-auto text-xs text-[#6B7A94]">{{ filtered.length }} account{{ filtered.length !== 1 ? 's' : '' }}</span>
     </div>
@@ -122,7 +120,7 @@ const loading  = ref(false);
 const filters = reactive({ search: '', campus: '', role: '' });
 usePersistedFilters('admin-accounts-filters', filters, ['search']);
 
-const PRIVILEGED = ['super_admin', 'admin', 'hr_officer', 'department_head'];
+const PRIVILEGED = ['super_admin', 'hr_officer'];
 
 const accounts = computed(() => refData.employees.filter(e => PRIVILEGED.includes(e.role)));
 

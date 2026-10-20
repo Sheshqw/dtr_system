@@ -20,7 +20,7 @@
       </button>
 
       <button
-        v-if="auth.isAdmin || auth.isHrOfficer"
+        v-if="auth.isPrivileged"
         @click="openAdd"
         class="inline-flex items-center gap-2 px-4 py-2 text-sm font-medium rounded-lg transition-colors ph-btn-primary"
       >
@@ -73,9 +73,7 @@
       </select>
       <select v-model="filters.role" class="select-sm">
         <option value="">All Roles</option>
-        <option value="admin">Campus Admin</option>
         <option value="hr_officer">HR Officer</option>
-        <option value="department_head">Department Head</option>
         <option value="employee">Faculty / Staff</option>
       </select>
       <select v-model="filters.status" class="select-sm">
@@ -157,7 +155,7 @@
                 <td class="td-cell"><div class="skel skel-text" style="width:90px;"></div></td>
                 <td class="td-cell text-center"><div class="skel skel-text mx-auto" style="width:64px;border-radius:12px;"></div></td>
                 <td class="td-cell text-center"><div class="skel skel-text mx-auto" style="width:50px;border-radius:12px;"></div></td>
-                <td v-if="auth.isAdmin || auth.isHrOfficer" class="td-cell text-right">
+                <td v-if="auth.isPrivileged" class="td-cell text-right">
                   <div class="skel skel-text ml-auto" style="width:44px;"></div>
                 </td>
               </tr>
@@ -203,7 +201,7 @@
                   {{ emp.is_active ? 'Active' : 'Inactive' }}
                 </span>
               </td>
-              <td class="td-cell text-right" v-if="auth.isAdmin || auth.isHrOfficer" data-label="Actions">
+              <td class="td-cell text-right" v-if="auth.isPrivileged" data-label="Actions">
                 <div class="flex items-center justify-end gap-1">
                   <button
                     @click="router.push({ name: 'reports', query: { employee: emp.employee_id } })"
@@ -381,9 +379,7 @@
                     <label class="form-label">System Role <span class="req">*</span></label>
                     <select v-model="form.role" class="form-input" required>
                       <option value="employee">Faculty / Staff</option>
-                      <option value="department_head">Department Head</option>
                       <option value="hr_officer">HR Officer</option>
-                      <option value="admin">Campus Admin</option>
                     </select>
                   </div>
                   <div class="col-span-2">
@@ -581,13 +577,13 @@
                     />
                     <p class="field-hint">An administrative title on top of their position, if any.</p>
                   </div>
-                  <div v-if="auth.isAdmin || auth.isHrOfficer">
+                  <div v-if="auth.isPrivileged">
                     <label class="form-label">Monthly Salary</label>
                     <input
                       v-model.number="form.salary"
                       type="number" min="0" step="0.01"
                       class="form-input"
-                      placeholder="Confidential — visible to HR Officers and admins only"
+                      placeholder="Confidential — visible to HR Officers and the Super Admin only"
                     />
                   </div>
                   <div>
@@ -1043,7 +1039,7 @@ const route       = useRoute();
 const { toast }   = useToast();
 const unsavedGuard = useUnsavedGuard();
 
-const canManage = computed(() => auth.isAdmin || auth.isHrOfficer);
+const canManage = computed(() => auth.isPrivileged);
 
 const { employees, departments, shifts } = storeToRefs(refData);
 const loading     = ref(false);

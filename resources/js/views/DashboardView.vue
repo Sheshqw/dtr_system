@@ -279,8 +279,10 @@
         <span class="ca-action">Review now →</span>
       </div>
 
-      <!-- ══ My Personal DTR Status (department heads) ════════════════ -->
-      <!-- Faculty / Staff get the richer MyAttendanceDashboard below instead. -->
+      <!-- ══ My Personal DTR Status ═════════════════════════════════ -->
+      <!-- Only for a Faculty / Staff account the Super Admin granted
+           "view other employees"; everyone else limited to their own
+           records gets the richer MyAttendanceDashboard below. -->
       <div v-if="!isAdminOrHr && !ownRecordsOnly" class="bg-white rounded-xl overflow-hidden" style="border:1px solid #E5E7EB;">
         <!-- Card header -->
         <div class="px-5 py-3.5 flex items-center gap-3" style="background:linear-gradient(135deg,#2E4A8C,#3D5CA3);border-radius:0.75rem 0.75rem 0 0;">
@@ -889,7 +891,7 @@ const todayMixGradient = computed(() => {
 });
 
 const isAdminOrHr = computed(() =>
-  ['super_admin', 'admin', 'hr_officer'].includes(auth.employee?.role)
+  ['super_admin', 'hr_officer'].includes(auth.employee?.role)
 );
 const isSuperAdmin = computed(() => auth.employee?.role === 'super_admin');
 // Faculty / Staff by default — they get only their own "My DTR Status" card.

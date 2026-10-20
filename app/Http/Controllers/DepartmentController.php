@@ -92,8 +92,8 @@ class DepartmentController extends Controller
 
     private function gate(\App\Models\User $user): void
     {
-        if (! in_array($user->role, ['super_admin', 'admin'])) {
-            abort(403, 'Only a Super Admin or Campus Admin can manage departments.');
+        if (! in_array($user->role, ['super_admin', 'hr_officer'])) {
+            abort(403, 'Only a Super Admin or HR Officer can manage departments.');
         }
     }
 }

@@ -70,11 +70,6 @@ class User extends Authenticatable
         return $this->role === 'super_admin';
     }
 
-    public function isAdmin(): bool
-    {
-        return $this->role === 'admin';
-    }
-
     public function campus()
     {
         return $this->belongsTo(Campus::class);
@@ -83,11 +78,6 @@ class User extends Authenticatable
     public function isHrOfficer(): bool
     {
         return $this->role === 'hr_officer';
-    }
-
-    public function isDepartmentHead(): bool
-    {
-        return $this->role === 'department_head';
     }
 
     public function department()

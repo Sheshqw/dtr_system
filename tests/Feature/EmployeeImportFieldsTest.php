@@ -21,11 +21,11 @@ function writeImportCsv(array $rows): UploadedFile
     return new UploadedFile($path, 'import.csv', 'text/csv', null, true);
 }
 
-test('salary is visible to super admin, admin, and hr officer but hidden from department head', function () {
+test('salary is visible to super admin and hr officer but hidden from an employee granted the roster', function () {
     $employee = User::factory()->create(['campus_id' => $this->campus->id, 'salary' => 45000]);
 
-    $admin = User::factory()->admin()->create(['campus_id' => $this->campus->id]);
-    $this->actingAs($admin, 'sanctum')
+    $super = User::factory()->superAdmin()->create();
+    $this->actingAs($super, 'sanctum')
         ->getJson("/api/employees?page=1")
         ->assertStatus(200)
         ->assertJsonFragment(['salary' => 45000.0]);
@@ -36,8 +36,11 @@ test('salary is visible to super admin, admin, and hr officer but hidden from de
         ->assertStatus(200)
         ->assertJsonFragment(['salary' => 45000.0]);
 
-    $deptHead = User::factory()->departmentHead()->create(['campus_id' => $this->campus->id]);
-    $res = $this->actingAs($deptHead, 'sanctum')
+    // A Faculty / Staff account the Super Admin granted "view other employees"
+    // can open the roster, but never sees salaries.
+    $viewer = User::factory()->create(['campus_id' => $this->campus->id]);
+    \App\Models\FeaturePermission::create(['user_id' => $viewer->id, 'feature_key' => 'dtr_records.view_all', 'granted' => true]);
+    $res = $this->actingAs($viewer, 'sanctum')
         ->getJson("/api/employees?page=1")
         ->assertStatus(200)
         ->json();
@@ -47,7 +50,7 @@ test('salary is visible to super admin, admin, and hr officer but hidden from de
 });
 
 test('importing a row with gender, birthdate, salary, and designation creates the employee with those fields', function () {
-    $admin = User::factory()->admin()->create(['campus_id' => $this->campus->id]);
+    $admin = User::factory()->hrOfficer()->create(['campus_id' => $this->campus->id]);
 
     $file = writeImportCsv([[
         'Employee ID'       => 'EMP-TEST-001',
@@ -83,7 +86,7 @@ test('importing a row with gender, birthdate, salary, and designation creates th
 });
 
 test('importing a row with an invalid gender produces a clear per-row error', function () {
-    $admin = User::factory()->admin()->create(['campus_id' => $this->campus->id]);
+    $admin = User::factory()->hrOfficer()->create(['campus_id' => $this->campus->id]);
 
     $file = writeImportCsv([[
         'Employee ID' => 'EMP-TEST-002',
@@ -102,7 +105,7 @@ test('importing a row with an invalid gender produces a clear per-row error', fu
 });
 
 test('importing a row with an invalid monthly salary produces a clear per-row error', function () {
-    $admin = User::factory()->admin()->create(['campus_id' => $this->campus->id]);
+    $admin = User::factory()->hrOfficer()->create(['campus_id' => $this->campus->id]);
 
     $file = writeImportCsv([[
         'Employee ID'    => 'EMP-TEST-003',

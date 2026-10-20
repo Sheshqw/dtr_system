@@ -44,7 +44,7 @@ trait ScopesByCampus
 
     protected function isPrivileged(Request $request): bool
     {
-        return in_array($request->user()->role, ['super_admin', 'admin', 'hr_officer']);
+        return in_array($request->user()->role, ['super_admin', 'hr_officer']);
     }
 
     /**

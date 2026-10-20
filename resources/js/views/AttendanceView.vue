@@ -3,7 +3,7 @@
 
     <PageHeader title="Attendance Logs" subtitle="Punch records and daily time records" :icon="ClockIcon">
       <button
-        v-if="(auth.isAdmin || auth.isHrOfficer) && activeTab === 'punches'"
+        v-if="auth.isPrivileged && activeTab === 'punches'"
         @click="openAddPunch"
         title="Add Manual Punch"
         class="inline-flex items-center gap-2 px-2.5 sm:px-4 py-2 text-sm font-medium rounded-lg transition-colors ph-btn-primary"
@@ -122,7 +122,7 @@
                 <th class="th-cell text-center">Source</th>
                 <th class="th-cell text-left">Device</th>
                 <th class="th-cell text-left">Remarks</th>
-                <th v-if="auth.isAdmin || auth.isHrOfficer" class="th-cell text-center">Action</th>
+                <th v-if="auth.isPrivileged" class="th-cell text-center">Action</th>
               </tr>
             </thead>
             <tbody>
@@ -162,7 +162,7 @@
                 </td>
                 <td class="td-cell text-[#64748B] font-mono text-xs" data-label="Device">{{ log.device_id ?? '—' }}</td>
                 <td class="td-cell text-[#64748B] text-xs max-w-[160px] truncate" data-label="Remarks">{{ log.remarks ?? '—' }}</td>
-                <td v-if="auth.isAdmin || auth.isHrOfficer" class="td-cell text-center" data-label="Action">
+                <td v-if="auth.isPrivileged" class="td-cell text-center" data-label="Action">
                   <button @click="confirmDelete(log)" class="p-1.5 rounded-md text-[#6B7A94] hover:text-[#EF4444] hover:bg-red-50 transition-colors">
                     <Trash2Icon class="w-4 h-4" />
                   </button>
@@ -190,14 +190,14 @@
               <option v-for="y in years" :key="y" :value="y">{{ y }}</option>
             </select>
           </div>
-          <div v-if="auth.isAdmin || auth.isHrOfficer">
+          <div v-if="auth.isPrivileged">
             <label class="block text-[10px] font-semibold text-[#64748B] uppercase tracking-wide mb-1">Department</label>
             <select v-model="dailyFilters.department_id" class="filter-input w-40">
               <option value="">All Departments</option>
               <option v-for="d in departments" :key="d.id" :value="d.id">{{ d.name }}</option>
             </select>
           </div>
-          <div v-if="!ownRecordsOnly && (auth.isAdmin || auth.isHrOfficer || auth.isDeptHead)">
+          <div v-if="!ownRecordsOnly">
             <label class="block text-[10px] font-semibold text-[#64748B] uppercase tracking-wide mb-1">Employee</label>
             <select v-model="dailyFilters.employee_id" class="filter-input w-44">
               <option value="">All Employees</option>

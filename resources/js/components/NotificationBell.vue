@@ -82,7 +82,7 @@ const total     = ref(0);
 const panelStyle = ref({});
 
 const hasCritical = computed(() => alerts.value.some(a => a.severity === 'critical'));
-const isVisible   = computed(() => ['super_admin', 'admin', 'hr_officer'].includes(auth.employee?.role));
+const isVisible   = computed(() => ['super_admin', 'hr_officer'].includes(auth.employee?.role));
 
 function positionPanel() {
   const rect = triggerEl.value?.getBoundingClientRect();

@@ -713,20 +713,19 @@ class EmployeeController extends Controller
     private function requirePrivileged(Request $request): void
     {
         if (! $this->isPrivileged($request)) {
-            abort(403, 'Only a Super Admin, Campus Admin, or HR Officer can manage employee accounts.');
+            abort(403, 'Only a Super Admin or HR Officer can manage employee accounts.');
         }
     }
 
     /**
-     * Roles the acting user is allowed to assign to an employee. Prevents an
-     * HR Officer from promoting an account to admin/super_admin.
+     * Roles the acting user is allowed to assign to an employee. Only a
+     * Super Admin can create another Super Admin.
      */
     private function assignableRoles(Request $request): array
     {
         return match ($request->user()->role) {
-            'super_admin' => ['super_admin', 'admin', 'hr_officer', 'department_head', 'employee'],
-            'admin'       => ['admin', 'hr_officer', 'department_head', 'employee'],
-            default       => ['hr_officer', 'department_head', 'employee'],
+            'super_admin' => ['super_admin', 'hr_officer', 'employee'],
+            default       => ['hr_officer', 'employee'],
         };
     }
 

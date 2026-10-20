@@ -27,8 +27,6 @@ class TrackingController extends Controller
 
         if ($user->role === 'employee') {
             $query->where('employee_id', $user->id);
-        } elseif ($user->role === 'department_head') {
-            $query->whereHas('employee', fn($q) => $q->where('department_id', $user->department_id));
         } elseif (! $this->isSuperAdmin($request)) {
             $query->whereHas('employee', fn($q) => $q->where('campus_id', $user->campus_id));
         } elseif ($request->filled('campus_id')) {
@@ -94,8 +92,6 @@ class TrackingController extends Controller
 
         if ($user->role === 'employee') {
             $query->where('employee_id', $user->id);
-        } elseif ($user->role === 'department_head') {
-            $query->whereHas('employee', fn($q) => $q->where('department_id', $user->department_id));
         } elseif (! $this->isSuperAdmin($request)) {
             $query->whereHas('employee', fn($q) => $q->where('campus_id', $user->campus_id));
         } elseif ($request->filled('campus_id')) {

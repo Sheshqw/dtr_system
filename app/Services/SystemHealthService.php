@@ -69,7 +69,7 @@ class SystemHealthService
         $found += $this->checkMissingGovernmentIds();
         $found += $this->checkEmployeesMissingShift();
         $found += $this->checkDepartmentsMissingHead();
-        $found += $this->checkCampusesMissingAdmin();
+        $found += $this->checkCampusesMissingHrOfficer();
 
         return $found;
     }
@@ -171,22 +171,22 @@ class SystemHealthService
         return 1;
     }
 
-    private function checkCampusesMissingAdmin(): int
+    private function checkCampusesMissingHrOfficer(): int
     {
         $campusIds = DB::table('campuses')->pluck('id');
-        $withAdmin = DB::table('employees')
-            ->where('role', 'admin')
+        $withHr    = DB::table('employees')
+            ->where('role', 'hr_officer')
             ->where('is_active', true)
             ->distinct()
             ->pluck('campus_id');
 
-        $missing = $campusIds->diff($withAdmin)->count();
+        $missing = $campusIds->diff($withHr)->count();
         if ($missing === 0) return 0;
 
         $this->record(
             severity: 'warning',
             type: 'data_integrity',
-            message: "{$missing} campus(es) have no active Campus Admin account assigned.",
+            message: "{$missing} campus(es) have no active HR Officer account assigned.",
             file: 'campuses',
         );
 

@@ -79,8 +79,8 @@ test('a reviewer cannot approve their own print request', function () {
     expect($consent->fresh()->status)->toBe('pending');
 });
 
-test('an admin cannot review a print request from another campus', function () {
-    $admin    = User::factory()->admin()->create(['campus_id' => $this->campusA->id]);
+test('an hr officer cannot review a print request from another campus', function () {
+    $admin    = User::factory()->hrOfficer()->create(['campus_id' => $this->campusA->id]);
     $employee = User::factory()->create(['campus_id' => $this->campusB->id]);
 
     $consent = DtrPrintConsent::create([
@@ -97,8 +97,8 @@ test('an admin cannot review a print request from another campus', function () {
     expect($consent->fresh()->status)->toBe('pending');
 });
 
-test('an admin can approve a print request from their own campus, letting the employee download', function () {
-    $admin    = User::factory()->admin()->create(['campus_id' => $this->campusA->id]);
+test('an hr officer can approve a print request from their own campus, letting the employee download', function () {
+    $admin    = User::factory()->hrOfficer()->create(['campus_id' => $this->campusA->id]);
     $employee = User::factory()->create(['campus_id' => $this->campusA->id]);
 
     $consent = DtrPrintConsent::create([
@@ -142,7 +142,7 @@ test('a download renders fine when the approving reviewer has a signature on fil
 });
 
 test('the default queue view returns every pending request but caps reviewed history', function () {
-    $admin = User::factory()->admin()->create(['campus_id' => $this->campusA->id]);
+    $admin = User::factory()->hrOfficer()->create(['campus_id' => $this->campusA->id]);
 
     // 3 pending requests (different employees, same period is fine since
     // each is a different employee) — all of these must come back.

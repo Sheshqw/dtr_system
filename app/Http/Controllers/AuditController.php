@@ -13,7 +13,7 @@ class AuditController extends Controller
     public function index(Request $request)
     {
         $user = $request->user();
-        if (! in_array($user->role, ['super_admin', 'admin', 'hr_officer'])) {
+        if (! in_array($user->role, ['super_admin', 'hr_officer'])) {
             abort(403, 'Unauthorized.');
         }
 

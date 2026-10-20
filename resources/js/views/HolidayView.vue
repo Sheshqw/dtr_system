@@ -397,7 +397,7 @@ const deleting  = ref(false);
 const view       = ref('calendar');
 const autofilling = ref(false);
 
-const canManage = computed(() => auth.employee?.role === 'admin' || auth.employee?.role === 'hr_officer');
+const canManage = computed(() => auth.isPrivileged);
 
 const modal = ref({ open: false, editing: null, saving: false, error: '' });
 const form  = ref({ name: '', date: '', type: 'regular' });

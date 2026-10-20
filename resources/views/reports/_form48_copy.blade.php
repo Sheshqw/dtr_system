@@ -173,7 +173,7 @@
       @endif
       {{-- The verifying office on Form 48 is always HR, whoever in the system
            approved the print request. Only an HR Officer's own position title
-           (e.g. "HRMO III") may stand in for it; a Campus Admin or Super Admin
+           (e.g. "HRMO III") may stand in for it; a Super Admin
            approver still prints as "HR Officer". --}}
       <div class="sig-sub" style="font-weight:bold; text-transform:uppercase;">
         {{ (! empty($signingReviewer) && $signingReviewer->role === 'hr_officer' && $signingReviewer->position)

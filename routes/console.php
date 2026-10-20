@@ -21,7 +21,8 @@ Artisan::command('inspire', function () {
 
 // Automated daily backup at 2:00 AM — keeps last 14 backups per campus
 Schedule::call(function () {
-    $admins = User::whereIn('role', ['super_admin', 'admin'])->get();
+    // One backup per campus that has an HR Officer, plus one all-campus backup.
+    $admins = User::whereIn('role', ['super_admin', 'hr_officer'])->get();
 
     // Group by campus so each campus gets its own backup file
     $done = [];

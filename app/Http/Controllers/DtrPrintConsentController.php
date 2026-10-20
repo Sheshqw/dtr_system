@@ -155,7 +155,7 @@ class DtrPrintConsentController extends Controller
         ));
 
         return response()->json([
-            'message' => 'Print request submitted. Your HR Officer or Campus Admin will review it shortly.',
+            'message' => 'Print request submitted. Your HR Officer will review it shortly.',
             'consent' => $this->formatConsent($consent, false),
         ], 201);
     }
@@ -163,7 +163,7 @@ class DtrPrintConsentController extends Controller
     public function review(Request $request, DtrPrintConsent $consent)
     {
         if (! $this->isPrivileged($request)) {
-            abort(403, 'Only HR Officers, Campus Admins, and the Super Admin can review print requests.');
+            abort(403, 'Only HR Officers and the Super Admin can review print requests.');
         }
 
         $this->assertSameCampus($request, $consent->employee?->campus_id);

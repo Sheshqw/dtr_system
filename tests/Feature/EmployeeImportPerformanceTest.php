@@ -6,7 +6,7 @@ use Illuminate\Http\UploadedFile;
 
 test('importing 1,000 employees in one request finishes well under a minute', function () {
     $campus = Campus::factory()->create(['code' => 'CAN']);
-    $admin  = User::factory()->admin()->create(['campus_id' => $campus->id]);
+    $admin  = User::factory()->hrOfficer()->create(['campus_id' => $campus->id]);
 
     $path = tempnam(sys_get_temp_dir(), 'bulk_import') . '.csv';
     $fh   = fopen($path, 'w');

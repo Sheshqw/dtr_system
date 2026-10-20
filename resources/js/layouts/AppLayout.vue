@@ -154,23 +154,6 @@
             <span v-if="$route.name === item.name" class="nav-pip" />
           </RouterLink>
 
-          <template v-if="isAdmin">
-            <p class="nav-section-label" style="margin-top: 18px;">Administration</p>
-            <RouterLink
-              v-for="item in adminOnlyItems"
-              :key="item.name"
-              :to="item.to"
-              class="nav-link group"
-              :class="$route.name === item.name ? 'nav-active' : 'nav-idle'"
-              @click="sidebarOpen = false"
-            >
-              <span class="nav-icon-wrap" :class="$route.name === item.name ? 'nav-icon-active' : 'nav-icon-idle'">
-                <component :is="item.icon" class="w-5 h-5" />
-              </span>
-              <span class="nav-label">{{ item.label }}</span>
-              <span v-if="$route.name === item.name" class="nav-pip" />
-            </RouterLink>
-          </template>
 
           <template v-if="isSuperAdmin">
             <p class="nav-section-label" style="margin-top: 18px; color: rgba(201, 162, 39,0.55);">Super Admin</p>
@@ -509,9 +492,7 @@ async function revokeOtherSessions() {
 // ── Role labels ───────────────────────────────────────────────────
 const ROLE_LABELS = {
   super_admin:     'Super Admin',
-  admin:           'Campus Admin',
   hr_officer:      'HR Officer',
-  department_head: 'Department Head',
   employee:        'Faculty / Staff',
 };
 function roleLabel(role) {
@@ -537,29 +518,22 @@ const hrItems = [
   { name: 'shifts',    label: 'Shifts',      to: { name: 'shifts'    }, icon: TimerIcon       },
   { name: 'holidays',  label: 'Holidays',    to: { name: 'holidays'  }, icon: CalendarIcon    },
   { name: 'audit',     label: 'Audit Trail', to: { name: 'audit'     }, icon: ShieldCheckIcon },
-  { name: 'biometric', label: 'Biometric',   to: { name: 'biometric' }, icon: WifiIcon        },
-  // Shown once here for every role that can back up (Super Admin, Admin,
-  // HR Officer) — it used to sit in both the Administration and Super
-  // Admin groups, so a Super Admin saw it twice.
-  { name: 'backup',    label: 'Backup',      to: { name: 'backup'    }, icon: DatabaseIcon    },
-];
-
-const adminOnlyItems = [
-  { name: 'departments', label: 'Departments', to: { name: 'departments' }, icon: Building2Icon },
+  { name: 'biometric',   label: 'Biometric',   to: { name: 'biometric'   }, icon: WifiIcon        },
+  { name: 'departments', label: 'Departments', to: { name: 'departments' }, icon: Building2Icon   },
+  { name: 'backup',      label: 'Backup',      to: { name: 'backup'      }, icon: DatabaseIcon    },
 ];
 
 const superAdminItems = [
   { name: 'campuses',       label: 'Campuses',       to: { name: 'campuses'       }, icon: MapPinIcon      },
-  { name: 'admin-accounts', label: 'Admin Accounts', to: { name: 'admin-accounts' }, icon: ShieldCheckIcon },
+  { name: 'admin-accounts', label: 'Privileged Accounts', to: { name: 'admin-accounts' }, icon: ShieldCheckIcon },
   { name: 'access-control', label: 'Access Control', to: { name: 'access-control' }, icon: LockIcon        },
   { name: 'system-health',  label: 'System Health',  to: { name: 'system-health'  }, icon: HeartPulseIcon  },
   { name: 'settings',       label: 'Settings',       to: { name: 'settings'       }, icon: SettingsIcon    },
 ];
 
 const isSuperAdmin = computed(() => auth.employee?.role === 'super_admin');
-const isAdmin      = computed(() => auth.employee?.role === 'admin' || isSuperAdmin.value);
 const isAdminOrHr  = computed(() =>
-  ['super_admin', 'admin', 'hr_officer'].includes(auth.employee?.role)
+  ['super_admin', 'hr_officer'].includes(auth.employee?.role)
 );
 
 const initials = computed(() => {

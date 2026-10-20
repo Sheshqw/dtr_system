@@ -34,19 +34,13 @@ test('with no approver the verifier title is HR Officer', function () {
     expect(verifierTitle(renderForm48($this->employee, null)))->toBe('HR Officer');
 });
 
-test('a campus admin approver still prints as HR Officer, even with a position on file', function () {
-    $admin = User::factory()->admin()->create(['campus_id' => $this->campus->id, 'position' => 'Administrative Officer V']);
-
-    $html = renderForm48($this->employee, $admin);
-
-    expect(verifierTitle($html))->toBe('HR Officer')
-        ->and($html)->toContain(strtoupper($admin->full_name));
-});
-
-test('a super admin approver prints as HR Officer', function () {
+test('a super admin approver prints as HR Officer, even with a position on file', function () {
     $super = User::factory()->superAdmin()->create(['position' => 'ICT Director']);
 
-    expect(verifierTitle(renderForm48($this->employee, $super)))->toBe('HR Officer');
+    $html = renderForm48($this->employee, $super);
+
+    expect(verifierTitle($html))->toBe('HR Officer')
+        ->and($html)->toContain(strtoupper($super->full_name));
 });
 
 test('an hr officer approver shows their own position title when one is on file', function () {

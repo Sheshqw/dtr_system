@@ -26,7 +26,7 @@ class AttendanceController extends Controller
     public function punch(Request $request)
     {
         if (! $this->isPrivileged($request)) {
-            abort(403, 'Only the biometric bridge or a Super Admin, Campus Admin, or HR Officer can submit punches.');
+            abort(403, 'Only the biometric bridge or a Super Admin or HR Officer can submit punches.');
         }
 
         $request->validate([
@@ -219,8 +219,6 @@ class AttendanceController extends Controller
 
         if ($this->seesOwnRecordsOnly($request)) {
             $query->where('employee_id', $user->id);
-        } elseif ($user->role === 'department_head') {
-            $query->whereHas('employee', fn($q) => $q->where('department_id', $user->department_id));
         } elseif (! $this->isSuperAdmin($request)) {
             $query->whereHas('employee', fn($q) => $q->where('campus_id', $user->campus_id));
         } elseif ($request->filled('campus_id')) {
@@ -272,8 +270,6 @@ class AttendanceController extends Controller
 
         if ($ownOnly) {
             $query->where('employee_id', $user->id);
-        } elseif ($user->role === 'department_head') {
-            $query->whereHas('employee', fn($q) => $q->where('department_id', $user->department_id));
         } elseif (! $this->isSuperAdmin($request)) {
             $query->whereHas('employee', fn($q) => $q->where('campus_id', $user->campus_id));
         } elseif ($request->filled('campus_id')) {
@@ -306,8 +302,7 @@ class AttendanceController extends Controller
         // whatever it just created.
         $scopedEmployeeIds = User::query()
             ->when($ownOnly, fn($q) => $q->where('id', $user->id))
-            ->when(! $ownOnly && $user->role === 'department_head', fn($q) => $q->where('department_id', $user->department_id))
-            ->when(! $ownOnly && ! $this->isSuperAdmin($request) && $user->role !== 'department_head', fn($q) => $q->where('campus_id', $user->campus_id))
+            ->when(! $ownOnly && ! $this->isSuperAdmin($request), fn($q) => $q->where('campus_id', $user->campus_id))
             ->when($this->isSuperAdmin($request) && $request->filled('campus_id'), fn($q) => $q->where('campus_id', $request->campus_id))
             ->when($request->filled('department_id'), fn($q) => $q->where('department_id', $request->department_id))
             ->when($request->filled('employee_id'), fn($q) => $q->where('id', $request->employee_id))
@@ -544,10 +539,6 @@ class AttendanceController extends Controller
                 return;
             }
             abort(403, 'Unauthorized.');
-        }
-
-        if ($viewer->role === 'department_head' && $viewer->department_id === $target->department_id) {
-            return;
         }
 
         if ($viewer->id === $target->id) {

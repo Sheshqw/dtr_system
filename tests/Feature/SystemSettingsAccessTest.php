@@ -26,8 +26,8 @@ test('only the super admin can change system settings', function () {
         ->assertJsonPath('max_login_attempts', 7);
 });
 
-test('a campus admin cannot change system settings or reset the logo', function () {
-    $admin = User::factory()->admin()->create();
+test('an hr officer cannot change system settings or reset the logo', function () {
+    $admin = User::factory()->hrOfficer()->create();
 
     $this->actingAs($admin, 'sanctum')
         ->postJson('/api/system-settings', settingsPayload(['system_name' => 'Hijacked']))
@@ -40,8 +40,8 @@ test('a campus admin cannot change system settings or reset the logo', function 
     expect(SystemSetting::current()->system_name)->toBe('NEMSU');
 });
 
-test('a campus admin only receives the public branding, not the security policy', function () {
-    $this->actingAs(User::factory()->admin()->create(), 'sanctum')
+test('an hr officer only receives the public branding, not the security policy', function () {
+    $this->actingAs(User::factory()->hrOfficer()->create(), 'sanctum')
         ->getJson('/api/system-settings')
         ->assertOk()
         ->assertJsonStructure(['system_name', 'short_name', 'tagline', 'turnstile'])

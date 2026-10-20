@@ -15,15 +15,12 @@ const props = defineProps({ role: String });
 
 const map = {
   super_admin:     { label: 'Super Admin',     bg: 'rb-gold',      text: '',                gold: true },
-  admin:           { label: 'Campus Admin',    bg: 'bg-blue-50',   text: 'text-blue-700'   },
   hr_officer:      { label: 'HR Officer',      bg: 'bg-violet-50', text: 'text-violet-700' },
-  department_head: { label: 'Dept. Head',      bg: 'bg-amber-50',  text: 'text-amber-700'  },
   employee:        { label: 'Faculty / Staff', bg: 'bg-slate-50',  text: 'text-slate-600'  },
 };
 
 const ROLE_LABELS = {
-  super_admin: 'Super Admin', admin: 'Campus Admin', hr_officer: 'HR Officer',
-  department_head: 'Dept. Head', employee: 'Faculty / Staff',
+  super_admin: 'Super Admin', hr_officer: 'HR Officer', employee: 'Faculty / Staff',
 };
 
 const cfg = computed(() =>

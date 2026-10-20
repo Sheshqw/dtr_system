@@ -100,7 +100,7 @@ class ReportController extends Controller
     {
         $this->authorizeView($request->user(), $employee);
         if (! $this->isPrivileged($request)) {
-            abort(403, 'You can preview your DTR here. Printed or downloaded copies must be requested from your HR Officer or Campus Admin.');
+            abort(403, 'You can preview your DTR here. Printed or downloaded copies must be requested from your HR Officer.');
         }
         $period = $this->resolvePeriod($request, $employee);
         $employee->loadMissing('department', 'shift', 'campus');
@@ -177,7 +177,7 @@ class ReportController extends Controller
             ->when($campusId,  fn($q) => $q->where('campus_id',     $campusId))
             ->when($deptId,    fn($q) => $q->where('department_id', $deptId))
             ->when($staffType, fn($q) => $q->where('staff_type',    $staffType))
-            ->whereNotIn('role', ['super_admin', 'admin'])
+            ->where('role', '!=', 'super_admin')
             ->orderBy('last_name')
             ->get();
 
@@ -384,7 +384,7 @@ class ReportController extends Controller
         $employees = User::with('department')
             ->when($campusId,  fn($q) => $q->where('campus_id',     $campusId))
             ->when($deptId,    fn($q) => $q->where('department_id', $deptId))
-            ->whereNotIn('role', ['super_admin', 'admin'])
+            ->where('role', '!=', 'super_admin')
             ->where('is_active', true)
             ->orderBy('last_name')
             ->get();
@@ -474,7 +474,7 @@ class ReportController extends Controller
                 ->first();
 
             if (! $consent) {
-                abort(403, 'You need HR Officer or Campus Admin approval before downloading your DTR for this period. Submit a print request from the Reports page.');
+                abort(403, 'You need HR Officer approval before downloading your DTR for this period. Submit a print request from the Reports page.');
             }
 
             $consent->update(['used_at' => now()]);

@@ -36,10 +36,10 @@ class DatabaseSeeder extends Seeder
             'last_name'         => 'Administrator',
             'email'             => 'admin@nemsu-cantilan.edu.ph',
             'password'          => Hash::make('Admin@1234'),
-            'role'              => 'admin',
+            'role'              => 'hr_officer',
             'department_id'     => $adminDept->id,
             'shift_id'          => $shift->id,
-            'position'          => 'System Administrator',
+            'position'          => null,
             'employment_status' => 'permanent',
             'is_active'         => true,
         ]);

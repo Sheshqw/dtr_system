@@ -229,8 +229,7 @@ const { toast }   = useToast();
 const { confirm } = useConfirm();
 
 const ROLE_LABELS = {
-  super_admin: 'Super Admin', admin: 'Campus Admin', hr_officer: 'HR Officer',
-  department_head: 'Department Head', employee: 'Faculty / Staff',
+  super_admin: 'Super Admin', hr_officer: 'HR Officer', employee: 'Faculty / Staff',
 };
 function roleLabel(role) { return ROLE_LABELS[role] ?? role; }
 function initials(name) { return (name ?? '').split(' ').map(n => n[0]).slice(0, 2).join('').toUpperCase(); }

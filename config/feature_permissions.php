@@ -26,15 +26,6 @@ return [
             'tracking_analytics'    => true,
             'notifications_manage'  => true,
         ],
-        'admin' => [
-            'dtr_records.view_all' => true,
-            'dtr_generation.export' => true,
-            'shift_management'      => true,
-            'holiday_calendar'      => true,
-            'system_health'         => false,
-            'tracking_analytics'    => true,
-            'notifications_manage'  => true,
-        ],
         'hr_officer' => [
             'dtr_records.view_all' => true,
             'dtr_generation.export' => true,
@@ -43,15 +34,6 @@ return [
             'system_health'         => false,
             'tracking_analytics'    => true,
             'notifications_manage'  => true,
-        ],
-        'department_head' => [
-            'dtr_records.view_all' => true,
-            'dtr_generation.export' => false,
-            'shift_management'      => false,
-            'holiday_calendar'      => false,
-            'system_health'         => false,
-            'tracking_analytics'    => true,
-            'notifications_manage'  => false,
         ],
         'employee' => [
             'dtr_records.view_all' => false,

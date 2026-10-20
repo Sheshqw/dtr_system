@@ -26,7 +26,7 @@ class BiometricController extends Controller
      */
     private function assertCanManageBiometric(Request $request): void
     {
-        if (! in_array($request->user()->role, ['super_admin', 'admin', 'hr_officer'])) {
+        if (! in_array($request->user()->role, ['super_admin', 'hr_officer'])) {
             abort(403, 'Unauthorized.');
         }
     }

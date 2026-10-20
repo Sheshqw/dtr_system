@@ -19,9 +19,9 @@ export const useAuthStore = defineStore('auth', () => {
 
     const isAuthenticated = computed(() => !!token.value);
     const isSuperAdmin    = computed(() => employee.value?.role === 'super_admin');
-    const isAdmin         = computed(() => employee.value?.role === 'admin' || isSuperAdmin.value);
     const isHrOfficer     = computed(() => employee.value?.role === 'hr_officer');
-    const isDeptHead      = computed(() => employee.value?.role === 'department_head');
+    // Super Admin or HR Officer — the two roles that manage records.
+    const isPrivileged    = computed(() => isSuperAdmin.value || isHrOfficer.value);
 
     function setAuth(data, remember = true) {
         token.value    = data.token;
@@ -83,5 +83,5 @@ export const useAuthStore = defineStore('auth', () => {
         axios.defaults.headers.common['Authorization'] = `Bearer ${token.value}`;
     }
 
-    return { token, employee, isAuthenticated, isSuperAdmin, isAdmin, isHrOfficer, isDeptHead, login, logout, refreshAccess };
+    return { token, employee, isAuthenticated, isSuperAdmin, isHrOfficer, isPrivileged, login, logout, refreshAccess };
 });

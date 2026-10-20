@@ -42,19 +42,9 @@ class UserFactory extends Factory
         return $this->state(fn () => ['role' => 'super_admin', 'campus_id' => null]);
     }
 
-    public function admin(): static
-    {
-        return $this->state(fn () => ['role' => 'admin']);
-    }
-
     public function hrOfficer(): static
     {
         return $this->state(fn () => ['role' => 'hr_officer']);
-    }
-
-    public function departmentHead(): static
-    {
-        return $this->state(fn () => ['role' => 'department_head']);
     }
 
     public function inactive(): static
