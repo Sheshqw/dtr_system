@@ -76,26 +76,38 @@
         $inPeriod = $d >= $period->startDay() && $d <= $period->endDay();
         $rec      = $inPeriod ? $records->get($d) : null;
         $status   = $inPeriod ? ($rec?->status ?? ($isWknd ? 'weekend' : 'absent')) : null;
+        // That day's own holiday (name + regular/special), shown on its row
+        // instead of a generic "Holiday" — on a weekend too, where the row is
+        // otherwise blank. A weekday holiday the employee worked keeps its times.
+        $holiday  = $inPeriod ? (($holidays ?? [])[$date->toDateString()] ?? null) : null;
+        // 'absent' here only ever means "no punches", so a declared holiday
+        // still reads as the holiday even if its DTR row wasn't filled in yet.
+        $showHol  = $holiday && ($isWknd || in_array($status, ['holiday', 'absent'], true));
 
         $utMins  = ($inPeriod && ! $isWknd) ? (int)($rec?->undertime_minutes ?? 0) : 0;
         $otMins  = ($inPeriod && ! $isWknd) ? (int)($rec?->overtime_minutes  ?? 0) : 0;
 
         // Weekend labeling is just the calendar, not attendance data — shown
-        // for every row regardless of which half was requested. ABS/HOL/LV
-        // only make sense for a day actually covered by this DTR.
+        // for every row regardless of which half was requested. HOL/LV only
+        // make sense for a day actually covered by this DTR. A day with no
+        // punches gets no remark: its empty time columns already say so, and
+        // an "ABS" would also wrongly mark days that haven't happened yet.
         $remark  = '';
         if ($isWknd) {
             $remark = $date->isSaturday() ? 'SAT' : 'SUN';
         } elseif ($inPeriod) {
-            if ($status === 'absent')  $remark = 'ABS';
-            elseif ($status === 'holiday') $remark = 'HOL';
+            if ($status === 'holiday' || $showHol) $remark = 'HOL';
             elseif ($status === 'on_leave') $remark = 'LV';
         }
       @endphp
       <tr class="{{ $isWknd ? 'row-wknd' : '' }}">
         <td class="c-day">{{ $d }}</td>
 
-        @if ($isWknd || ! $inPeriod)
+        @if ($showHol)
+          <td colspan="4" style="font-size:5.5pt;font-style:italic;color:#555;white-space:nowrap;overflow:hidden;">{{ \Illuminate\Support\Str::limit($holiday->label(), 48) }}</td>
+          <td class="c-ut"></td>
+          <td class="c-ut"></td>
+        @elseif ($isWknd || ! $inPeriod)
           <td class="c-tm"></td>
           <td class="c-tm"></td>
           <td class="c-tm"></td>

@@ -5,6 +5,7 @@ namespace App\Http\Controllers;
 use App\Http\Traits\ScopesByCampus;
 use App\Models\DailyDtr;
 use App\Models\DtrPrintConsent;
+use App\Models\Holiday;
 use App\Models\User;
 use App\Services\WorkingHoursService;
 use App\Support\DtrPeriod;
@@ -47,8 +48,10 @@ class ReportController extends Controller
             'hours_rendered'    => round($records->sum('hours_rendered'), 2),
         ];
 
+        $holidays = Holiday::keyedBetween($period->start()->toDateString(), $period->end()->toDateString());
+
         $pdf = Pdf::loadView('reports.form48', compact(
-            'employee', 'records', 'period', 'year', 'month', 'totals', 'signingReviewer'
+            'employee', 'records', 'period', 'year', 'month', 'totals', 'signingReviewer', 'holidays'
         ))->setPaper('a4', 'portrait');
 
         $filename = "DTR_{$employee->employee_id}_{$year}_{$month}{$period->filenameSuffix()}.pdf";
@@ -61,7 +64,8 @@ class ReportController extends Controller
         $this->authorizeView($request->user(), $employee);
         $period = $this->resolvePeriod($request, $employee);
 
-        $records = $this->periodRecords($employee, $period);
+        $records  = $this->periodRecords($employee, $period);
+        $holidays = Holiday::keyedBetween($period->start()->toDateString(), $period->end()->toDateString());
 
         return response()->json([
             'employee'   => [
@@ -83,6 +87,12 @@ class ReportController extends Controller
                 'overtime_minutes'  => $records->sum('overtime_minutes'),
                 'hours_rendered'    => round($records->sum('hours_rendered'), 2),
             ],
+            // Every declared holiday in the period, by day — including ones on
+            // a weekend, which have no 'holiday' record to carry the name.
+            'holidays'   => collect($holidays)->map(fn($h) => [
+                'day'   => $h->date->day,
+                'label' => $h->label(),
+            ])->values(),
             'records'    => $records->map(fn($r) => [
                 'day'          => $r->work_date->day,
                 'day_name'     => $r->work_date->format('D'),
@@ -105,12 +115,13 @@ class ReportController extends Controller
         $period = $this->resolvePeriod($request, $employee);
         $employee->loadMissing('department', 'shift', 'campus');
 
-        $records = $this->periodRecords($employee, $period);
+        $records  = $this->periodRecords($employee, $period);
+        $holidays = Holiday::keyedBetween($period->start()->toDateString(), $period->end()->toDateString());
 
         $monthLabel = $period->label();
         $filename   = "DTR_{$employee->employee_id}_{$period->year}_{$period->month}{$period->filenameSuffix()}.csv";
 
-        return response()->streamDownload(function () use ($employee, $records, $monthLabel) {
+        return response()->streamDownload(function () use ($employee, $records, $monthLabel, $holidays) {
             $out = fopen('php://output', 'w');
             fwrite($out, "\xEF\xBB\xBF");
             fputcsv($out, ['NEMSU — Daily Time Record']);
@@ -130,7 +141,9 @@ class ReportController extends Controller
                     $r->afternoon_in ?? '',
                     $r->afternoon_out ?? '',
                     $r->hours_rendered ? round($r->hours_rendered, 2) : '',
-                    $r->status,
+                    $r->status === 'holiday' && isset($holidays[$r->work_date->toDateString()])
+                        ? $holidays[$r->work_date->toDateString()]->label()
+                        : $r->status,
                     $r->tardiness_minutes ?? 0,
                     $r->undertime_minutes ?? 0,
                     $r->overtime_minutes  ?? 0,
@@ -194,6 +207,11 @@ class ReportController extends Controller
             ->get()
             ->groupBy('employee_id');
 
+        $holidays = Holiday::keyedBetween(
+            Carbon::create($year, $month, 1)->toDateString(),
+            Carbon::create($year, $month)->endOfMonth()->toDateString()
+        );
+
         $daysInMonth = Carbon::create($year, $month)->daysInMonth;
         $workingDays = 0;
         for ($d = 1; $d <= $daysInMonth; $d++) {
@@ -214,7 +232,7 @@ class ReportController extends Controller
 
         return response()->streamDownload(function () use (
             $employees, $allRecords, $monthLabel, $campusName,
-            $generated, $workingDays, $statusLabel, $fmt, $daysInMonth, $year, $month
+            $generated, $workingDays, $statusLabel, $fmt, $daysInMonth, $year, $month, $holidays
         ) {
             $out = fopen('php://output', 'w');
             fwrite($out, "\xEF\xBB\xBF"); // UTF-8 BOM for Excel
@@ -265,7 +283,11 @@ class ReportController extends Controller
                         $rec ? (int)$rec->tardiness_minutes  : 0,
                         $rec ? (int)$rec->overtime_minutes   : 0,
                         $rec ? (int)$rec->undertime_minutes  : 0,
-                        $rec ? $statusLabel($rec->status) : 'No Record',
+                        match (true) {
+                            ! $rec                                         => 'No Record',
+                            $rec->status === 'holiday' && isset($holidays[$key]) => $holidays[$key]->label(),
+                            default                                        => $statusLabel($rec->status),
+                        },
                     ]);
                 }
             }

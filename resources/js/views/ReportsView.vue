@@ -768,10 +768,13 @@
                     <span class="day-num">{{ row.day }}</span>
                     <span class="day-name">{{ row.dayName }}</span>
                   </td>
-                  <td class="dtr-td dtr-td-time">{{ row.morning_in ?? (row.isWeekend ? '' : '—') }}</td>
-                  <td class="dtr-td dtr-td-time">{{ row.morning_out ?? (row.isWeekend ? '' : '—') }}</td>
-                  <td class="dtr-td dtr-td-time">{{ row.afternoon_in ?? (row.isWeekend ? '' : '—') }}</td>
-                  <td class="dtr-td dtr-td-time">{{ row.afternoon_out ?? (row.isWeekend ? '' : '—') }}</td>
+                  <td v-if="row.holidayLabel" colspan="4" class="dtr-td dtr-td-holiday">{{ row.holidayLabel }}</td>
+                  <template v-else>
+                    <td class="dtr-td dtr-td-time">{{ row.morning_in ?? (row.isWeekend ? '' : '—') }}</td>
+                    <td class="dtr-td dtr-td-time">{{ row.morning_out ?? (row.isWeekend ? '' : '—') }}</td>
+                    <td class="dtr-td dtr-td-time">{{ row.afternoon_in ?? (row.isWeekend ? '' : '—') }}</td>
+                    <td class="dtr-td dtr-td-time">{{ row.afternoon_out ?? (row.isWeekend ? '' : '—') }}</td>
+                  </template>
                   <td class="dtr-td dtr-td-mono">
                     <span v-if="row.hours > 0" class="hrs-val">{{ row.hours.toFixed(1) }}h</span>
                     <span v-else-if="!row.isWeekend" class="hrs-nil">—</span>
@@ -1084,6 +1087,8 @@ const fullMonthRows = computed(() => {
   const { year: y, month: m, start_day: firstDay, end_day: lastDay } = previewData.value.period;
   const recordMap = {};
   for (const r of previewData.value.records) recordMap[r.day] = r;
+  const holidayMap = {};
+  for (const h of previewData.value.holidays ?? []) holidayMap[h.day] = h.label;
 
   const rows = [];
   for (let d = firstDay; d <= lastDay; d++) {
@@ -1100,6 +1105,9 @@ const fullMonthRows = computed(() => {
       dayName,
       isWeekend,
       status,
+      // e.g. "All Saints' Day (Special Holiday)" — that day's own holiday,
+      // on a weekend too. A weekday holiday the employee worked keeps its times.
+      holidayLabel:      (status === 'holiday' || isWeekend) ? (holidayMap[d] ?? (status === 'holiday' ? 'Holiday' : null)) : null,
       morning_in:        rec?.morning_in   ?? null,
       morning_out:       rec?.morning_out  ?? null,
       afternoon_in:      rec?.afternoon_in ?? null,
@@ -1517,6 +1525,7 @@ function printDtr() {
   const absents = Math.max(0, workdayCount.value - t.days_present - (t.leave_days ?? 0));
 
   const fmt = (v) => v ? String(v).slice(0, 5) : '';
+  const escapeHtml = (s) => String(s).replace(/[&<>"']/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' })[c]);
 
   const statusLabel = (s) => ({ present:'Present', late:'Late', absent:'Absent', on_leave:'On Leave', holiday:'Holiday', weekend:'' })[s] ?? '';
   const statusDot   = (s) => ({
@@ -1542,10 +1551,12 @@ function printDtr() {
       : '';
     return `<tr style="${rowStyle(r)}">
       <td class="td-day">${r.day}<span class="dn">${r.dayName}</span></td>
-      <td>${fmt(r.morning_in)   || blank}</td>
+      ${r.holidayLabel
+        ? `<td colspan="4" style="font-style:italic;color:#0369A1;">${escapeHtml(r.holidayLabel)}</td>`
+        : `<td>${fmt(r.morning_in)   || blank}</td>
       <td>${fmt(r.morning_out)  || blank}</td>
       <td>${fmt(r.afternoon_in) || blank}</td>
-      <td>${fmt(r.afternoon_out)|| blank}</td>
+      <td>${fmt(r.afternoon_out)|| blank}</td>`}
       <td class="num">${r.hours > 0 ? r.hours.toFixed(2) : (r.isWeekend ? '' : '&mdash;')}</td>
       <td class="num red">${r.tardiness_minutes > 0 ? r.tardiness_minutes : (r.isWeekend ? '' : '&mdash;')}</td>
       <td class="num blue">${r.overtime_minutes  > 0 ? r.overtime_minutes  : (r.isWeekend ? '' : '&mdash;')}</td>
@@ -2226,6 +2237,14 @@ onUnmounted(() => {
 .dtr-row--late    { background: #FFFBEB; }
 .dtr-row--absent  { background: #FEF2F2; }
 .dtr-row--holiday { background: #F0F9FF; }
+.dtr-td-holiday {
+  text-align: center;
+  font-size: 12px;
+  font-style: italic;
+  font-weight: 600;
+  color: #0369A1;
+}
+:global([data-theme="dark"] .dtr-td-holiday) { color: #7DD3FC; }
 .dtr-row--leave   { background: #EEF2FF; }
 
 .dtr-td { padding: 7px 10px; text-align: center; vertical-align: middle; border: 0.5px solid #E2E8F0; }
