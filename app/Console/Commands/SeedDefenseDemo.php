@@ -3,192 +3,349 @@
 namespace App\Console\Commands;
 
 use App\Models\AttendanceLog;
+use App\Models\Campus;
 use App\Models\DailyDtr;
+use App\Models\Department;
+use App\Models\DtrPrintConsent;
 use App\Models\Holiday;
+use App\Models\Shift;
 use App\Models\User;
 use App\Services\WorkingHoursService;
 use Carbon\Carbon;
 use Illuminate\Console\Command;
+use Illuminate\Support\Collection;
+use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Hash;
+use Illuminate\Support\Str;
 
 /**
- * Fills in a full month of attendance for a real employee (gaps only — never
- * touches a date that already has a punch) plus a handful of clearly-marked
- * demo employees in the same campus/department, so a defense/demo has a
- * complete-looking DTR to show. Safe to run against production:
- *   - Never creates a Holiday (that's campus-wide and would misattribute
- *     every other real employee's day too).
- *   - Never overwrites an existing AttendanceLog for the real employee.
- *   - Demo employees use an "DEF-DEMO-" employee_id prefix and can be fully
- *     removed afterward with --cleanup.
+ * Fills one past month of attendance for a defense/demo, so the dashboards,
+ * reports and Form 48 have a complete, varied month to show. Safe to run
+ * against production:
+ *   - Gaps only: a weekday that already has a punch, an On Leave mark or a
+ *     holiday is never touched, and today/future days are never filled.
+ *   - Never creates a Holiday — that's campus-wide and would misattribute
+ *     every other employee's day too.
+ *   - Punch times are built from each employee's own shift and grace period,
+ *     then go through WorkingHoursService like a real punch, so late,
+ *     undertime and overtime are exactly what the system computes.
+ *   - Every seeded punch carries the remark "Demo data" and every extra demo
+ *     employee a DEF-DEMO- employee_id, so --cleanup removes exactly them.
  *
  * Usage:
- *   php artisan defense:seed-demo 2023-02279
- *   php artisan defense:seed-demo 2023-02279 --demo-count=4
+ *   php artisan defense:seed-demo 2023-02279 --campus=CAN --dry-run
+ *   php artisan defense:seed-demo 2023-02279 --campus=CAN --month=9 --year=2026
  *   php artisan defense:seed-demo --cleanup
  */
 class SeedDefenseDemo extends Command
 {
     protected $signature = 'defense:seed-demo
-        {employee_id? : Your real employee_id to fill in October for}
-        {--year=2026}
-        {--month=10}
-        {--demo-count=4 : How many extra demo employees to create}
-        {--cleanup : Remove every DEF-DEMO- employee and their attendance, then exit}';
+        {employee_ids?* : Showcase account(s) — the full mix (on time, late, absent, On Leave, undertime, overtime) plus a pending print request}
+        {--campus= : Also fill every active employee with a shift in this campus (by code), gaps only}
+        {--year= : Defaults to the last full month}
+        {--month= : Defaults to the last full month}
+        {--demo-count=0 : Extra DEF-DEMO- employees to create in the showcase/campus}
+        {--no-print-request : Skip the pending print request for the showcase account(s)}
+        {--dry-run : Show what would be filled, then roll everything back}
+        {--cleanup : Remove every seeded punch and DEF-DEMO- employee, then exit}';
 
-    protected $description = 'Fill a full month of attendance for a real employee + clearly-marked demo employees (defense prep)';
+    protected $description = 'Fill a past month of realistic attendance for the defense demo (gaps only, removable with --cleanup)';
 
-    private const DEMO_PREFIX = 'DEF-DEMO-';
+    public const DEMO_PREFIX  = 'DEF-DEMO-';
+    public const DEMO_REMARK  = 'Demo data';
+    public const DEMO_PURPOSE = 'Monthly DTR submission (demo)';
 
-    public function handle(WorkingHoursService $workingHours): int
+    // Weekday positions (0-based, within the days actually being filled) for
+    // the showcase mix — spread out so each week has a little of everything.
+    private const SHOWCASE = [3 => 'late', 6 => 'undertime', 9 => 'absent', 11 => 'overtime', 13 => 'late', 17 => 'on_leave', 19 => 'overtime'];
+
+    // Rotated across the other employees so no two months look identical.
+    private const PATTERNS = ['reliable', 'tardy', 'mixed', 'overtime'];
+
+    private const DEMO_PEOPLE = [
+        ['Ana', 'Villareal', 'Instructor I'],
+        ['Ramon', 'Ibarra', 'Instructor II'],
+        ['Liza', 'Concepcion', 'Assistant Professor I'],
+        ['Carlo', 'Dizon', 'Instructor I'],
+        ['Rhea', 'Santiago', 'Administrative Aide IV'],
+        ['Noel', 'Fernandez', 'Instructor III'],
+    ];
+
+    public function __construct(private readonly WorkingHoursService $workingHours)
+    {
+        parent::__construct();
+    }
+
+    public function handle(): int
     {
         if ($this->option('cleanup')) {
             return $this->cleanup();
         }
 
-        $employeeId = $this->argument('employee_id');
-        if (! $employeeId) {
-            $this->error('Pass your employee_id, e.g. php artisan defense:seed-demo 2023-02279');
+        $lastMonth = now()->subMonthNoOverflow();
+        $year  = (int) ($this->option('year') ?: $lastMonth->year);
+        $month = (int) ($this->option('month') ?: $lastMonth->month);
+
+        if ($month < 1 || $month > 12) {
+            $this->error('--month must be between 1 and 12.');
             return self::FAILURE;
         }
 
-        $employee = User::where('employee_id', $employeeId)->first();
-        if (! $employee) {
-            $this->error("No employee found with employee_id \"{$employeeId}\".");
-            return self::FAILURE;
-        }
-        if (! $employee->shift_id) {
-            $this->error("{$employee->full_name} has no shift assigned — assign one first so working hours can be computed.");
-            return self::FAILURE;
-        }
-
-        $year  = (int) $this->option('year');
-        $month = (int) $this->option('month');
         $monthStart = Carbon::create($year, $month, 1)->startOfDay();
-        $monthEnd   = $monthStart->copy()->endOfMonth();
-
-        $weekdays = collect();
-        for ($d = $monthStart->copy(); $d->lte($monthEnd); $d->addDay()) {
-            if (! $d->isWeekend()) $weekdays->push($d->copy());
+        if ($monthStart->gt(now())) {
+            $this->error("{$monthStart->format('F Y')} hasn't started yet — demo data is only filled for days that have already passed.");
+            return self::FAILURE;
         }
 
-        $this->info("Filling {$monthStart->format('F Y')} for {$employee->full_name} ({$employee->employee_id}) — gaps only, existing punches are left alone.");
-
-        // One weekday (not already a holiday, not already punched) shows off
-        // the self-service On Leave feature on the real account.
-        $leaveDate = null;
-        foreach ($weekdays as $day) {
-            $dateStr = $day->toDateString();
-            if (Holiday::whereDate('date', $dateStr)->exists()) continue;
-            if (AttendanceLog::where('employee_id', $employee->id)->whereDate('punch_time', $dateStr)->exists()) continue;
-            $leaveDate = $dateStr;
-            break;
+        $showcase = collect();
+        foreach ($this->argument('employee_ids') as $employeeId) {
+            $employee = User::where('employee_id', $employeeId)->first();
+            if (! $employee) {
+                $this->error("No employee found with employee_id \"{$employeeId}\".");
+                return self::FAILURE;
+            }
+            if (! $employee->shift_id) {
+                $this->error("{$employee->full_name} has no shift assigned — assign one first so working hours can be computed.");
+                return self::FAILURE;
+            }
+            $showcase->push($employee);
         }
 
-        $filledDates = [];
-        foreach ($weekdays as $day) {
-            $dateStr = $day->toDateString();
-
-            if (AttendanceLog::where('employee_id', $employee->id)->whereDate('punch_time', $dateStr)->exists()) {
-                continue; // real punch already exists — never touch it
+        $campus = null;
+        if ($code = $this->option('campus')) {
+            $campus = Campus::where('code', $code)->first();
+            if (! $campus) {
+                $this->error("No campus found with code \"{$code}\".");
+                return self::FAILURE;
             }
-
-            if (Holiday::whereDate('date', $dateStr)->exists()) {
-                $workingHours->computeDailyDtr($employee, $dateStr); // holiday already declared, just make sure it's reflected
-                continue;
-            }
-
-            if ($dateStr === $leaveDate) {
-                $this->markOnLeave($employee, $dateStr);
-                $filledDates[] = "{$dateStr} (on leave)";
-                continue;
-            }
-
-            $this->punchOnTime($workingHours, $employee, $day);
-            $workingHours->computeDailyDtr($employee, $dateStr);
-            $filledDates[] = $dateStr;
         }
 
-        $this->line('Filled ' . count($filledDates) . ' day(s) for your own account:');
-        foreach ($filledDates as $d) $this->line("  - {$d}");
+        if ($showcase->isEmpty() && ! $campus) {
+            $this->error('Pass a showcase employee_id and/or --campus=CODE, e.g. php artisan defense:seed-demo 2023-02279 --campus=CAN');
+            return self::FAILURE;
+        }
 
-        // ── Demo employees — clearly marked, attached to the same campus/department/shift ──
-        $demoCount = max(0, (int) $this->option('demo-count'));
-        $patterns  = ['reliable', 'tardy', 'mixed', 'undertime'];
-        $names     = [
-            ['first_name' => 'Ana',    'last_name' => 'Villareal'],
-            ['first_name' => 'Mark',   'last_name' => 'Ibarra'],
-            ['first_name' => 'Liza',   'last_name' => 'Concepcion'],
-            ['first_name' => 'Carlo',  'last_name' => 'Dizon'],
-            ['first_name' => 'Rhea',   'last_name' => 'Santiago'],
-            ['first_name' => 'Noel',   'last_name' => 'Fernandez'],
-        ];
+        // Only days that have already passed — never today, which may still
+        // receive real punches.
+        $days = collect();
+        for ($d = $monthStart->copy(); $d->month === $month && $d->lt(today()); $d->addDay()) {
+            if (! $d->isWeekend()) $days->push($d->copy());
+        }
+        if ($days->isEmpty()) {
+            $this->error("No weekday of {$monthStart->format('F Y')} has passed yet — nothing to fill.");
+            return self::FAILURE;
+        }
 
-        $hashedPassword = Hash::make('Demo@12345');
+        $holidays = Holiday::keyedBetween($monthStart->toDateString(), $monthStart->copy()->endOfMonth()->toDateString());
+        $dryRun   = (bool) $this->option('dry-run');
 
-        for ($i = 0; $i < $demoCount; $i++) {
-            $name    = $names[$i % count($names)];
-            $pattern = $patterns[$i % count($patterns)];
-            $empId   = self::DEMO_PREFIX . str_pad((string) ($i + 1), 2, '0', STR_PAD_LEFT);
+        $this->info(($dryRun ? '[DRY RUN] ' : '') . "Filling {$monthStart->format('F Y')} — gaps only, existing records are left alone.");
+        $this->line($holidays
+            ? 'Declared holidays this month: ' . collect($holidays)->map->label()->implode(', ')
+            : 'No holidays are declared this month — none will be created.');
 
-            $demoEmployee = User::firstOrCreate(
-                ['employee_id' => $empId],
-                [
-                    'first_name'        => $name['first_name'],
-                    'last_name'         => $name['last_name'],
-                    'email'             => strtolower("{$name['first_name']}.{$name['last_name']}.{$i}@demo.local"),
-                    'password'          => $hashedPassword,
-                    'role'              => 'employee',
-                    'campus_id'         => $employee->campus_id,
-                    'department_id'     => $employee->department_id,
-                    'shift_id'          => $employee->shift_id,
-                    'position'          => 'Instructor I',
-                    'staff_type'        => 'faculty',
-                    'employment_status' => 'permanent',
-                    'is_active'         => true,
-                ]
-            );
+        DB::beginTransaction();
 
-            foreach ($weekdays as $wi => $day) {
-                $dateStr = $day->toDateString();
-                if (Holiday::whereDate('date', $dateStr)->exists()) {
-                    $workingHours->computeDailyDtr($demoEmployee, $dateStr);
-                    continue;
+        try {
+            $rows   = [];
+            $filled = collect();
+
+            foreach ($showcase as $employee) {
+                $rows[] = $this->fill($employee, $days, $holidays, 'showcase');
+                $filled->push($employee->id);
+            }
+
+            if ($campus) {
+                $others = User::where('campus_id', $campus->id)
+                    ->where('role', '!=', 'super_admin')
+                    ->where('is_active', true)
+                    ->where('employee_id', 'not like', self::DEMO_PREFIX . '%')
+                    ->whereNotIn('id', $filled)
+                    ->orderBy('id')
+                    ->get();
+
+                foreach ($others->values() as $i => $employee) {
+                    if (! $employee->shift_id) {
+                        $this->warn("Skipped {$employee->full_name} ({$employee->employee_id}) — no shift assigned.");
+                        continue;
+                    }
+                    $rows[] = $this->fill($employee, $days, $holidays, self::PATTERNS[$i % count(self::PATTERNS)]);
                 }
-                $this->punchPattern($workingHours, $demoEmployee, $day, $pattern, $wi);
-                $workingHours->computeDailyDtr($demoEmployee, $dateStr);
             }
 
-            $this->line("Demo employee ready: {$demoEmployee->full_name} ({$empId}) — pattern: {$pattern}");
+            foreach ($this->demoEmployees($showcase->first(), $campus) as $i => $employee) {
+                $rows[] = $this->fill($employee, $days, $holidays, self::PATTERNS[$i % count(self::PATTERNS)]);
+            }
+
+            $requests = $this->option('no-print-request')
+                ? []
+                : $showcase->map(fn (User $e) => $this->requestPrint($e, $year, $month))->filter()->all();
+
+            $this->newLine();
+            $this->table(
+                ['Employee', 'Pattern', 'Days filled', 'Present', 'Late', 'Absent', 'On leave', 'Holiday'],
+                $rows,
+            );
+            foreach ($requests as $line) $this->line($line);
+
+            if ($dryRun) {
+                DB::rollBack();
+                $this->warn('Dry run — nothing was saved. Run again without --dry-run to apply.');
+                return self::SUCCESS;
+            }
+
+            DB::commit();
+        } catch (\Throwable $e) {
+            DB::rollBack();
+            throw $e;
         }
 
         $this->newLine();
-        $this->info('Done. Run with --cleanup any time to remove every DEF-DEMO- employee and their attendance.');
+        $this->info('Done. Run php artisan defense:seed-demo --cleanup any time to remove it all.');
 
         return self::SUCCESS;
     }
 
-    private function cleanup(): int
+    /**
+     * Fill one employee's gaps for the month and report how the month came
+     * out, as computed by the system itself.
+     */
+    private function fill(User $employee, Collection $days, array $holidays, string $pattern): array
     {
-        $ids = User::where('employee_id', 'like', self::DEMO_PREFIX . '%')->pluck('id');
-        if ($ids->isEmpty()) {
-            $this->info('No DEF-DEMO- employees found — nothing to clean up.');
-            return self::SUCCESS;
+        $employee->loadMissing('shift');
+        $shift = $employee->shift;
+
+        if ($this->isOvernight($shift)) {
+            $this->warn("Skipped {$employee->full_name} ({$employee->employee_id}) — overnight shifts aren't supported by the demo seeder.");
+            return [$employee->full_name, $pattern, 0, '—', '—', '—', '—', '—'];
         }
 
-        AttendanceLog::whereIn('employee_id', $ids)->delete();
-        DailyDtr::whereIn('employee_id', $ids)->delete();
-        $count = User::whereIn('id', $ids)->delete();
+        // A day's scenario comes from its fixed position among the month's
+        // working days, not among the still-empty ones — so a re-run gives a
+        // deliberately absent day the same "absent" again instead of filling it.
+        $workdays = $days->reject(fn (Carbon $d) => isset($holidays[$d->toDateString()]))->values();
 
-        $this->info("Removed {$count} demo employee(s) and their attendance records.");
-        return self::SUCCESS;
+        $open = $workdays->filter(function (Carbon $day) use ($employee) {
+            $date = $day->toDateString();
+            if (AttendanceLog::where('employee_id', $employee->id)->whereDate('punch_time', $date)->exists()) return false;
+
+            return ! DailyDtr::where('employee_id', $employee->id)
+                ->whereDate('work_date', $date)
+                ->whereIn('status', ['on_leave', 'holiday'])
+                ->exists();
+        });
+
+        foreach ($open as $i => $day) {
+            $scenario = $this->scenario($pattern, $i);
+            $date     = $day->toDateString();
+
+            // Same times for the same person and day on every run.
+            mt_srand(crc32("{$employee->employee_id}|{$date}"));
+
+            if ($scenario === 'on_leave') {
+                $this->markOnLeave($employee, $date);
+                continue;
+            }
+
+            if ($scenario !== 'absent') {
+                foreach ($this->punchTimes($shift, $day, $scenario) as $punchTime) {
+                    $this->workingHours->recordPunchIfNotDuplicate($employee->id, $punchTime, [
+                        'punch_type' => 'IN',
+                        // 'biometric' would misrepresent these as real device taps.
+                        'source'     => 'manual',
+                        'remarks'    => self::DEMO_REMARK,
+                    ]);
+                }
+            }
+
+            $this->workingHours->computeDailyDtr($employee, $date);
+        }
+
+        // A declared holiday with no punches still needs its DTR row.
+        foreach (array_keys($holidays) as $date) {
+            if ($days->contains(fn (Carbon $d) => $d->toDateString() === $date)) {
+                $this->workingHours->computeDailyDtr($employee, $date);
+            }
+        }
+
+        $statuses = DailyDtr::where('employee_id', $employee->id)
+            ->whereDate('work_date', '>=', $days->first()?->toDateString())
+            ->whereDate('work_date', '<=', $days->last()?->toDateString())
+            ->pluck('status')
+            ->countBy();
+
+        return [
+            "{$employee->full_name} ({$employee->employee_id})",
+            $pattern,
+            $open->count(),
+            $statuses['present'] ?? 0,
+            $statuses['late'] ?? 0,
+            $statuses['absent'] ?? 0,
+            $statuses['on_leave'] ?? 0,
+            $statuses['holiday'] ?? 0,
+        ];
     }
 
-    private function markOnLeave(User $employee, string $dateStr): void
+    private function scenario(string $pattern, int $i): string
     {
-        $dtr = DailyDtr::where('employee_id', $employee->id)
-            ->whereDate('work_date', $dateStr)
-            ->first() ?? new DailyDtr(['employee_id' => $employee->id, 'work_date' => $dateStr]);
+        return match ($pattern) {
+            'showcase' => self::SHOWCASE[$i] ?? 'on_time',
+            'reliable' => $i === 7 ? 'overtime' : 'on_time',
+            'tardy'    => $i % 4 === 1 ? 'late' : 'on_time',
+            'mixed'    => match ($i) { 5 => 'undertime', 12 => 'absent', 15 => 'late', default => 'on_time' },
+            'overtime' => $i % 3 === 0 ? 'overtime' : 'on_time',
+            default    => 'on_time',
+        };
+    }
+
+    /**
+     * The day's four taps, relative to the employee's own shift: an on-time
+     * arrival stays inside the grace period, a late one lands past it, and
+     * consecutive taps are always more than 5 minutes apart so the duplicate
+     * guard never swallows one.
+     */
+    private function punchTimes(Shift $shift, Carbon $day, string $scenario): array
+    {
+        $at    = fn (string $time) => Carbon::parse($day->toDateString() . ' ' . $time);
+        $jit   = fn (Carbon $t, int $min, int $max) => $t->copy()->addMinutes(mt_rand($min, $max))->addSeconds(mt_rand(0, 59));
+        $grace = (int) $shift->grace_period_minutes;
+
+        $in = $scenario === 'late'
+            ? $jit($at($shift->morning_in), $grace + 3, $grace + 35)
+            : $jit($at($shift->morning_in), -20, max(-20, $grace - 2));
+        $morningOut = $jit($at($shift->morning_out), 0, 6);
+        $afterIn    = $jit($at($shift->afternoon_in), -12, 0);
+
+        // A shift with no lunch gap (e.g. 06:00–12:00 / 12:00–18:30).
+        if ($afterIn->lt($morningOut->copy()->addMinutes(6))) {
+            $afterIn = $morningOut->copy()->addMinutes(mt_rand(6, 10));
+        }
+
+        // Undertime and overtime are measured against required hours, which
+        // can be less than the shift's span (the Faculty shift spans 8h40 for
+        // 8 required) — so those departures are set from the hours already
+        // rendered that morning, not just from the shift's end time.
+        $required  = (int) round(((float) ($shift->required_hours ?? 8)) * 60);
+        $morning   = (int) $in->diffInMinutes($morningOut);
+        $metAt     = $afterIn->copy()->addMinutes(max(0, $required - $morning));
+        $shiftEnd  = $at($shift->afternoon_out);
+
+        $out = match ($scenario) {
+            // Leaves 30–90 min before both the shift's end and the required hours.
+            'undertime' => $metAt->copy()->min($shiftEnd)->subMinutes(mt_rand(30, 90))->addSeconds(mt_rand(0, 59)),
+            // Stays 45–100 min past both.
+            'overtime'  => $metAt->copy()->max($shiftEnd)->addMinutes(mt_rand(45, 100))->addSeconds(mt_rand(0, 59)),
+            default     => $jit($shiftEnd, 0, 15),
+        };
+
+        return [$in, $morningOut, $afterIn, $out];
+    }
+
+    /** Same effect as the self-service "Mark as On Leave" (AttendanceController::applyOnLeave). */
+    private function markOnLeave(User $employee, string $date): void
+    {
+        $dtr = DailyDtr::where('employee_id', $employee->id)->whereDate('work_date', $date)->first()
+            ?? new DailyDtr(['employee_id' => $employee->id, 'work_date' => $date]);
 
         $dtr->fill([
             'status'            => 'on_leave',
@@ -203,46 +360,115 @@ class SeedDefenseDemo extends Command
         ])->save();
     }
 
-    private function punchOnTime(WorkingHoursService $workingHours, User $employee, Carbon $day): void
+    /** A pending request for HR to approve live — skipped if one is already open, same rule as the API. */
+    private function requestPrint(User $employee, int $year, int $month): ?string
     {
-        foreach ([
-            $day->copy()->setTime(7, 55),
-            $day->copy()->setTime(12, 0),
-            $day->copy()->setTime(13, 0),
-            $day->copy()->setTime(17, 5),
-        ] as $punchTime) {
-            $workingHours->recordPunchIfNotDuplicate($employee->id, $punchTime, [
-                'punch_type' => 'IN',
-                'source'     => 'manual',
-            ]);
+        $open = DtrPrintConsent::where('employee_id', $employee->id)
+            ->where('month', $month)
+            ->where('year', $year)
+            ->where(fn ($q) => $q->where('status', 'pending')
+                ->orWhere(fn ($q2) => $q2->where('status', 'approved')->whereNull('used_at')))
+            ->exists();
+
+        if ($open) {
+            return "{$employee->full_name} already has an open print request for this month — left as is.";
         }
+
+        DtrPrintConsent::create([
+            'employee_id' => $employee->id,
+            'month'       => $month,
+            'year'        => $year,
+            'period'      => 'full',
+            'purpose'     => self::DEMO_PURPOSE,
+            'status'      => 'pending',
+        ]);
+
+        return "Pending print request created for {$employee->full_name} — ready for HR to approve.";
     }
 
-    private function punchPattern(WorkingHoursService $workingHours, User $employee, Carbon $day, string $pattern, int $weekdayIndex): void
+    /** @return Collection<int, User> */
+    private function demoEmployees(?User $anchor, ?Campus $campus): Collection
     {
-        $scenario = match ($pattern) {
-            'reliable'  => $weekdayIndex === 15 ? 'absent' : 'on_time',
-            'tardy'     => $weekdayIndex % 3 === 0 ? 'late' : 'on_time',
-            'mixed'     => match ($weekdayIndex) { 5 => 'undertime', 10 => 'absent', default => 'on_time' },
-            'undertime' => $weekdayIndex % 4 === 0 ? 'undertime' : 'on_time',
-            default     => 'on_time',
-        };
+        $count = max(0, (int) $this->option('demo-count'));
+        if ($count === 0) return collect();
 
-        if ($scenario === 'absent') return;
+        $campusId = $anchor?->campus_id ?? $campus?->id;
+        $shiftId  = $anchor?->shift_id
+            ?? Shift::where('name', 'Faculty / Instructor Shift')->value('id')
+            ?? Shift::orderBy('id')->value('id');
 
-        $morningIn    = $day->copy()->setTime(7, 55);
-        $morningOut   = $day->copy()->setTime(12, 0);
-        $afternoonIn  = $day->copy()->setTime(13, 0);
-        $afternoonOut = $day->copy()->setTime(17, 5);
-
-        if ($scenario === 'late')      $morningIn    = $day->copy()->setTime(8, 30);
-        if ($scenario === 'undertime') $afternoonOut = $day->copy()->setTime(15, 30);
-
-        foreach ([$morningIn, $morningOut, $afternoonIn, $afternoonOut] as $punchTime) {
-            $workingHours->recordPunchIfNotDuplicate($employee->id, $punchTime, [
-                'punch_type' => 'IN',
-                'source'     => 'manual',
-            ]);
+        if (! $shiftId) {
+            $this->warn('No shift exists to give the demo employees — skipped them.');
+            return collect();
         }
+
+        $departments = Department::where(fn ($q) => $q->whereNull('campus_id')->orWhere('campus_id', $campusId))
+            ->orderBy('id')->pluck('id');
+
+        return collect(range(1, $count))->map(function (int $n) use ($campusId, $shiftId, $departments) {
+            [$first, $last, $position] = self::DEMO_PEOPLE[($n - 1) % count(self::DEMO_PEOPLE)];
+
+            return User::firstOrCreate(
+                ['employee_id' => self::DEMO_PREFIX . str_pad((string) $n, 2, '0', STR_PAD_LEFT)],
+                [
+                    'first_name'        => $first,
+                    'last_name'         => $last,
+                    'email'             => strtolower("{$first}.{$last}.{$n}@demo.local"),
+                    // Never a guessable shared password on a live server.
+                    'password'          => Hash::make(Str::password(24)),
+                    'role'              => 'employee',
+                    'campus_id'         => $campusId,
+                    'department_id'     => $departments->isEmpty() ? null : $departments[($n - 1) % $departments->count()],
+                    'shift_id'          => $shiftId,
+                    'position'          => $position,
+                    'staff_type'        => str_starts_with($position, 'Administrative') ? 'administrative' : 'faculty',
+                    'employment_status' => 'permanent',
+                    'is_active'         => true,
+                ]
+            );
+        })->values();
+    }
+
+    private function cleanup(): int
+    {
+        DB::transaction(function () {
+            $demoIds = User::where('employee_id', 'like', self::DEMO_PREFIX . '%')->pluck('id');
+
+            // Seeded punches on real accounts: remove them, then recompute
+            // each affected day so it goes back to what its real punches say.
+            $affected = AttendanceLog::where('remarks', self::DEMO_REMARK)
+                ->where('source', 'manual')
+                ->whereNotIn('employee_id', $demoIds)
+                ->get(['employee_id', 'punch_time'])
+                ->map(fn ($log) => [$log->employee_id, $log->punch_time->toDateString()])
+                ->unique(fn ($pair) => implode('|', $pair));
+
+            $removed = AttendanceLog::where('remarks', self::DEMO_REMARK)->where('source', 'manual')
+                ->whereNotIn('employee_id', $demoIds)->delete();
+
+            foreach ($affected as [$employeeId, $date]) {
+                if ($employee = User::find($employeeId)) {
+                    $this->workingHours->computeDailyDtr($employee, $date);
+                }
+            }
+
+            $requests = DtrPrintConsent::where('purpose', self::DEMO_PURPOSE)->where('status', 'pending')->delete();
+
+            AttendanceLog::whereIn('employee_id', $demoIds)->delete();
+            DailyDtr::whereIn('employee_id', $demoIds)->delete();
+            DtrPrintConsent::whereIn('employee_id', $demoIds)->delete();
+            $users = User::whereIn('id', $demoIds)->delete();
+
+            $this->info("Removed {$removed} seeded punch(es) across {$affected->count()} day(s), {$requests} pending demo print request(s) and {$users} DEF-DEMO- employee(s).");
+            $this->line('Seeded On Leave days are kept — unmark any of them from the employee\'s Attendance page if needed.');
+        });
+
+        return self::SUCCESS;
+    }
+
+    private function isOvernight(?Shift $shift): bool
+    {
+        return $shift && $shift->afternoon_out && $shift->morning_in
+            && Carbon::parse($shift->afternoon_out)->lt(Carbon::parse($shift->morning_in));
     }
 }
