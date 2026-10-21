@@ -131,6 +131,7 @@
 
 <script setup>
 import { ref, reactive, computed, onMounted } from 'vue';
+import { localDateStr } from '@/composables/useLocalDate';
 import axios from 'axios';
 import PageHeader from '@/components/PageHeader.vue';
 import EmptyState from '@/components/EmptyState.vue';
@@ -233,7 +234,7 @@ function dayLabel(dateStr) {
 }
 
 function isToday(dateTimeStr) {
-  return dateTimeStr.slice(0, 10) === new Date().toISOString().slice(0, 10);
+  return dateTimeStr.slice(0, 10) === localDateStr();
 }
 
 function formatTime(dateTimeStr) {

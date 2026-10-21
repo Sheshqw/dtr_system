@@ -985,6 +985,7 @@
 
 <script setup>
 import { ref, reactive, computed, watch, onMounted, onUnmounted } from 'vue';
+import { localDateStr } from '@/composables/useLocalDate';
 import { storeToRefs } from 'pinia';
 import { useRouter, useRoute } from 'vue-router';
 import axios from 'axios';
@@ -1121,7 +1122,7 @@ function downloadBlob(blob, filename) {
 
 async function exportAs(type) {
   showExportMenu.value = false;
-  const stamp = new Date().toISOString().slice(0, 10);
+  const stamp = localDateStr();
   try {
     const res = await axios.get(`/api/employees/export/${type}`, {
       params: currentFilterParams(),

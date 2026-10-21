@@ -364,6 +364,7 @@
 
 <script setup>
 import { ref, computed, onMounted } from 'vue';
+import { localDateStr } from '@/composables/useLocalDate';
 import axios from 'axios';
 import { useAuthStore } from '@/stores/auth';
 import { useToast } from '@/composables/useToast';
@@ -421,14 +422,14 @@ const specialCount = computed(() => holidays.value.filter(h => h.type === 'speci
 
 const nextHoliday = computed(() => {
   if (!holidays.value.length) return null;
-  const todayStr = new Date().toISOString().slice(0, 10);
+  const todayStr = localDateStr();
   const upcoming = holidays.value.filter(h => h.date >= todayStr).sort((a, b) => a.date.localeCompare(b.date));
   return upcoming[0] ?? holidays.value[0];
 });
 
 const nextHolidayLabel = computed(() => {
   if (!nextHoliday.value) return 'No holidays yet';
-  const todayStr = new Date().toISOString().slice(0, 10);
+  const todayStr = localDateStr();
   if (nextHoliday.value.date < todayStr) return `First in ${year.value}`;
   const days = Math.round((new Date(nextHoliday.value.date) - new Date(todayStr)) / 86400000);
   if (days === 0) return 'Today';
@@ -440,7 +441,7 @@ const monthGrids = computed(() => {
   const byDate = {};
   for (const h of holidays.value) byDate[h.date] = h;
 
-  const todayStr = new Date().toISOString().slice(0, 10);
+  const todayStr = localDateStr();
   const months = [];
 
   for (let month = 0; month < 12; month++) {

@@ -425,6 +425,7 @@
 
 <script setup>
 import { ref, reactive, computed, onMounted, watch } from 'vue';
+import { localDateStr, localDateTimeStr } from '@/composables/useLocalDate';
 import { storeToRefs } from 'pinia';
 import axios from 'axios';
 import StatusBadge    from '@/components/StatusBadge.vue';
@@ -495,7 +496,7 @@ const punchLogs    = ref([]);
 const punchLoading = ref(false);
 
 const punchFilters = reactive({
-  date:        now.toISOString().split('T')[0],
+  date:        localDateStr(now),
   employee_id: '',
   source:      '',
   punch_type:  '',
@@ -591,7 +592,7 @@ const punchForm    = reactive({
 
 function openAddPunch() {
   punchForm.employee_id = '';
-  punchForm.punch_time  = new Date().toISOString().slice(0, 16);
+  punchForm.punch_time  = localDateTimeStr();
   punchForm.punch_type  = 'IN';
   punchForm.remarks     = '';
   punchError.value      = '';
