@@ -4,6 +4,7 @@ namespace App\Http\Controllers;
 
 use App\Models\Campus;
 use Illuminate\Http\Request;
+use Illuminate\Support\Facades\Storage;
 
 class CampusController extends Controller
 {
@@ -51,6 +52,37 @@ class CampusController extends Controller
         return response()->json($this->format($campus->fresh()->loadCount('employees')));
     }
 
+    /**
+     * Upload or replace the campus's photo in the login page slideshow.
+     */
+    public function uploadPhoto(Request $request, Campus $campus)
+    {
+        $this->gate($request->user());
+
+        $request->validate([
+            'photo' => 'required|image|mimes:jpeg,png,jpg,webp|max:4096',
+        ]);
+
+        $this->deleteStoredPhoto($campus);
+        $campus->update(['photo_path' => $request->file('photo')->store('campuses', 'public')]);
+
+        return response()->json($this->format($campus->fresh()->loadCount('employees')));
+    }
+
+    /**
+     * Remove an uploaded photo — the campus goes back to its bundled official
+     * photo, or out of the slideshow if it has none.
+     */
+    public function resetPhoto(Request $request, Campus $campus)
+    {
+        $this->gate($request->user());
+
+        $this->deleteStoredPhoto($campus);
+        $campus->update(['photo_path' => null]);
+
+        return response()->json($this->format($campus->fresh()->loadCount('employees')));
+    }
+
     public function destroy(Campus $campus)
     {
         $this->gate(request()->user());
@@ -59,21 +91,31 @@ class CampusController extends Controller
             return response()->json(['message' => 'Cannot delete a campus with assigned employees.'], 422);
         }
 
+        $this->deleteStoredPhoto($campus);
         $campus->delete();
 
         return response()->json(['message' => 'Campus deleted.']);
     }
 
+    private function deleteStoredPhoto(Campus $campus): void
+    {
+        if ($campus->photo_path && Storage::disk('public')->exists($campus->photo_path)) {
+            Storage::disk('public')->delete($campus->photo_path);
+        }
+    }
+
     private function format(Campus $c): array
     {
         return [
-            'id'              => $c->id,
-            'name'            => $c->name,
-            'code'            => $c->code,
-            'address'         => $c->address,
-            'director_name'   => $c->director_name,
-            'is_active'       => $c->is_active,
-            'employees_count' => $c->employees_count ?? 0,
+            'id'               => $c->id,
+            'name'             => $c->name,
+            'code'             => $c->code,
+            'address'          => $c->address,
+            'director_name'    => $c->director_name,
+            'photo_url'        => $c->photo_url,
+            'has_custom_photo' => (bool) $c->photo_path,
+            'is_active'        => $c->is_active,
+            'employees_count'  => $c->employees_count ?? 0,
         ];
     }
 

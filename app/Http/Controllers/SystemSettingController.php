@@ -2,6 +2,7 @@
 
 namespace App\Http\Controllers;
 
+use App\Models\Campus;
 use App\Models\SystemSetting;
 use App\Services\TurnstileService;
 use Illuminate\Http\Request;
@@ -137,6 +138,25 @@ class SystemSettingController extends Controller
         }
     }
 
+    /**
+     * Every active campus that has a photo, for the login page slideshow —
+     * name and address only, nothing a visitor shouldn't see.
+     */
+    private function campusSlides(): array
+    {
+        return Campus::where('is_active', true)
+            ->orderBy('name')
+            ->get(['id', 'name', 'code', 'address', 'photo_path'])
+            ->filter(fn (Campus $c) => $c->photo_url)
+            ->map(fn (Campus $c) => [
+                'name'      => $c->name,
+                'address'   => $c->address,
+                'photo_url' => $c->photo_url,
+            ])
+            ->values()
+            ->all();
+    }
+
     private function formatPublic(SystemSetting $s): array
     {
         $turnstileActive = $s->turnstile_enabled && $this->turnstile->isConfigured();
@@ -147,6 +167,7 @@ class SystemSettingController extends Controller
             'tagline'     => $s->tagline,
             'logo_url'    => $s->logo_url,
             'login_background_url' => $s->login_background_url,
+            'campus_slides'        => $this->campusSlides(),
 
             // The login page needs these before anyone signs in. The site key
             // is public by design (it's embedded in the page); the secret key

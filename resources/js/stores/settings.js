@@ -13,6 +13,8 @@ export const useSettingsStore = defineStore('settings', () => {
     const logoUrl     = ref(DEFAULT_LOGO);
     // null = the login page draws its bundled illustrated background.
     const loginBackgroundUrl = ref(null);
+    // Active campuses with a photo — the login page slideshow.
+    const campusSlides = ref([]);
     const turnstileEnabled = ref(false);
     const turnstileSiteKey = ref(null);
     const loaded      = ref(false);
@@ -25,6 +27,7 @@ export const useSettingsStore = defineStore('settings', () => {
             tagline.value    = res.data.tagline;
             logoUrl.value    = res.data.logo_url || DEFAULT_LOGO;
             loginBackgroundUrl.value = res.data.login_background_url || null;
+            campusSlides.value = res.data.campus_slides ?? [];
             turnstileEnabled.value = !!res.data.turnstile?.enabled;
             turnstileSiteKey.value = res.data.turnstile?.site_key ?? null;
         } catch {
@@ -35,5 +38,5 @@ export const useSettingsStore = defineStore('settings', () => {
         }
     }
 
-    return { systemName, shortName, tagline, logoUrl, loginBackgroundUrl, turnstileEnabled, turnstileSiteKey, loaded, fetch };
+    return { systemName, shortName, tagline, logoUrl, loginBackgroundUrl, campusSlides, turnstileEnabled, turnstileSiteKey, loaded, fetch };
 });

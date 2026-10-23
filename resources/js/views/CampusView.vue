@@ -21,6 +21,7 @@
             <thead>
               <tr style="background: #FAFAFA; border-bottom: 1px solid #F1F5F9;">
                 <th scope="col" class="text-left px-5 py-3 text-[11px] font-semibold uppercase tracking-wider" style="color: #6B7A94;">Campus</th>
+                <th scope="col" class="text-left px-4 py-3 text-[11px] font-semibold uppercase tracking-wider" style="color: #6B7A94;">Photo</th>
                 <th scope="col" class="text-left px-4 py-3 text-[11px] font-semibold uppercase tracking-wider" style="color: #6B7A94;">Code</th>
                 <th scope="col" class="text-left px-4 py-3 text-[11px] font-semibold uppercase tracking-wider" style="color: #6B7A94;">Address</th>
                 <th scope="col" class="text-left px-4 py-3 text-[11px] font-semibold uppercase tracking-wider" style="color: #6B7A94;">Campus Director</th>
@@ -44,6 +45,16 @@
                     </div>
                     <span class="text-sm font-medium" style="color: #0F172A;">{{ campus.name }}</span>
                   </div>
+                </td>
+                <td class="px-4 py-3.5">
+                  <img
+                    v-if="campus.photo_url"
+                    :src="campus.photo_url"
+                    :alt="`${campus.name} photo`"
+                    class="campus-thumb"
+                    loading="lazy"
+                  />
+                  <span v-else class="text-xs" style="color: #94A3B8;">None</span>
                 </td>
                 <td class="px-4 py-3.5">
                   <span
@@ -94,7 +105,7 @@
                 </td>
               </tr>
               <tr v-if="campuses.length === 0">
-                <td colspan="7" class="px-5 py-16 text-center text-sm" style="color: #6B7A94;">No campuses found.</td>
+                <td colspan="8" class="px-5 py-16 text-center text-sm" style="color: #6B7A94;">No campuses found.</td>
               </tr>
             </tbody>
           </table>
@@ -143,6 +154,39 @@
               class="w-full px-3 py-2 text-sm border border-[#E2E8F0] rounded-lg focus:outline-none focus:ring-2 focus:ring-[#2E4A8C] text-[#0F172A] bg-white" />
             <p class="text-xs text-[#6B7A94] mt-1">Printed as the verifying signatory on every CSC Form 48 from this campus, exactly as typed.</p>
           </div>
+          <div>
+            <label class="block text-sm font-medium text-[#0F172A] mb-1.5">Login Slideshow Photo</label>
+            <div v-if="modal.editing" class="flex items-center gap-3">
+              <div class="campus-photo-preview flex-shrink-0">
+                <img v-if="modal.editing.photo_url" :src="modal.editing.photo_url" alt="" />
+                <span v-else>No photo</span>
+              </div>
+              <div class="min-w-0 space-y-1.5">
+                <div class="flex flex-wrap items-center gap-2">
+                  <label class="campus-photo-btn" :class="{ 'opacity-60 pointer-events-none': photoBusy }">
+                    <Loader2Icon v-if="photoBusy" class="w-3.5 h-3.5 animate-spin" />
+                    <UploadIcon v-else class="w-3.5 h-3.5" />
+                    {{ modal.editing.photo_url ? 'Replace' : 'Upload' }}
+                    <input type="file" accept="image/jpeg,image/png,image/webp" class="sr-only" @change="uploadPhoto" />
+                  </label>
+                  <button
+                    v-if="modal.editing.has_custom_photo"
+                    type="button"
+                    :disabled="photoBusy"
+                    @click="resetPhoto"
+                    class="text-xs font-semibold px-2.5 py-1.5 rounded-lg text-[#DC2626] bg-[#FEF2F2] hover:bg-[#FEE2E2] disabled:opacity-50 transition-colors"
+                  >Remove upload</button>
+                </div>
+                <p class="text-xs text-[#6B7A94]">
+                  <template v-if="modal.editing.has_custom_photo">Uploaded photo.</template>
+                  <template v-else-if="modal.editing.photo_url">Official NEMSU photo (bundled).</template>
+                  <template v-else>Without a photo this campus is left out of the slideshow.</template>
+                  JPG, PNG or WEBP, up to 4MB.
+                </p>
+              </div>
+            </div>
+            <p v-else class="text-xs text-[#6B7A94]">You can add a photo after saving the campus.</p>
+          </div>
           <div class="flex items-center gap-3">
             <input id="is_active" v-model="form.is_active" type="checkbox"
               class="w-4 h-4 rounded border-[#E2E8F0] text-[#2E4A8C] focus:ring-[#2E4A8C]" />
@@ -172,7 +216,7 @@
 import { ref, reactive, onMounted } from 'vue';
 import { storeToRefs } from 'pinia';
 import axios from 'axios';
-import { Plus as PlusIcon, Pencil as PencilIcon, Trash2 as Trash2Icon, MapPin as MapPinIcon, X as XIcon, Loader2 as Loader2Icon } from 'lucide-vue-next';
+import { Plus as PlusIcon, Pencil as PencilIcon, Trash2 as Trash2Icon, MapPin as MapPinIcon, X as XIcon, Loader2 as Loader2Icon, Upload as UploadIcon } from 'lucide-vue-next';
 import { useToast } from '@/composables/useToast';
 import { useConfirm } from '@/composables/useConfirm';
 import { themeForCampusCode } from '@/composables/useCampusIdentity';
@@ -200,6 +244,7 @@ const { campuses } = storeToRefs(refData);
 const loading   = ref(false);
 const saving    = ref(false);
 const formError = ref('');
+const photoBusy = ref(false);
 
 const modal = reactive({ open: false, editing: null });
 const form  = reactive({ name: '', code: '', address: '', director_name: '', is_active: true });
@@ -260,6 +305,41 @@ async function submit() {
   }
 }
 
+// The photo saves on its own, straight away — it isn't part of the form.
+async function uploadPhoto(e) {
+  const file = e.target.files?.[0];
+  e.target.value = '';
+  if (!file || !modal.editing) return;
+  photoBusy.value = true;
+  try {
+    const fd = new FormData();
+    fd.append('photo', file);
+    const res = await axios.post(`/api/campuses/${modal.editing.id}/photo`, fd);
+    modal.editing = res.data;
+    toast('Campus photo updated.', 'success');
+    await load();
+  } catch (err) {
+    toast(Object.values(err.response?.data?.errors ?? {})[0]?.[0] ?? err.response?.data?.message ?? 'Upload failed.', 'error');
+  } finally {
+    photoBusy.value = false;
+  }
+}
+
+async function resetPhoto() {
+  if (!modal.editing) return;
+  photoBusy.value = true;
+  try {
+    const res = await axios.delete(`/api/campuses/${modal.editing.id}/photo`);
+    modal.editing = res.data;
+    toast('Uploaded photo removed.', 'success');
+    await load();
+  } catch (err) {
+    toast(err.response?.data?.message ?? 'Could not remove the photo.', 'error');
+  } finally {
+    photoBusy.value = false;
+  }
+}
+
 async function confirmDelete(campus) {
   const ok = await confirm({
     title:       `Delete "${campus.name}"?`,
@@ -278,3 +358,27 @@ async function confirmDelete(campus) {
 
 onMounted(load);
 </script>
+
+<style scoped>
+.campus-thumb {
+  width: 64px; height: 36px; object-fit: cover;
+  border-radius: 6px;
+  box-shadow: 0 0 0 1px rgba(15, 23, 42, 0.08);
+}
+.campus-photo-preview {
+  width: 128px; height: 72px; border-radius: 8px; overflow: hidden;
+  display: flex; align-items: center; justify-content: center;
+  background: #F1F5F9; color: #94A3B8; font-size: 11px;
+  box-shadow: 0 0 0 1px rgba(15, 23, 42, 0.08);
+}
+.campus-photo-preview img { width: 100%; height: 100%; object-fit: cover; }
+.campus-photo-btn {
+  display: inline-flex; align-items: center; gap: 6px;
+  padding: 6px 12px; font-size: 12px; font-weight: 600;
+  color: #1D4ED8; background: #EEF2FF; border-radius: 8px;
+  cursor: pointer; transition: background-color 0.15s ease;
+}
+.campus-photo-btn:hover { background: #DDE5FF; }
+[data-theme="dark"] .campus-photo-preview { background: #22314D; }
+[data-theme="dark"] .campus-photo-btn     { color: #93C5FD; background: rgba(147,197,253,0.12); }
+</style>

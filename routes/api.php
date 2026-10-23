@@ -115,6 +115,8 @@ Route::middleware('auth:sanctum')->group(function () {
     Route::get('/campuses',              [CampusController::class, 'index']);
     Route::post('/campuses',             [CampusController::class, 'store']);
     Route::put('/campuses/{campus}',     [CampusController::class, 'update']);
+    Route::post('/campuses/{campus}/photo',   [CampusController::class, 'uploadPhoto']);
+    Route::delete('/campuses/{campus}/photo', [CampusController::class, 'resetPhoto']);
     Route::delete('/campuses/{campus}',  [CampusController::class, 'destroy']);
 
     // Holidays

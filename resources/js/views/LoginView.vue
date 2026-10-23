@@ -14,20 +14,23 @@
           <p class="text-[9.5px] font-semibold tracking-[0.22em] uppercase" style="color: rgba(214, 220, 255, 0.75);">Republic of the Philippines</p>
           <p class="login-uni text-white text-[13px] sm:text-[15px] truncate">North Eastern Mindanao State University</p>
         </div>
-        <span class="ml-auto hidden sm:inline-flex login-chip">{{ settings.shortName }}</span>
+        <div class="ml-auto login-clock" :aria-label="`Philippine time: ${clock.date}, ${clock.time}`">
+          <span class="login-clock-dot" aria-hidden="true"></span>
+          <span class="hidden md:inline login-clock-date">{{ clock.date }}</span>
+          <span class="login-clock-time">{{ clock.time }}</span>
+        </div>
       </div>
       <div class="login-header-rule"></div>
     </header>
 
-    <main class="flex-1 grid lg:grid-cols-2">
+    <main class="flex-1 grid grid-rows-[auto_1fr] lg:grid-rows-1 lg:grid-cols-2">
 
-      <!-- ── Campus photo ────────────────────────────────────────────────
-           The right half on desktop, a banner across the top on phones. By
-           default the NEMSU Administration Building, from the university's
-           own SIS banner — its blue-and-gold swoosh edge meets the blue
-           panel. The Super Admin can replace it in System Settings. -->
-      <div class="login-photo lg:order-2" :class="{ 'login-photo--custom': settings.loginBackgroundUrl }" aria-hidden="true">
-        <img :src="settings.loginBackgroundUrl || DEFAULT_CAMPUS_PHOTO" alt="" />
+      <!-- ── Campus slideshow ────────────────────────────────────────────
+           The right half on desktop, a banner across the top on phones:
+           the university photo first, then every active campus that has a
+           photo (Campuses page). -->
+      <div class="login-photo lg:order-2">
+        <CampusSlideshow :slides="slides" />
       </div>
 
       <!-- ── Title + sign-in ──────────────────────────────────────────── -->
@@ -242,11 +245,12 @@
 </template>
 
 <script setup>
-import { ref, reactive, computed } from 'vue';
+import { ref, reactive, computed, onMounted, onBeforeUnmount } from 'vue';
 import { useRouter, useRoute } from 'vue-router';
 import { useAuthStore } from '@/stores/auth';
 import { useSettingsStore } from '@/stores/settings';
 import TurnstileWidget from '@/components/TurnstileWidget.vue';
+import CampusSlideshow from '@/components/CampusSlideshow.vue';
 import {
   Mail          as MailIcon,
   Lock          as LockIcon,
@@ -293,8 +297,43 @@ function onTurnstileError() {
 
 const currentYear = new Date().getFullYear();
 
-// Shown until the Super Admin uploads a campus photo of their own.
+// The university photo that opens the slideshow, until the Super Admin
+// uploads one of their own in System Settings. The building's facade reads
+// "Administration"; which campus it stands on isn't confirmed, so the
+// caption names the building and the university only.
 const DEFAULT_CAMPUS_PHOTO = '/images/nemsu-campus.jpg';
+
+const slides = computed(() => [
+  settings.loginBackgroundUrl
+    ? { photo_url: settings.loginBackgroundUrl, name: 'North Eastern Mindanao State University' }
+    : {
+        photo_url: DEFAULT_CAMPUS_PHOTO,
+        name:      'Administration Building',
+        subtitle:  'North Eastern Mindanao State University',
+        // Keeps the photo's own swoosh edge against the blue panel.
+        position:  '30% center',
+      },
+  ...settings.campusSlides.map((c) => ({
+    photo_url: c.photo_url,
+    name:      c.name,
+    subtitle:  c.address || 'North Eastern Mindanao State University',
+    position:  'center 40%',
+  })),
+]);
+
+// ── Live clock — Philippine time, wherever the visitor's device is set ──
+const dateFmt = new Intl.DateTimeFormat('en-PH', { timeZone: 'Asia/Manila', weekday: 'long', month: 'long', day: 'numeric', year: 'numeric' });
+const timeFmt = new Intl.DateTimeFormat('en-PH', { timeZone: 'Asia/Manila', hour: 'numeric', minute: '2-digit', second: '2-digit', hour12: true });
+const clock = reactive({ date: '', time: '' });
+function tick() {
+  const now = new Date();
+  clock.date = dateFmt.format(now);
+  clock.time = timeFmt.format(now);
+}
+tick();
+let clockTimer = null;
+onMounted(() => { clockTimer = setInterval(tick, 1000); });
+onBeforeUnmount(() => clearInterval(clockTimer));
 
 function inputStyle(field) {
   const active = focused.value === field;
@@ -343,32 +382,25 @@ async function handleLogin() {
 /* ── Campus photo ─────────────────────────────────────────────────────────── */
 .login-photo {
   position: relative;
-  height: 190px;
+  height: 210px;
   overflow: hidden;
   background: #1A138F;
 }
-.login-photo img {
-  width: 100%; height: 100%;
-  object-fit: cover;
-  object-position: 60% 45%;
-}
 @media (min-width: 1024px) {
-  .login-photo { height: auto; }
-  /* Far enough left that the photo's swoosh edge still meets the blue
-     panel, far enough right to keep the building's NEMSU tower in view. */
-  .login-photo img { position: absolute; inset: 0; object-position: 30% center; }
+  .login-photo { height: auto; min-height: 520px; }
 }
-/* An uploaded photo has no swoosh of its own — fade its seam into the panel. */
-.login-photo--custom::before {
+/* Soften the seam between the photos and the blue panel. */
+.login-photo::after {
   content: '';
-  position: absolute; z-index: 1;
-  inset: auto 0 0 0; height: 48px;
-  background: linear-gradient(0deg, #1C0ED7, transparent);
+  position: absolute; z-index: 2;
+  inset: auto 0 0 0; height: 36px;
+  background: linear-gradient(0deg, rgba(28, 14, 215, 0.85), transparent);
+  pointer-events: none;
 }
 @media (min-width: 1024px) {
-  .login-photo--custom::before {
-    inset: 0 auto 0 0; width: 72px; height: auto;
-    background: linear-gradient(90deg, #1C0ED7, transparent);
+  .login-photo::after {
+    inset: 0 auto 0 0; width: 56px; height: auto;
+    background: linear-gradient(90deg, rgba(26, 19, 143, 0.9), transparent);
   }
 }
 
@@ -416,13 +448,34 @@ async function handleLogin() {
   font-weight: 600;
   letter-spacing: 0.01em;
 }
-.login-chip {
-  font-size: 10.5px; font-weight: 700; letter-spacing: 0.18em;
-  color: #FFBE45;
-  padding: 5px 12px;
+/* Live clock pill */
+.login-clock {
+  display: inline-flex; align-items: center; gap: 8px;
+  padding: 6px 14px;
   border-radius: 999px;
-  border: 1px solid rgba(247, 165, 26, 0.50);
-  background: rgba(247, 165, 26, 0.12);
+  border: 1px solid rgba(247, 165, 26, 0.45);
+  background: rgba(247, 165, 26, 0.10);
+  white-space: nowrap;
+}
+.login-clock-date { font-size: 12px; color: rgba(226, 230, 255, 0.85); }
+.login-clock-time {
+  font-size: 13px; font-weight: 700; color: #FFBE45;
+  font-variant-numeric: tabular-nums;
+  min-width: 7.6ch; text-align: right;
+}
+.login-clock-dot {
+  width: 7px; height: 7px; border-radius: 999px; background: #34D399;
+  box-shadow: 0 0 0 0 rgba(52, 211, 153, 0.6);
+  animation: clockPulse 2s ease-out infinite;
+}
+/* On phones the university's name needs the whole header. */
+@media (max-width: 639px) {
+  .login-clock { display: none; }
+}
+@keyframes clockPulse {
+  0%   { box-shadow: 0 0 0 0   rgba(52, 211, 153, 0.6); }
+  70%  { box-shadow: 0 0 0 6px rgba(52, 211, 153, 0);   }
+  100% { box-shadow: 0 0 0 0   rgba(52, 211, 153, 0);   }
 }
 
 /* ── Hero ─────────────────────────────────────────────────────────────────── */
