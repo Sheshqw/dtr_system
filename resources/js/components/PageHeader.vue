@@ -50,6 +50,15 @@ defineProps({
   background: linear-gradient(135deg, #253A6E 0%, #34478C 55%, #3D5CA3 100%);
 }
 
+/* Gold-and-blue rule along the bottom — the same masthead line as the
+   login page's university header, so every page carries it. */
+.ph-wrap::after {
+  content: '';
+  position: absolute; left: 0; right: 0; bottom: 0; height: 2px;
+  background: linear-gradient(90deg, #C9A227 0%, #E8C040 30%, rgba(46, 74, 140, 0.6) 70%, rgba(2, 132, 199, 0.5) 100%);
+  opacity: 0.85;
+}
+
 /* Dot-grid texture */
 .ph-texture {
   position: absolute; inset: 0; pointer-events: none;

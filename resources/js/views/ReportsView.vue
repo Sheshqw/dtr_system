@@ -3,7 +3,7 @@
 
     <PageHeader title="Reports" subtitle="Generate monthly DTR summaries and official CSC Form 48" :icon="FileTextIcon" />
 
-    <div class="report-page flex-1 overflow-auto bg-[#F8FAFC] p-6">
+    <div class="report-page flex-1 overflow-auto bg-[#F4F6FB] p-6">
       <div class="mx-auto" :class="(activeTab === 'generate' && previewData) ? 'max-w-5xl' : 'max-w-3xl'">
 
         <!-- ── Tab bar ─────────────────────────────────────────────────── -->
@@ -69,7 +69,7 @@
                       v-model="empSearch"
                       @focus="showDropdown = true"
                       @blur="hideDropdown"
-                      class="form-input pl-9"
+                      class="form-input !pl-9"
                       placeholder="Search employee name or ID…"
                       autocomplete="off"
                     />
@@ -808,7 +808,7 @@
           <!-- Government letterhead — mirrors the official CSC Form 48 -->
           <div class="doc-letterhead">
             <div class="dl-republic">Republic of the Philippines</div>
-            <div class="dl-uni">Northern Eastern Mindanao State University</div>
+            <div class="dl-uni">North Eastern Mindanao State University</div>
             <div class="dl-campus">{{ previewData.employee.campus ?? 'NEMSU' }} · Human Resources Management Office</div>
             <div class="dl-badge">CSC Form 48</div>
           </div>
@@ -1958,7 +1958,7 @@ function printDtr() {
     <div style="width:48px;"></div>
     <div class="gh-center">
       <div class="gh-republic">Republic of the Philippines</div>
-      <div class="gh-uni">Northern Eastern Mindanao State University</div>
+      <div class="gh-uni">North Eastern Mindanao State University</div>
       <div class="gh-campus">${escapeHtml(d.employee.campus ?? 'Campus')} &nbsp;·&nbsp; Human Resources Management Office</div>
     </div>
     <div class="gh-badge">CSC Form 48</div>

@@ -30,7 +30,7 @@
       </div>
     </div>
 
-    <div class="att-body flex-1 overflow-auto bg-[#F0F4FF] p-6">
+    <div class="att-body flex-1 overflow-auto bg-[#F4F6FB] p-6">
 
       <!-- ── PUNCH LOGS TAB ── -->
       <div v-if="activeTab === 'punches'" class="space-y-4">

@@ -70,7 +70,7 @@ const DEFAULT_THEME = {
   colorDim:     '#FEF9E7',
   textColor:    '#FDE68A',
   heroGradient: 'linear-gradient(135deg, #1B2A5E 0%, #24356F 50%, #2A3C76 100%)',
-  tagline:      'Northern Eastern Mindanao State University',
+  tagline:      'North Eastern Mindanao State University',
 };
 
 export function useCampusIdentity() {

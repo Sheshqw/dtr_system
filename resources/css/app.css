@@ -29,6 +29,16 @@ textarea:focus-visible,
   outline-color: #93C5FD !important;
 }
 
+/* ─── Base typography ──────────────────────────────────────────────────────────
+   One text colour for anything that doesn't set its own (the brand's
+   near-black navy, not browser black), and tabular figures in tables so
+   times and totals line up digit-for-digit down a column. ──────────────── */
+body {
+  color: var(--color-text-primary);
+  text-rendering: optimizeLegibility;
+}
+table { font-variant-numeric: tabular-nums; }
+
 /* ─── Scrollbar ─────────────────────────────────────────────────────────────── */
 ::-webkit-scrollbar             { width: 5px; height: 5px; }
 ::-webkit-scrollbar-track       { background: transparent; }
@@ -651,7 +661,12 @@ input, select, textarea {
 [data-theme="dark"] .card-head       { background: #1E3050 !important; border-bottom-color: rgba(255,255,255,0.07) !important; }
 [data-theme="dark"] .card-head-title { color: #E4EAF5 !important; }
 [data-theme="dark"] .card-head-sub   { color: #9AAAC9 !important; }
-[data-theme="dark"] .card-head-icon  { background: color-mix(in srgb, var(--accent, #1B2A5E) 28%, transparent) !important; }
+/* The navy accent (#1B2A5E) disappears against a dark card — lift it toward
+   white so the icon and its badge stay visible; brighter accents keep their hue. */
+[data-theme="dark"] .card-head-icon  {
+  background: color-mix(in srgb, color-mix(in srgb, var(--accent, #1B2A5E) 55%, #FFFFFF) 16%, transparent) !important;
+  color: color-mix(in srgb, var(--accent, #1B2A5E) 45%, #FFFFFF) !important;
+}
 
 /* ── DashboardView — Skeletons ───────────────────────────────────────────── */
 [data-theme="dark"] .an-sk        { background: #1C2A44 !important; border-color: rgba(255,255,255,0.06) !important; }
@@ -914,6 +929,7 @@ input, select, textarea {
 @theme {
     --font-sans: 'IBM Plex Sans', ui-sans-serif, system-ui, sans-serif;
     --font-mono: 'IBM Plex Mono', ui-monospace, monospace;
+    --font-serif: 'IBM Plex Serif', Georgia, 'Times New Roman', serif;
 
     /* NEMSU brand — softened navy + rich gold */
     --color-bg:              #F4F6FB;
