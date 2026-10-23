@@ -38,8 +38,8 @@
         <img :src="settings.logoUrl" alt="" class="login-watermark" aria-hidden="true" />
 
         <div class="relative w-full max-w-[440px] mx-auto">
-          <section class="hero-enter text-center lg:text-left mb-6">
-            <p class="text-[11px] font-bold tracking-[0.26em] uppercase" style="color: #F7A51A;">
+          <section class="login-hero hero-enter text-center lg:text-left mb-6">
+            <p class="login-eyebrow text-[11px] font-bold tracking-[0.26em] uppercase" style="color: #F7A51A;">
               Human Resource Management Office
             </p>
             <h1 class="login-title mt-2.5 text-white">
@@ -58,18 +58,18 @@
             <!-- Top accent bar: royal blue → gold, the university's colours -->
             <div class="h-[3px] w-full" style="background: linear-gradient(90deg, #2A1FCF 0%, #4C6BFF 35%, #F7A51A 70%, #FFBE45 100%);"></div>
 
-            <div class="px-8 pt-7 pb-8">
+            <div class="px-8 pt-6 pb-6">
 
               <!-- Card header -->
-              <div class="mb-6 text-center">
-                <h2 class="text-[21px] font-bold leading-tight text-white">Welcome back</h2>
-                <p class="text-[13px] mt-1" style="color: rgba(214, 220, 255, 0.75);">Sign in to your account to continue</p>
+              <div class="mb-5 text-center">
+                <h2 class="text-[20px] font-bold leading-tight text-white">Sign in to {{ settings.shortName }}</h2>
+                <p class="text-[13px] mt-1" style="color: rgba(214, 220, 255, 0.78);">Use your official NEMSU email address and password.</p>
               </div>
-              <form @submit.prevent="handleLogin" class="space-y-4" novalidate>
+              <form @submit.prevent="handleLogin" class="space-y-3.5" novalidate>
 
                 <!-- Email -->
                 <div>
-                  <label for="login-email" class="block text-[10px] font-bold tracking-[0.18em] uppercase mb-2"
+                  <label for="login-email" class="block text-[10px] font-bold tracking-[0.18em] uppercase mb-1.5"
                          style="color: rgba(214, 220, 255, 0.72);">
                     Email Address
                   </label>
@@ -80,12 +80,13 @@
                     />
                     <input
                       id="login-email"
+                      ref="emailInput"
                       v-model="form.email"
                       type="email"
                       required
                       autocomplete="email"
                       placeholder="you@nemsu.edu.ph"
-                      class="input-field w-full pl-10 pr-4 py-3 text-sm rounded-xl outline-none transition-all duration-200"
+                      class="input-field w-full pl-10 pr-4 py-2.5 text-sm rounded-xl outline-none transition-all duration-200"
                       :style="inputStyle('email')"
                       :aria-invalid="!!error"
                       @focus="focused = 'email'"
@@ -96,7 +97,7 @@
 
                 <!-- Password -->
                 <div>
-                  <label for="login-password" class="block text-[10px] font-bold tracking-[0.18em] uppercase mb-2"
+                  <label for="login-password" class="block text-[10px] font-bold tracking-[0.18em] uppercase mb-1.5"
                          style="color: rgba(214, 220, 255, 0.72);">
                     Password
                   </label>
@@ -112,7 +113,7 @@
                       required
                       autocomplete="current-password"
                       placeholder="Enter your password"
-                      class="input-field w-full pl-10 pr-11 py-3 text-sm rounded-xl outline-none transition-all duration-200"
+                      class="input-field w-full pl-10 pr-11 py-2.5 text-sm rounded-xl outline-none transition-all duration-200"
                       :style="inputStyle('pwd')"
                       :aria-invalid="!!error"
                       @focus="focused = 'pwd'"
@@ -146,7 +147,7 @@
                     type="button"
                     role="checkbox"
                     :aria-checked="rememberMe"
-                    aria-label="Remember me"
+                    aria-label="Keep me signed in on this device"
                     @click="rememberMe = !rememberMe"
                     class="remember-toggle flex-shrink-0"
                     :class="rememberMe ? 'remember-on' : 'remember-off'"
@@ -158,7 +159,7 @@
                     style="color: rgba(214, 220, 255, 0.78);"
                     @click="rememberMe = !rememberMe"
                   >
-                    Remember me
+                    Keep me signed in on this device
                   </span>
                 </div>
 
@@ -198,7 +199,7 @@
                 <button
                   type="submit"
                   :disabled="loading || !form.email || !form.password || awaitingTurnstile"
-                  class="relative w-full py-3.5 text-sm font-bold rounded-xl overflow-hidden transition-all duration-200 disabled:opacity-70 disabled:cursor-not-allowed group mt-1"
+                  class="relative w-full py-3 text-sm font-bold rounded-xl overflow-hidden transition-all duration-200 disabled:opacity-70 disabled:cursor-not-allowed group mt-1"
                   :style="btnStyle"
                 >
                   <div
@@ -221,9 +222,12 @@
               </form>
 
               <!-- Card footer -->
-              <div class="mt-6 pt-5" style="border-top: 1px solid rgba(255,255,255,0.10);">
-                <p class="text-center text-[10.5px]" style="color: rgba(214, 220, 255, 0.60);">
-                  Authorized personnel only &nbsp;&middot;&nbsp; Activity is recorded in the audit trail
+              <div class="mt-5 pt-4 text-center" style="border-top: 1px solid rgba(255,255,255,0.10);">
+                <p class="text-[11.5px]" style="color: rgba(214, 220, 255, 0.80);">
+                  Forgot your password? Contact your campus HR Officer.
+                </p>
+                <p class="text-[10.5px] mt-1" style="color: rgba(214, 220, 255, 0.55);">
+                  For authorized NEMSU personnel only &middot; Sign-ins are recorded
                 </p>
               </div>
             </div>
@@ -275,6 +279,7 @@ const focused    = ref(null);
 const rememberMe = ref(true);
 const capsLockOn = ref(false);
 
+const emailInput      = ref(null);
 const turnstileRef    = ref(null);
 const turnstileToken  = ref('');
 const turnstileFailed = ref(false);
@@ -332,7 +337,15 @@ function tick() {
 }
 tick();
 let clockTimer = null;
-onMounted(() => { clockTimer = setInterval(tick, 1000); });
+onMounted(() => {
+  clockTimer = setInterval(tick, 1000);
+  // On desktop the cursor waits in the email field, so an employee can type
+  // straight away. Not on phones, where it would pop the keyboard up over
+  // the page before they've seen it.
+  if (window.matchMedia('(min-width: 1024px)').matches && !form.email) {
+    emailInput.value?.focus({ preventScroll: true });
+  }
+});
 onBeforeUnmount(() => clearInterval(clockTimer));
 
 function inputStyle(field) {
@@ -382,7 +395,7 @@ async function handleLogin() {
 /* ── Campus photo ─────────────────────────────────────────────────────────── */
 .login-photo {
   position: relative;
-  height: 210px;
+  height: 160px;
   overflow: hidden;
   background: #1A138F;
 }
@@ -418,10 +431,33 @@ async function handleLogin() {
 @media (min-width: 1024px) {
   .login-panel { padding: 28px 48px; }
 }
-/* On short screens the one-line description gives way, so the card and
-   footer still fit without scrolling. */
-@media (max-height: 820px) {
+/* The sign-in card must be fully on screen without scrolling. On shorter
+   screens (a laptop at 125% zoom is about 740px tall) the title above it
+   shrinks step by step, and on very short ones it gives way entirely —
+   the university's name is still in the header. */
+@media (max-height: 900px) {
   .login-blurb { display: none !important; }
+}
+@media (min-width: 1024px) and (max-height: 800px) {
+  .login-panel   { padding-top: 20px; padding-bottom: 20px; }
+  .login-hero    { margin-bottom: 16px; }
+  .login-eyebrow { display: none; }
+  .login-title   { font-size: 26px; }
+  .login-title-rule { margin-top: 10px; }
+}
+@media (min-width: 1024px) and (max-height: 680px) {
+  .login-hero { display: none; }
+}
+/* Phones: a shorter photo strip and title, so the Sign In button is on
+   screen without scrolling. */
+@media (max-width: 1023px) {
+  .login-panel { padding-top: 22px; }
+  .login-hero  { margin-bottom: 18px; }
+  .login-title { font-size: 23px; }
+  .login-title-rule { margin-top: 12px; }
+}
+@media (max-width: 1023px) and (max-height: 780px) {
+  .login-hero { display: none; }
 }
 /* The seal, faint and oversized — the same touch as the SIS site's footer. */
 .login-watermark {

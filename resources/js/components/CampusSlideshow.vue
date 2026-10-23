@@ -248,10 +248,12 @@ onBeforeUnmount(() => {
 @keyframes ss-fill { from { transform: scaleX(0); } to { transform: scaleX(1); } }
 
 @media (max-width: 1023px) {
-  .ss-caption  { left: 12px; bottom: 10px; padding: 7px 12px 7px 9px; }
-  .ss-name     { font-size: 13px; }
-  .ss-sub      { font-size: 11px; }
-  .ss-credit   { font-size: 9.5px; margin-top: 1px; }
+  /* The strip is short on phones — name and credit only. */
+  .ss-caption  { left: 10px; bottom: 8px; gap: 7px; padding: 5px 10px 5px 8px; border-radius: 9px; }
+  .ss-caption-icon { width: 14px; height: 14px; }
+  .ss-name     { font-size: 12px; }
+  .ss-sub      { display: none; }
+  .ss-credit   { font-size: 9px; margin-top: 1px; }
   .ss-controls { top: 10px; right: 10px; }
 }
 </style>
