@@ -2,7 +2,7 @@
 <html lang="en">
 <head>
 <meta charset="UTF-8">
-<title>CSC Form 48 – {{ $employee->full_name }} – {{ $period->label() }}</title>
+<title>{{ $title }}</title>
 <style>
 * { margin: 0; padding: 0; box-sizing: border-box; }
 html, body {
@@ -12,6 +12,7 @@ html, body {
   background: #fff;
 }
 @page {
+  size: A4 portrait;
   margin: 10mm 7mm 10mm 9mm;
 }
 
@@ -124,92 +125,32 @@ html, body {
 .certif-lead { font-weight: bold; }
 
 /* ── Signatures ───────────────────────────────── */
-.sig-tbl {
-  width: 100%;
-  border-collapse: collapse;
-  margin-top: 5pt;
-}
-.sig-tbl td {
-  vertical-align: top;
+.sig-block {
   text-align: center;
-  font-size: 7pt;
-  padding: 0 2pt;
+  margin-top: 4pt;
 }
 .sig-space { height: 18pt; }
-.sig-over  { border-top: 1pt solid #000; padding-top: 1pt; }
+.sig-line  {
+  display: inline-block;
+  min-width: 150pt;
+  border-top: 1pt solid #000;
+  padding-top: 1pt;
+}
 .sig-name  { font-size: 8.5pt; font-weight: bold; text-transform: uppercase; }
 .sig-sub   { font-size: 7pt; }
-.sig-label { font-size: 6.5pt; text-align: left; }
+.sig-label { font-size: 7.5pt; text-align: left; margin-top: 8pt; }
+
+/* ── One employee per sheet when several are printed together ── */
+.sheet-break { page-break-after: always; }
 </style>
 </head>
 <body>
 
-@php
-// Shift office hours — no leading zero, matching the official form (8:00, 12:00, 1:00, 5:00)
-$shiftMorIn  = optional($employee->shift)->morning_in    ? \Carbon\Carbon::parse($employee->shift->morning_in)->format('G:i')    : '8:00';
-$shiftMorOut = optional($employee->shift)->morning_out   ? \Carbon\Carbon::parse($employee->shift->morning_out)->format('G:i')   : '12:00';
-$shiftAftIn  = optional($employee->shift)->afternoon_in  ? \Carbon\Carbon::parse($employee->shift->afternoon_in)->format('g:i')  : '1:00';
-$shiftAftOut = optional($employee->shift)->afternoon_out ? \Carbon\Carbon::parse($employee->shift->afternoon_out)->format('g:i') : '5:00';
-
-// Totals
-$lateMins = (int)($totals['tardiness_minutes'] ?? 0);
-
-// Employee info (uppercase to match the CSC form convention)
-$empName = strtoupper($employee->full_name);
-
-// "January - 2026" per the CSC form's month/year format. A half-month DTR
-// (COS / Job Order) names its days instead: "January 1-15, 2026".
-$monthName      = \Carbon\Carbon::create($year, $month)->format('F');
-$monthYearLabel = $period->isHalfMonth()
-    ? "{$monthName} {$period->startDay()}-{$period->endDay()}, {$year}"
-    : "{$monthName} - {$year}";
-
-// Director by campus code
-$directors = [
-    'TAN' => ['name' => '', 'title' => 'Campus Director'],
-    'CAN' => ['name' => 'JUANCHO A. INTANO, Ph.D.', 'title' => 'Campus Director'],
-    'LIA' => ['name' => '', 'title' => 'Campus Director'],
-    'CAG' => ['name' => '', 'title' => 'Campus Director'],
-    'SMC' => ['name' => '', 'title' => 'Campus Director'],
-    'TAG' => ['name' => '', 'title' => 'Campus Director'],
-    'BIS' => ['name' => '', 'title' => 'Campus Director'],
-];
-$campusCode = $employee->campus?->code ?? '';
-$director   = $directors[$campusCode] ?? ['name' => '', 'title' => 'Campus Director'];
-@endphp
-
-<table class="pair">
-<tr>
-  {{-- ══ LEFT COPY ══ --}}
-  <td class="copy copy-left">
-    @include('reports._form48_copy', [
-      'empName'        => $empName,
-      'monthYearLabel' => $monthYearLabel,
-      'shiftMorIn'     => $shiftMorIn,
-      'shiftMorOut'    => $shiftMorOut,
-      'shiftAftIn'     => $shiftAftIn,
-      'shiftAftOut'    => $shiftAftOut,
-      'lateMins'       => $lateMins,
-      'director'       => $director,
-      'signingReviewer'=> $signingReviewer ?? null,
-    ])
-  </td>
-  {{-- ══ RIGHT COPY ══ --}}
-  <td class="copy copy-right">
-    @include('reports._form48_copy', [
-      'empName'        => $empName,
-      'monthYearLabel' => $monthYearLabel,
-      'shiftMorIn'     => $shiftMorIn,
-      'shiftMorOut'    => $shiftMorOut,
-      'shiftAftIn'     => $shiftAftIn,
-      'shiftAftOut'    => $shiftAftOut,
-      'lateMins'       => $lateMins,
-      'director'       => $director,
-      'signingReviewer'=> $signingReviewer ?? null,
-    ])
-  </td>
-</tr>
-</table>
+@foreach ($pages as $page)
+  <div class="{{ $loop->last ? '' : 'sheet-break' }}">
+    @include('reports._form48_page', $page)
+  </div>
+@endforeach
 
 </body>
 </html>

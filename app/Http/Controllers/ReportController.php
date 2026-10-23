@@ -27,36 +27,46 @@ class ReportController extends Controller
         $this->authorizeView($request->user(), $employee);
         $period = $this->resolvePeriod($request, $employee);
 
-        $month = $period->month;
-        $year  = $period->year;
-
-        $signingReviewer = null;
         if (! $this->isPrivileged($request)) {
-            $signingReviewer = $this->consumeApprovedPrintConsent($employee, $period);
+            $this->consumeApprovedPrintConsent($employee, $period);
         }
 
         $employee->loadMissing('department', 'shift', 'campus');
 
-        $records = $this->periodRecords($employee, $period)
-            ->keyBy(fn($r) => $r->work_date->day);
-
-        $totals = [
-            'days_present'      => $records->whereIn('status', ['present', 'late'])->count(),
-            'tardiness_minutes' => $records->sum('tardiness_minutes'),
-            'undertime_minutes' => $records->sum('undertime_minutes'),
-            'overtime_minutes'  => $records->sum('overtime_minutes'),
-            'hours_rendered'    => round($records->sum('hours_rendered'), 2),
-        ];
-
         $holidays = Holiday::keyedBetween($period->start()->toDateString(), $period->end()->toDateString());
+        $page     = $this->form48Page($employee, $period, $this->periodRecords($employee, $period), $holidays);
 
-        $pdf = Pdf::loadView('reports.form48', compact(
-            'employee', 'records', 'period', 'year', 'month', 'totals', 'signingReviewer', 'holidays'
-        ))->setPaper('a4', 'portrait');
+        $filename = "DTR_{$employee->employee_id}_{$period->year}_{$period->month}{$period->filenameSuffix()}.pdf";
 
-        $filename = "DTR_{$employee->employee_id}_{$year}_{$month}{$period->filenameSuffix()}.pdf";
+        return $this->form48Pdf([$page], "CSC Form 48 – {$employee->full_name} – {$period->label()}")
+            ->download($filename);
+    }
 
-        return $pdf->download($filename);
+    /** Everything _form48_page.blade.php needs for one employee's sheet. */
+    private function form48Page(User $employee, DtrPeriod $period, $records, array $holidays): array
+    {
+        $records = $records->keyBy(fn ($r) => $r->work_date->day);
+
+        return [
+            'employee' => $employee,
+            'records'  => $records,
+            'period'   => $period,
+            'year'     => $period->year,
+            'month'    => $period->month,
+            'holidays' => $holidays,
+            'totals'   => [
+                'days_present'      => $records->whereIn('status', ['present', 'late'])->count(),
+                'tardiness_minutes' => $records->sum('tardiness_minutes'),
+                'undertime_minutes' => $records->sum('undertime_minutes'),
+                'overtime_minutes'  => $records->sum('overtime_minutes'),
+                'hours_rendered'    => round($records->sum('hours_rendered'), 2),
+            ],
+        ];
+    }
+
+    private function form48Pdf(array $pages, string $title)
+    {
+        return Pdf::loadView('reports.form48', compact('pages', 'title'))->setPaper('a4', 'portrait');
     }
 
     public function preview(Request $request, User $employee)
@@ -75,6 +85,7 @@ class ReportController extends Controller
                 'position'    => $employee->position,
                 'department'  => $employee->department?->name,
                 'campus'      => $employee->campus?->name ?? 'NEMSU',
+                'campus_director' => $employee->campus?->director_name,
                 'semi_monthly_dtr' => $employee->usesSemiMonthlyDtr(),
             ],
             'month_label'=> $period->label(),
@@ -470,7 +481,6 @@ class ReportController extends Controller
      * A non-privileged employee may only download the official PDF once HR/Admin
      * has approved a print request for this exact month/year, and only once per
      * approval — it's consumed here so a second download needs a fresh request.
-     * Returns the reviewer who approved it, so form48() can show their signature.
      *
      * Wrapped in a transaction with lockForUpdate(), same pattern as
      * WorkingHoursService::recordPunchIfNotDuplicate() — without it, two
@@ -480,13 +490,12 @@ class ReportController extends Controller
      * second request wait for the first to finish, then correctly find
      * nothing left to consume.
      */
-    private function consumeApprovedPrintConsent(User $employee, DtrPeriod $period): ?User
+    private function consumeApprovedPrintConsent(User $employee, DtrPeriod $period): void
     {
-        return DB::transaction(function () use ($employee, $period) {
+        DB::transaction(function () use ($employee, $period) {
             // Matched on the exact period: approving a COS employee's 1st-half
             // DTR doesn't also unlock the 2nd half (or the whole month).
-            $consent = DtrPrintConsent::with('reviewer')
-                ->where('employee_id', $employee->id)
+            $consent = DtrPrintConsent::where('employee_id', $employee->id)
                 ->where('month', $period->month)
                 ->where('year', $period->year)
                 ->where('period', $period->key)
@@ -500,8 +509,6 @@ class ReportController extends Controller
             }
 
             $consent->update(['used_at' => now()]);
-
-            return $consent->reviewer;
         });
     }
 

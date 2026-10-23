@@ -23,6 +23,7 @@
                 <th scope="col" class="text-left px-5 py-3 text-[11px] font-semibold uppercase tracking-wider" style="color: #6B7A94;">Campus</th>
                 <th scope="col" class="text-left px-4 py-3 text-[11px] font-semibold uppercase tracking-wider" style="color: #6B7A94;">Code</th>
                 <th scope="col" class="text-left px-4 py-3 text-[11px] font-semibold uppercase tracking-wider" style="color: #6B7A94;">Address</th>
+                <th scope="col" class="text-left px-4 py-3 text-[11px] font-semibold uppercase tracking-wider" style="color: #6B7A94;">Campus Director</th>
                 <th scope="col" class="text-center px-4 py-3 text-[11px] font-semibold uppercase tracking-wider" style="color: #6B7A94;">Employees</th>
                 <th scope="col" class="text-center px-4 py-3 text-[11px] font-semibold uppercase tracking-wider" style="color: #6B7A94;">Status</th>
                 <th scope="col" class="px-5 py-3"><span class="sr-only">Actions</span></th>
@@ -53,6 +54,10 @@
                   </span>
                 </td>
                 <td class="px-4 py-3.5 text-sm" style="color: #64748B;">{{ campus.address ?? '—' }}</td>
+                <td class="px-4 py-3.5 text-sm">
+                  <span v-if="campus.director_name" style="color: #0F172A;">{{ campus.director_name }}</span>
+                  <span v-else class="text-xs italic" style="color: #B45309;">Not set — signed by hand on Form 48</span>
+                </td>
                 <td class="px-4 py-3.5 text-center text-sm font-semibold" style="color: #0F172A;">{{ campus.employees_count }}</td>
                 <td class="px-4 py-3.5 text-center">
                   <span
@@ -89,7 +94,7 @@
                 </td>
               </tr>
               <tr v-if="campuses.length === 0">
-                <td colspan="6" class="px-5 py-16 text-center text-sm" style="color: #6B7A94;">No campuses found.</td>
+                <td colspan="7" class="px-5 py-16 text-center text-sm" style="color: #6B7A94;">No campuses found.</td>
               </tr>
             </tbody>
           </table>
@@ -131,6 +136,12 @@
             <label class="block text-sm font-medium text-[#0F172A] mb-1.5">Address</label>
             <input v-model="form.address" type="text" placeholder="e.g. Cantilan, Surigao del Sur"
               class="w-full px-3 py-2 text-sm border border-[#E2E8F0] rounded-lg focus:outline-none focus:ring-2 focus:ring-[#2E4A8C] text-[#0F172A] bg-white" />
+          </div>
+          <div>
+            <label class="block text-sm font-medium text-[#0F172A] mb-1.5">Campus Director</label>
+            <input v-model="form.director_name" type="text" maxlength="120" placeholder="e.g. JUANCHO A. INTANO, Ph.D."
+              class="w-full px-3 py-2 text-sm border border-[#E2E8F0] rounded-lg focus:outline-none focus:ring-2 focus:ring-[#2E4A8C] text-[#0F172A] bg-white" />
+            <p class="text-xs text-[#6B7A94] mt-1">Printed as the verifying signatory on every CSC Form 48 from this campus, exactly as typed.</p>
           </div>
           <div class="flex items-center gap-3">
             <input id="is_active" v-model="form.is_active" type="checkbox"
@@ -191,7 +202,7 @@ const saving    = ref(false);
 const formError = ref('');
 
 const modal = reactive({ open: false, editing: null });
-const form  = reactive({ name: '', code: '', address: '', is_active: true });
+const form  = reactive({ name: '', code: '', address: '', director_name: '', is_active: true });
 
 async function load() {
   loading.value = true;
@@ -203,7 +214,7 @@ async function load() {
 }
 
 function openCreate() {
-  Object.assign(form, { name: '', code: '', address: '', is_active: true });
+  Object.assign(form, { name: '', code: '', address: '', director_name: '', is_active: true });
   formError.value = '';
   modal.editing = null;
   modal.open = true;
@@ -214,6 +225,7 @@ function openEdit(campus) {
     name: campus.name,
     code: campus.code,
     address: campus.address ?? '',
+    director_name: campus.director_name ?? '',
     is_active: campus.is_active,
   });
   formError.value = '';

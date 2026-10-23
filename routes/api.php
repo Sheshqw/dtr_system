@@ -18,7 +18,6 @@ use App\Http\Controllers\AnalyticsController;
 use App\Http\Controllers\SystemHealthController;
 use App\Http\Controllers\AlertController;
 use App\Http\Controllers\SystemSettingController;
-use App\Http\Controllers\SignatureController;
 use App\Http\Controllers\FeaturePermissionController;
 use App\Http\Controllers\MyAttendanceController;
 use Illuminate\Support\Facades\Route;
@@ -141,12 +140,6 @@ Route::middleware('auth:sanctum')->group(function () {
     Route::get('/dtr-print-consents',                [DtrPrintConsentController::class, 'index']);
     Route::post('/dtr-print-consents',               [DtrPrintConsentController::class, 'store']);
     Route::patch('/dtr-print-consents/{consent}',    [DtrPrintConsentController::class, 'review']);
-
-    // A reviewer's own digital signature — shown on DTRs they approve for download
-    Route::get('/my-signature',    [SignatureController::class, 'show']);
-    Route::post('/my-signature',   [SignatureController::class, 'store']);
-    Route::patch('/my-signature',  [SignatureController::class, 'toggle']);
-    Route::delete('/my-signature', [SignatureController::class, 'destroy']);
 
     // Tracking & analytics — granted by role default (off for employees) and
     // overridable per employee by the Super Admin in Access Control.

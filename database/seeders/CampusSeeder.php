@@ -11,7 +11,7 @@ class CampusSeeder extends Seeder
     {
         $campuses = [
             ['name' => 'Tandag Campus',     'code' => 'TAN', 'address' => 'Tandag City, Surigao del Sur'],
-            ['name' => 'Cantilan Campus',   'code' => 'CAN', 'address' => 'Cantilan, Surigao del Sur'   ],
+            ['name' => 'Cantilan Campus',   'code' => 'CAN', 'address' => 'Cantilan, Surigao del Sur',   'director_name' => 'JUANCHO A. INTANO, Ph.D.'],
             ['name' => 'Lianga Campus',     'code' => 'LIA', 'address' => 'Lianga, Surigao del Sur'     ],
             ['name' => 'Cagwait Campus',    'code' => 'CAG', 'address' => 'Cagwait, Surigao del Sur'    ],
             ['name' => 'San Miguel Campus', 'code' => 'SMC', 'address' => 'San Miguel, Surigao del Sur' ],

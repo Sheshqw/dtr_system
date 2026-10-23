@@ -22,10 +22,11 @@ class CampusController extends Controller
         $this->gate($request->user());
 
         $data = $request->validate([
-            'name'      => 'required|string|max:100|unique:campuses,name',
-            'code'      => 'required|string|max:20|unique:campuses,code',
-            'address'   => 'nullable|string|max:255',
-            'is_active' => 'sometimes|boolean',
+            'name'          => 'required|string|max:100|unique:campuses,name',
+            'code'          => 'required|string|max:20|unique:campuses,code',
+            'address'       => 'nullable|string|max:255',
+            'director_name' => 'nullable|string|max:120',
+            'is_active'     => 'sometimes|boolean',
         ]);
 
         $campus = Campus::create($data);
@@ -38,10 +39,11 @@ class CampusController extends Controller
         $this->gate($request->user());
 
         $data = $request->validate([
-            'name'      => 'required|string|max:100|unique:campuses,name,' . $campus->id,
-            'code'      => 'required|string|max:20|unique:campuses,code,' . $campus->id,
-            'address'   => 'nullable|string|max:255',
-            'is_active' => 'sometimes|boolean',
+            'name'          => 'required|string|max:100|unique:campuses,name,' . $campus->id,
+            'code'          => 'required|string|max:20|unique:campuses,code,' . $campus->id,
+            'address'       => 'nullable|string|max:255',
+            'director_name' => 'nullable|string|max:120',
+            'is_active'     => 'sometimes|boolean',
         ]);
 
         $campus->update($data);
@@ -69,6 +71,7 @@ class CampusController extends Controller
             'name'            => $c->name,
             'code'            => $c->code,
             'address'         => $c->address,
+            'director_name'   => $c->director_name,
             'is_active'       => $c->is_active,
             'employees_count' => $c->employees_count ?? 0,
         ];

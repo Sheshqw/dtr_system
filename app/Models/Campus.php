@@ -9,7 +9,7 @@ class Campus extends Model
 {
     use HasFactory;
 
-    protected $fillable = ['name', 'code', 'address', 'is_active'];
+    protected $fillable = ['name', 'code', 'address', 'director_name', 'is_active'];
 
     protected function casts(): array
     {

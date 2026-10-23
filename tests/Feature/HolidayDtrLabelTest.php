@@ -23,7 +23,7 @@ test('a holiday label names the holiday and its type', function () {
 });
 
 test('the printed Form 48 shows each day\'s own holiday instead of a generic "Holiday"', function () {
-    $html = view('reports.form48', [
+    $html = view('reports.form48', ['title' => 'DTR', 'pages' => [[
         'employee'        => $this->employee->load('department', 'shift', 'campus'),
         'records'         => collect([
             2  => new DailyDtr(['work_date' => '2026-11-02', 'status' => 'holiday']),
@@ -33,9 +33,8 @@ test('the printed Form 48 shows each day\'s own holiday instead of a generic "Ho
         'year'            => 2026,
         'month'           => 11,
         'totals'          => ['days_present' => 0, 'tardiness_minutes' => 0, 'undertime_minutes' => 0, 'overtime_minutes' => 0, 'hours_rendered' => 0],
-        'signingReviewer' => null,
         'holidays'        => Holiday::keyedBetween('2026-11-01', '2026-11-30'),
-    ])->render();
+    ]]])->render();
 
     // Two copies per page, so each label appears twice.
     expect(substr_count($html, 'All Souls&#039; Day (Special Holiday)'))->toBe(2)
@@ -77,16 +76,15 @@ test('the DTR CSV export writes the holiday name in the status column', function
 });
 
 test('days without punches get no ABS remark on the printed Form 48', function () {
-    $html = view('reports.form48', [
+    $html = view('reports.form48', ['title' => 'DTR', 'pages' => [[
         'employee'        => $this->employee->load('department', 'shift', 'campus'),
         'records'         => collect([3 => new DailyDtr(['work_date' => '2026-11-03', 'status' => 'absent'])]),
         'period'          => new DtrPeriod(2026, 11),
         'year'            => 2026,
         'month'           => 11,
         'totals'          => ['days_present' => 0, 'tardiness_minutes' => 0, 'undertime_minutes' => 0, 'overtime_minutes' => 0, 'hours_rendered' => 0],
-        'signingReviewer' => null,
         'holidays'        => Holiday::keyedBetween('2026-11-01', '2026-11-30'),
-    ])->render();
+    ]]])->render();
 
     expect($html)->not->toContain('>ABS<')
         ->and($html)->toContain('HOL')

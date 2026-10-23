@@ -150,61 +150,27 @@
   time of arrival and departure from office.
 </div>
 
-{{-- ── Signatures ───────────────────────────────── --}}
-<table class="sig-tbl">
-  <tr>
-    {{-- Employee signature — the invisible label below matches the height of
-         the reviewer column's "Verified as to..." line, so both signature
-         lines sit level with each other instead of the reviewer's floating
-         higher up the page. --}}
-    <td style="width:46%; text-align:center;">
-      <div class="sig-label" style="font-size:6.5pt; text-align:left; margin-bottom:2pt; visibility:hidden;">&nbsp;</div>
-      <div class="sig-space"></div>
-      <div class="sig-over"></div>
-      <div class="sig-sub">Employee Signature</div>
-    </td>
-
-    <td style="width:8%;">&nbsp;</td>
-
-    {{-- Verifying officer --}}
-    <td style="width:46%; text-align:center;">
-      <div class="sig-label" style="font-size:6.5pt; text-align:left; margin-bottom:2pt;">
-        Verified as to the prescribed office hours:
-      </div>
-      @if(!empty($signingReviewer) && $signingReviewer->signature_enabled && $signingReviewer->signature_path)
-        <img
-          src="{{ \Illuminate\Support\Facades\Storage::disk('public')->path($signingReviewer->signature_path) }}"
-          style="height:16pt; max-width:90%; margin:1pt auto 0; display:block;"
-        />
-      @else
-        <div class="sig-space"></div>
-      @endif
-      <div class="sig-over"></div>
-      @if(!empty($signingReviewer))
-        <div class="sig-name">{{ strtoupper($signingReviewer->full_name) }}</div>
-      @endif
-      {{-- The verifying office on Form 48 is always HR, whoever in the system
-           approved the print request. Only an HR Officer's own position title
-           (e.g. "HRMO III") may stand in for it; a Super Admin
-           approver still prints as "HR Officer". --}}
-      <div class="sig-sub" style="font-weight:bold; text-transform:uppercase;">
-        {{ (! empty($signingReviewer) && $signingReviewer->role === 'hr_officer' && $signingReviewer->position)
-            ? $signingReviewer->position
-            : 'HR Officer' }}
-      </div>
-    </td>
-  </tr>
-</table>
-
-{{-- ── Campus Director — a separate, final approving signature below
-     both the employee and the reviewer, not a stand-in for either. --}}
-@if(!empty($director['title']))
-<div style="margin-top: 6pt; text-align: center;">
+{{-- ── Signatures ───────────────────────────────────
+     Two signatories only, as on the official form: the employee certifying
+     the record, centred under the certification, and the Campus Director
+     verifying it against the prescribed office hours. --}}
+<div class="sig-block">
   <div class="sig-space"></div>
-  <div class="sig-over" style="display: inline-block; min-width: 150pt;"></div>
-  @if(!empty($director['name']))
-    <div class="sig-name">{{ $director['name'] }}</div>
-  @endif
-  <div class="sig-sub" style="font-weight: bold; text-transform: uppercase;">{{ $director['title'] }}</div>
+  <div class="sig-line">
+    <div class="sig-name">{{ $empName }}</div>
+    <div class="sig-sub">Employee's Signature</div>
+  </div>
 </div>
-@endif
+
+<div class="sig-label">Verified as to the prescribed office hours:</div>
+
+<div class="sig-block">
+  <div class="sig-space"></div>
+  <div class="sig-line">
+    @if (! empty($directorName))
+      {{-- As entered on the campus record — uppercasing would turn "Ph.D." into "PH.D." --}}
+      <div class="sig-name" style="text-transform: none;">{{ $directorName }}</div>
+    @endif
+    <div class="sig-sub" style="font-weight: bold; text-transform: uppercase;">Campus Director</div>
+  </div>
+</div>
