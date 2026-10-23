@@ -63,13 +63,12 @@
           <div class="settings-card rounded-xl overflow-hidden">
             <div class="settings-card-head px-5 py-4 border-b">
               <h2 class="settings-card-title text-sm font-semibold">Login Page Background</h2>
-              <p class="settings-card-sub text-xs mt-0.5">A campus photo shown behind the sign-in card, under the university's navy overlay.</p>
+              <p class="settings-card-sub text-xs mt-0.5">The campus photo on the right half of the login page. By default, the NEMSU Administration Building.</p>
             </div>
             <div class="p-5 flex items-center gap-5 flex-wrap sm:flex-nowrap">
               <div class="login-bg-preview flex-shrink-0">
-                <img v-if="bgPreview || form.login_background_url" :src="bgPreview || form.login_background_url" alt="" />
-                <div class="login-bg-overlay"></div>
-                <span v-if="!bgPreview && !form.login_background_url" class="login-bg-default">Default illustration</span>
+                <img :src="bgPreview || form.login_background_url || DEFAULT_CAMPUS_PHOTO" alt="" />
+                <span v-if="!bgPreview && !form.login_background_url" class="login-bg-default">Default photo</span>
               </div>
               <div class="flex-1 min-w-0 space-y-2">
                 <div class="flex flex-wrap items-center gap-2">
@@ -94,7 +93,7 @@
                     Cancel selection
                   </button>
                 </div>
-                <p class="settings-card-sub text-xs">JPG, PNG, or WEBP — up to 4MB. A wide landscape shot (1920×1080 or larger) of the campus works best.</p>
+                <p class="settings-card-sub text-xs">JPG, PNG, or WEBP — up to 4MB. A landscape shot of the campus, 1600px wide or larger, works best.</p>
               </div>
             </div>
           </div>
@@ -239,6 +238,9 @@ const error    = ref('');
 const logoFile    = ref(null);
 const logoPreview = ref(null);
 
+// The photo the login page uses until one is uploaded (see LoginView).
+const DEFAULT_CAMPUS_PHOTO = '/images/nemsu-campus.jpg';
+
 const bgFile      = ref(null);
 const bgPreview   = ref(null);
 const resettingBg = ref(false);
@@ -374,7 +376,7 @@ async function resetLogo() {
 async function resetBackground() {
   const ok = await confirm({
     title:       'Use the default login background?',
-    message:     'This removes the uploaded campus photo and brings back the bundled illustration.',
+    message:     'This removes the uploaded campus photo and brings back the default NEMSU Administration Building photo.',
     confirmText: 'Use Default',
   });
   if (!ok) return;
@@ -447,19 +449,17 @@ onBeforeUnmount(() => {
 .settings-danger-btn:hover { background:#FEE2E2; }
 .settings-error { background:#FEF2F2; border:1px solid #FECACA; color:#991B1B; }
 
-/* A miniature of the login page's backdrop: photo + the same navy wash. */
+/* A miniature of the login page's photo panel. */
 .login-bg-preview {
   position: relative; width: 168px; height: 96px; border-radius: 10px; overflow: hidden;
   background: linear-gradient(150deg, #1B2A5E 0%, #22305C 60%, #0E1A44 100%);
   box-shadow: 0 0 0 1px rgba(15,23,42,0.08);
 }
 .login-bg-preview img { position: absolute; inset: 0; width: 100%; height: 100%; object-fit: cover; }
-.login-bg-overlay {
-  position: absolute; inset: 0;
-  background: linear-gradient(110deg, rgba(14,26,68,0.88) 0%, rgba(27,42,94,0.70) 50%, rgba(27,42,94,0.45) 100%);
-}
 .login-bg-default {
-  position: absolute; inset: auto 0 8px; text-align: center;
-  font-size: 10.5px; font-weight: 600; letter-spacing: 0.04em; color: rgba(232,192,64,0.85);
+  position: absolute; left: 6px; bottom: 6px;
+  padding: 1px 7px; border-radius: 999px;
+  font-size: 10px; font-weight: 600; letter-spacing: 0.03em;
+  color: #fff; background: rgba(26, 19, 143, 0.80);
 }
 </style>
