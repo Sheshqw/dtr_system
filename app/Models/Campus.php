@@ -12,6 +12,22 @@ class Campus extends Model
 
     protected $fillable = ['name', 'code', 'address', 'director_name', 'photo_path', 'is_active'];
 
+    /**
+     * Where each bundled photo in public/images/campuses came from. The two
+     * Wikimedia Commons photos are CC BY-SA, which requires crediting the
+     * photographer and licence wherever they're shown; the rest are NEMSU's
+     * own, from the Campuses section of nemsu.edu.ph.
+     */
+    public const BUNDLED_PHOTO_CREDITS = [
+        'TAN' => ['Photo: Rektz, CC BY-SA 4.0', 'https://commons.wikimedia.org/wiki/File:NEMSU_Field.jpg'],
+        'CAN' => ['Photo: Surigaotourist, CC BY-SA 3.0', 'https://commons.wikimedia.org/wiki/File:Cantilan_Uni_3.JPG'],
+        'SMC' => ['Photo: NEMSU', null],
+        'CAG' => ['Photo: NEMSU', null],
+        'LIA' => ['Photo: NEMSU', null],
+        'TAG' => ['Photo: NEMSU', null],
+        'BIS' => ['Photo: NEMSU', null],
+    ];
+
     protected function casts(): array
     {
         return ['is_active' => 'boolean'];
@@ -46,5 +62,18 @@ class Campus extends Model
         $bundled = "images/campuses/{$code}.jpg";
 
         return is_file(public_path($bundled)) ? '/' . $bundled : null;
+    }
+
+    /**
+     * [text, link] crediting a bundled photo; null for an uploaded one (the
+     * Super Admin's own) or none at all.
+     */
+    public function photoCredit(): ?array
+    {
+        if ($this->photo_path || ! $this->photo_url) {
+            return null;
+        }
+
+        return self::BUNDLED_PHOTO_CREDITS[strtoupper((string) $this->code)] ?? null;
     }
 }

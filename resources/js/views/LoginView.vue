@@ -310,14 +310,14 @@ const slides = computed(() => [
         photo_url: DEFAULT_CAMPUS_PHOTO,
         name:      'Administration Building',
         subtitle:  'North Eastern Mindanao State University',
-        // Keeps the photo's own swoosh edge against the blue panel.
-        position:  '30% center',
+        credit:    'Photo: NEMSU',
       },
   ...settings.campusSlides.map((c) => ({
-    photo_url: c.photo_url,
-    name:      c.name,
-    subtitle:  c.address || 'North Eastern Mindanao State University',
-    position:  'center 40%',
+    photo_url:  c.photo_url,
+    name:       c.name,
+    subtitle:   c.address || 'North Eastern Mindanao State University',
+    credit:     c.credit,
+    credit_url: c.credit_url,
   })),
 ]);
 

@@ -149,9 +149,11 @@ class SystemSettingController extends Controller
             ->get(['id', 'name', 'code', 'address', 'photo_path'])
             ->filter(fn (Campus $c) => $c->photo_url)
             ->map(fn (Campus $c) => [
-                'name'      => $c->name,
-                'address'   => $c->address,
-                'photo_url' => $c->photo_url,
+                'name'       => $c->name,
+                'address'    => $c->address,
+                'photo_url'  => $c->photo_url,
+                'credit'     => $c->photoCredit()[0] ?? null,
+                'credit_url' => $c->photoCredit()[1] ?? null,
             ])
             ->values()
             ->all();

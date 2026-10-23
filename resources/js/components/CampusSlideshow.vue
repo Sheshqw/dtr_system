@@ -1,32 +1,26 @@
 <template>
-  <div
-    class="ss"
-    role="region"
-    aria-roledescription="carousel"
-    aria-label="NEMSU campuses"
-    @mouseenter="hovered = true"
-    @mouseleave="hovered = false"
-    @focusin="focused = true"
-    @focusout="focused = false"
-  >
-    <!-- Photos are stacked and cross-faded; only the current one and the
-         next are loaded, so the login page never waits on the whole set. -->
+  <div class="ss" role="region" aria-roledescription="carousel" aria-label="NEMSU campuses">
+    <!-- Each photo is shown whole and never enlarged past its own pixels,
+         so it stays sharp and keeps the campus sign in view; a blurred copy
+         of the same photo fills the space around it. Only the current and
+         next photos are loaded. -->
     <div
       v-for="(slide, i) in slides"
       :key="`${i}-${slide.photo_url}`"
       class="ss-slide"
-      :class="{ 'is-active': i === index, 'is-still': slides.length === 1 }"
-      :style="{ '--ss-duration': `${interval + FADE_MS}ms` }"
+      :class="{ 'is-active': i === index }"
       :aria-hidden="i !== index"
     >
-      <img
-        v-if="loaded.has(i) || i === index || i === nextIndex"
-        :src="slide.photo_url"
-        alt=""
-        :style="{ objectPosition: slide.position ?? 'center' }"
-        decoding="async"
-        @load="loaded.add(i)"
-      />
+      <template v-if="loaded.has(i) || i === index || i === nextIndex">
+        <img :src="slide.photo_url" alt="" class="ss-backdrop" decoding="async" />
+        <img
+          :src="slide.photo_url"
+          :alt="slide.name"
+          class="ss-photo"
+          decoding="async"
+          @load="loaded.add(i)"
+        />
+      </template>
     </div>
 
     <!-- Caption: which campus this is -->
@@ -36,12 +30,16 @@
         <div class="min-w-0">
           <p class="ss-name">{{ current.name }}</p>
           <p v-if="current.subtitle" class="ss-sub">{{ current.subtitle }}</p>
+          <p v-if="current.credit" class="ss-credit">
+            <a v-if="current.credit_url" :href="current.credit_url" target="_blank" rel="noopener noreferrer">{{ current.credit }}</a>
+            <template v-else>{{ current.credit }}</template>
+          </p>
         </div>
       </div>
     </Transition>
 
-    <!-- Controls: pause/play, then one dot per campus; the active dot fills
-         as its photo's time runs out. -->
+    <!-- It plays by itself; the dots show where it is (and jump to a
+         campus if clicked), and the button pauses it. -->
     <div v-if="slides.length > 1" class="ss-controls">
       <button
         type="button"
@@ -79,26 +77,22 @@ import { ref, reactive, computed, watch, onMounted, onBeforeUnmount } from 'vue'
 import { MapPin as MapPinIcon, Pause as PauseIcon, Play as PlayIcon } from 'lucide-vue-next';
 
 const props = defineProps({
-  // [{ photo_url, name, subtitle?, position? }]
+  // [{ photo_url, name, subtitle?, credit?, credit_url? }]
   slides:   { type: Array, required: true },
-  interval: { type: Number, default: 6500 },
+  interval: { type: Number, default: 6000 },
 });
-
-const FADE_MS = 1200;
 
 const index   = ref(0);
 const cycle   = ref(0);          // restarts the active dot's fill animation
 const loaded  = reactive(new Set());
-const hovered = ref(false);
-const focused = ref(false);
 const stopped = ref(false);       // the visitor pressed pause
 const hidden  = ref(typeof document !== 'undefined' && document.hidden);
 
 const current   = computed(() => props.slides[index.value] ?? props.slides[0] ?? {});
 const nextIndex = computed(() => (index.value + 1) % Math.max(props.slides.length, 1));
-// Hovering, keyboard focus, a hidden tab or the pause button all hold the
-// current photo, so nobody is rushed and a background tab costs nothing.
-const paused    = computed(() => hovered.value || focused.value || stopped.value || hidden.value);
+// Only the pause button or a hidden browser tab stop it — the slideshow
+// keeps going while the visitor signs in.
+const paused    = computed(() => stopped.value || hidden.value);
 
 let timer = null;
 
@@ -149,30 +143,34 @@ onBeforeUnmount(() => {
   background: #1A138F;
 }
 
-/* ── Slides: cross-fade + a slow push-in while each one is on screen ── */
+/* ── Slides: a plain cross-fade ──────────────────────────────────────── */
 .ss-slide {
   position: absolute;
   inset: 0;
   opacity: 0;
-  transition: opacity 1.2s ease;
+  transition: opacity 1s ease;
 }
 .ss-slide.is-active { opacity: 1; z-index: 1; }
-.ss-slide img {
-  width: 100%;
-  height: 100%;
+
+/* The blurred fill — heavily blurred, so its resolution never shows. */
+.ss-backdrop {
+  position: absolute;
+  inset: -40px;
+  width: calc(100% + 80px);
+  height: calc(100% + 80px);
   object-fit: cover;
-  transform: scale(1);
-  transform-origin: 60% 40%;
+  filter: blur(28px) saturate(1.15) brightness(0.62);
 }
-.ss-slide.is-active img {
-  animation: ss-push var(--ss-duration) ease-out both;
+/* The photo itself: whole, centred, and no larger than it really is. */
+.ss-photo {
+  position: absolute;
+  inset: 0;
+  margin: auto;
+  max-width: 100%;
+  max-height: 100%;
+  object-fit: contain;
+  box-shadow: 0 18px 50px rgba(8, 5, 50, 0.45);
 }
-/* A single photo just breathes slowly instead. */
-.ss-slide.is-still img {
-  animation: ss-breathe 18s ease-in-out infinite alternate;
-}
-@keyframes ss-push    { from { transform: scale(1); }    to { transform: scale(1.07); } }
-@keyframes ss-breathe { from { transform: scale(1); }    to { transform: scale(1.05); } }
 
 /* ── Caption ─────────────────────────────────────────────────────────── */
 .ss-caption {
@@ -187,19 +185,22 @@ onBeforeUnmount(() => {
   padding: 10px 16px 10px 12px;
   border-radius: 12px;
   border-left: 3px solid #F7A51A;
-  background: rgba(14, 9, 86, 0.74);
+  background: rgba(14, 9, 86, 0.78);
   backdrop-filter: blur(8px);
   -webkit-backdrop-filter: blur(8px);
   box-shadow: 0 8px 24px rgba(10, 6, 60, 0.35);
 }
 .ss-caption-icon { width: 18px; height: 18px; color: #F7A51A; flex-shrink: 0; }
-.ss-name { font-size: 15px; font-weight: 700; color: #fff; line-height: 1.2; }
-.ss-sub  { font-size: 12px; color: rgba(226, 230, 255, 0.82); margin-top: 2px; }
+.ss-name   { font-size: 15px; font-weight: 700; color: #fff; line-height: 1.2; }
+.ss-sub    { font-size: 12px; color: rgba(226, 230, 255, 0.85); margin-top: 2px; }
+.ss-credit { font-size: 10.5px; color: rgba(226, 230, 255, 0.6); margin-top: 3px; }
+.ss-credit a { color: inherit; text-decoration: underline; text-underline-offset: 2px; }
+.ss-credit a:hover { color: #FFBE45; }
 
-.ss-cap-enter-active { transition: opacity 0.45s ease 0.35s, transform 0.45s ease 0.35s; }
+.ss-cap-enter-active { transition: opacity 0.4s ease 0.3s, transform 0.4s ease 0.3s; }
 .ss-cap-leave-active { transition: opacity 0.25s ease, transform 0.25s ease; }
-.ss-cap-enter-from   { opacity: 0; transform: translateY(10px); }
-.ss-cap-leave-to     { opacity: 0; transform: translateY(-6px); }
+.ss-cap-enter-from   { opacity: 0; transform: translateY(8px); }
+.ss-cap-leave-to     { opacity: 0; transform: translateY(-4px); }
 
 /* ── Controls ────────────────────────────────────────────────────────── */
 .ss-controls {
@@ -247,9 +248,10 @@ onBeforeUnmount(() => {
 @keyframes ss-fill { from { transform: scaleX(0); } to { transform: scaleX(1); } }
 
 @media (max-width: 1023px) {
-  .ss-caption { left: 12px; bottom: 10px; padding: 7px 12px 7px 9px; }
-  .ss-name    { font-size: 13px; }
-  .ss-sub     { font-size: 11px; }
+  .ss-caption  { left: 12px; bottom: 10px; padding: 7px 12px 7px 9px; }
+  .ss-name     { font-size: 13px; }
+  .ss-sub      { font-size: 11px; }
+  .ss-credit   { font-size: 9.5px; margin-top: 1px; }
   .ss-controls { top: 10px; right: 10px; }
 }
 </style>
