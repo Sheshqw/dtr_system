@@ -1380,7 +1380,9 @@ const fullMonthRows = computed(() => {
   return rows;
 });
 
-const workdayCount = computed(() => fullMonthRows.value.filter(r => !r.isWeekend).length);
+// A declared holiday isn't a day the employee was expected to work, so it
+// counts toward neither "present" nor "absent".
+const workdayCount = computed(() => fullMonthRows.value.filter(r => !r.isWeekend && r.status !== 'holiday').length);
 
 // ── Mark / Unmark On Leave (self-service, own record only) ──────────────
 const selectedLeaveDates = ref(new Set());
