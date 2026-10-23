@@ -32,9 +32,14 @@ use Illuminate\Support\Str;
  *   - Every seeded punch carries the remark "Demo data" and every extra demo
  *     employee a DEF-DEMO- employee_id, so --cleanup removes exactly them.
  *
+ * System testing: --per-campus=20 tops every active campus up to at least
+ * 20 active employees with a realistic roster (faculty, admin staff, guards,
+ * COS / Job Order …), then fills their month the same way.
+ *
  * Usage:
  *   php artisan defense:seed-demo 2023-02279 --campus=CAN --dry-run
  *   php artisan defense:seed-demo 2023-02279 --campus=CAN --month=9 --year=2026
+ *   php artisan defense:seed-demo --per-campus=20
  *   php artisan defense:seed-demo --cleanup
  */
 class SeedDefenseDemo extends Command
@@ -45,6 +50,7 @@ class SeedDefenseDemo extends Command
         {--year= : Defaults to the last full month}
         {--month= : Defaults to the last full month}
         {--demo-count=0 : Extra DEF-DEMO- employees to create in the showcase/campus}
+        {--per-campus=0 : Top every active campus up to at least this many active employees with DEF-DEMO- test records}
         {--no-print-request : Skip the pending print request for the showcase account(s)}
         {--dry-run : Show what would be filled, then roll everything back}
         {--cleanup : Remove every seeded punch and DEF-DEMO- employee, then exit}';
@@ -69,6 +75,45 @@ class SeedDefenseDemo extends Command
         ['Carlo', 'Dizon', 'Instructor I'],
         ['Rhea', 'Santiago', 'Administrative Aide IV'],
         ['Noel', 'Fernandez', 'Instructor III'],
+    ];
+
+    // One campus's test roster — the mix a real NEMSU campus has: mostly
+    // faculty, plus admin staff, a guard, utility, a driver, and some COS /
+    // Job Order staff so semi-monthly DTRs get exercised too. Cycled when
+    // --per-campus asks for more than 20.
+    private const ROSTER = [
+        ['faculty',        'Instructor I',               'permanent'],
+        ['faculty',        'Instructor II',              'permanent'],
+        ['faculty',        'Assistant Professor I',      'permanent'],
+        ['faculty',        'Instructor I',               'cos'],
+        ['administrative', 'Administrative Aide IV',     'permanent'],
+        ['faculty',        'Instructor III',             'permanent'],
+        ['faculty',        'Associate Professor I',      'permanent'],
+        ['administrative', 'Administrative Assistant I', 'job_order'],
+        ['faculty',        'Assistant Professor II',     'permanent'],
+        ['security',       'Security Guard I',           'job_order'],
+        ['faculty',        'Instructor II',              'cos'],
+        ['administrative', 'Administrative Officer II',  'permanent'],
+        ['laboratory',     'Laboratory Technician I',    'permanent'],
+        ['faculty',        'Instructor I',               'permanent'],
+        ['custodial',      'Utility Worker I',           'job_order'],
+        ['faculty',        'Instructor III',             'permanent'],
+        ['driver',         'Driver I',                   'permanent'],
+        ['administrative', 'Records Officer I',          'permanent'],
+        ['maintenance',    'Maintenance Worker',         'job_order'],
+        ['faculty',        'Assistant Professor I',      'permanent'],
+    ];
+
+    // Paired so every test employee gets a distinct name (see testName()).
+    private const FIRST_NAMES = [
+        'Maria', 'Jose', 'Ana', 'Juan', 'Rosa', 'Carlo', 'Liza', 'Ramon', 'Grace', 'Noel',
+        'Joy', 'Mark', 'Rhea', 'Paolo', 'Jenny', 'Rey', 'Cherry', 'Arnel', 'Kristine', 'Dennis',
+        'Mae', 'Jerome', 'Lovely', 'Ronald', 'Angelica', 'Vincent', 'Marites', 'Edgar', 'Shiela', 'Allan',
+    ];
+    private const LAST_NAMES = [
+        'Santos', 'Reyes', 'Cruz', 'Bautista', 'Ocampo', 'Garcia', 'Mendoza', 'Torres', 'Villanueva', 'Ramos',
+        'Castillo', 'Flores', 'Navarro', 'Aquino', 'Dela Cruz', 'Gonzales', 'Lopez', 'Rivera', 'Salazar', 'Pascual',
+        'Morales', 'Domingo', 'Ibarra', 'Concepcion', 'Dizon', 'Fernandez', 'Villareal', 'Montero', 'Sarmiento', 'Tolentino',
     ];
 
     public function __construct(private readonly WorkingHoursService $workingHours)
@@ -120,8 +165,10 @@ class SeedDefenseDemo extends Command
             }
         }
 
-        if ($showcase->isEmpty() && ! $campus) {
-            $this->error('Pass a showcase employee_id and/or --campus=CODE, e.g. php artisan defense:seed-demo 2023-02279 --campus=CAN');
+        $perCampus = max(0, (int) $this->option('per-campus'));
+
+        if ($showcase->isEmpty() && ! $campus && $perCampus === 0) {
+            $this->error('Pass a showcase employee_id, --campus=CODE and/or --per-campus=N, e.g. php artisan defense:seed-demo 2023-02279 --campus=CAN');
             return self::FAILURE;
         }
 
@@ -175,6 +222,12 @@ class SeedDefenseDemo extends Command
 
             foreach ($this->demoEmployees($showcase->first(), $campus) as $i => $employee) {
                 $rows[] = $this->fill($employee, $days, $holidays, self::PATTERNS[$i % count(self::PATTERNS)]);
+            }
+
+            if ($perCampus > 0) {
+                foreach ($this->topUpCampuses($perCampus) as $i => $employee) {
+                    $rows[] = $this->fill($employee, $days, $holidays, self::PATTERNS[$i % count(self::PATTERNS)]);
+                }
             }
 
             $requests = $this->option('no-print-request')
@@ -427,6 +480,89 @@ class SeedDefenseDemo extends Command
                 ]
             );
         })->values();
+    }
+
+    /**
+     * Enough DEF-DEMO-<CODE>- employees for every active campus to reach
+     * $target active (non–Super Admin) employees. Real employees count toward
+     * the target, so a campus that already has 20 gets none; re-running
+     * reuses the same records instead of adding more.
+     *
+     * @return Collection<int, User>
+     */
+    private function topUpCampuses(int $target): Collection
+    {
+        $created = collect();
+        $nameSeq = 0;
+
+        foreach (Campus::where('is_active', true)->orderBy('id')->get() as $campus) {
+            $prefix = self::DEMO_PREFIX . $campus->code . '-';
+
+            $real = User::where('campus_id', $campus->id)
+                ->where('role', '!=', 'super_admin')
+                ->where('is_active', true)
+                ->where('employee_id', 'not like', $prefix . '%')
+                ->count();
+
+            $needed = max(0, $target - $real);
+
+            $departments = Department::where(fn ($q) => $q->whereNull('campus_id')->orWhere('campus_id', $campus->id))
+                ->orderBy('id')->pluck('id');
+
+            for ($n = 1; $n <= $needed; $n++) {
+                [$staffType, $position, $status] = self::ROSTER[($n - 1) % count(self::ROSTER)];
+                [$first, $last] = $this->testName($nameSeq++);
+
+                $shiftId = $this->shiftFor($staffType);
+                if (! $shiftId) {
+                    $this->warn('No shift exists to give the test employees — create one first.');
+                    return $created;
+                }
+
+                $created->push(User::firstOrCreate(
+                    ['employee_id' => $prefix . str_pad((string) $n, 2, '0', STR_PAD_LEFT)],
+                    [
+                        'first_name'        => $first,
+                        'last_name'         => $last,
+                        // No email: test records never sign in, and approving
+                        // their print requests must not send real mail.
+                        'email'             => null,
+                        // Never a guessable shared password on a live server.
+                        'password'          => Hash::make(Str::password(24)),
+                        'role'              => 'employee',
+                        'campus_id'         => $campus->id,
+                        'department_id'     => $departments->isEmpty() ? null : $departments[($n - 1) % $departments->count()],
+                        'shift_id'          => $shiftId,
+                        'position'          => $position,
+                        'staff_type'        => $staffType,
+                        'employment_status' => $status,
+                        'is_active'         => true,
+                    ]
+                ));
+            }
+
+            $this->line("[{$campus->code}] {$real} real employee(s) + {$needed} test record(s) = " . ($real + $needed));
+        }
+
+        return $created;
+    }
+
+    /** The n-th distinct first/last pair — unique for the first 900. */
+    private function testName(int $n): array
+    {
+        $count = count(self::FIRST_NAMES);
+        $first = $n % $count;
+        $last  = ($first + intdiv($n, $count)) % count(self::LAST_NAMES);
+
+        return [self::FIRST_NAMES[$first], self::LAST_NAMES[$last]];
+    }
+
+    /** A shift meant for this staff type, else the general-purpose one. */
+    private function shiftFor(string $staffType): ?int
+    {
+        return Shift::where('staff_type', $staffType)->orderBy('id')->value('id')
+            ?? Shift::whereNull('staff_type')->orderBy('id')->value('id')
+            ?? Shift::orderBy('id')->value('id');
     }
 
     private function cleanup(): int

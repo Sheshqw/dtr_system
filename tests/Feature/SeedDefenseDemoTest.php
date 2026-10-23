@@ -128,3 +128,33 @@ test('it refuses a month that has not started', function () {
 
     expect(AttendanceLog::count())->toBe(0);
 });
+
+test('--per-campus tops every active campus up to the target with a varied roster', function () {
+    $tan = Campus::factory()->create(['code' => 'TAN']);
+    Campus::factory()->create(['code' => 'OLD', 'is_active' => false]);
+    User::factory()->count(2)->create(['campus_id' => $this->campus->id, 'shift_id' => $this->shift->id]);
+
+    $this->artisan('defense:seed-demo', ['--per-campus' => 20])->assertSuccessful();
+
+    $active = fn (Campus $c) => User::where('campus_id', $c->id)->where('is_active', true)->count();
+
+    // CAN already had 3 real employees, so it only needed 17.
+    expect($active($this->campus))->toBe(20)
+        ->and($active($tan))->toBe(20)
+        ->and(User::where('employee_id', 'like', 'DEF-DEMO-CAN-%')->count())->toBe(17)
+        ->and(User::where('employee_id', 'like', 'DEF-DEMO-OLD-%')->exists())->toBeFalse();
+
+    $test = User::where('employee_id', 'like', 'DEF-DEMO-TAN-%')->get();
+    expect($test->pluck('staff_type')->unique()->count())->toBeGreaterThan(4)
+        ->and($test->whereIn('employment_status', ['cos', 'job_order'])->count())->toBeGreaterThan(0)
+        ->and($test->map(fn ($u) => $u->full_name)->unique()->count())->toBe(20)
+        // Each one gets a filled month, computed from its shift.
+        ->and(DailyDtr::where('employee_id', $test->first()->id)->count())->toBe(22);
+
+    // Re-running reuses the same records; cleanup removes them all.
+    $this->artisan('defense:seed-demo', ['--per-campus' => 20])->assertSuccessful();
+    expect($active($tan))->toBe(20);
+
+    $this->artisan('defense:seed-demo', ['--cleanup' => true])->assertSuccessful();
+    expect(User::where('employee_id', 'like', 'DEF-DEMO-%')->exists())->toBeFalse();
+});
