@@ -181,35 +181,97 @@ class DtrPrintConsentController extends Controller
             'reviewer_remarks' => 'nullable|string|max:500',
         ]);
 
-        $consent->update([
-            'status'           => $validated['status'],
-            'reviewed_by'      => $request->user()->id,
-            'reviewed_at'      => now(),
-            'reviewer_remarks' => $validated['reviewer_remarks'] ?? null,
-        ]);
-
-        $employee = User::find($consent->employee_id);
-        if ($employee && $employee->email) {
-            try {
-                $employee->notify(new PrintConsentReviewed($consent, $validated['status'], $validated['reviewer_remarks'] ?? null));
-            } catch (\Throwable) {
-                // Silent — don't fail the review if mail is misconfigured
-            }
-        }
-
-        $fresh = $consent->fresh(['employee.department', 'employee.campus', 'reviewer']);
-        $formatted = $this->formatConsent($fresh, true);
-
-        broadcast(new PrintConsentDecided(
-            $formatted,
-            $fresh->employee_id,
-            $fresh->employee?->campus?->code,
-        ));
+        $formatted = $this->decide($consent, $request->user(), $validated['status'], $validated['reviewer_remarks'] ?? null);
 
         return response()->json([
             'message' => $validated['status'] === 'approved' ? 'Print request approved.' : 'Print request denied.',
             'consent' => $formatted,
         ]);
+    }
+
+    /**
+     * Approve or deny many pending requests at once — for the start of a pay
+     * period, when most of a campus asks for its DTR on the same day.
+     * Requests that aren't the reviewer's to decide (another campus, their
+     * own, already reviewed) are skipped rather than failing the batch.
+     */
+    public function bulkReview(Request $request)
+    {
+        if (! $this->isPrivileged($request)) {
+            abort(403, 'Only HR Officers and the Super Admin can review print requests.');
+        }
+
+        $validated = $request->validate([
+            'ids'              => 'required|array|min:1|max:500',
+            'ids.*'            => 'integer',
+            'status'           => 'required|in:approved,denied',
+            'reviewer_remarks' => 'nullable|string|max:500',
+        ]);
+
+        $reviewer = $request->user();
+
+        $consents = DtrPrintConsent::with('employee')
+            ->whereIn('id', $validated['ids'])
+            ->where('status', 'pending')
+            ->where('employee_id', '!=', $reviewer->id)
+            ->when(! $this->isSuperAdmin($request), fn ($q) => $q->whereHas('employee', fn ($e) => $e->where('campus_id', $reviewer->campus_id)))
+            ->get();
+
+        $decided = $consents->map(fn (DtrPrintConsent $c) =>
+            $this->decide($c, $reviewer, $validated['status'], $validated['reviewer_remarks'] ?? null)
+        )->values();
+
+        $skipped = count(array_unique($validated['ids'])) - $decided->count();
+        $verb    = $validated['status'] === 'approved' ? 'Approved' : 'Denied';
+
+        return response()->json([
+            'message'  => "{$verb} {$decided->count()} print request" . ($decided->count() === 1 ? '' : 's') . '.'
+                . ($skipped > 0 ? " {$skipped} skipped (already reviewed or not yours to review)." : ''),
+            'consents' => $decided,
+            'skipped'  => $skipped,
+        ]);
+    }
+
+    /**
+     * Record the decision, tell the employee, and push it live to every open
+     * queue. Returns the consent as the API formats it.
+     *
+     * The email and the broadcast go out after the response is sent: each
+     * one is a network round trip (SMTP, Reverb), so doing them inline made
+     * a bulk approval of a few dozen requests outlast PHP's time limit.
+     */
+    private function decide(DtrPrintConsent $consent, User $reviewer, string $status, ?string $remarks): array
+    {
+        $consent->update([
+            'status'           => $status,
+            'reviewed_by'      => $reviewer->id,
+            'reviewed_at'      => now(),
+            'reviewer_remarks' => $remarks,
+        ]);
+
+        $fresh     = $consent->fresh(['employee.department', 'employee.campus', 'reviewer']);
+        $formatted = $this->formatConsent($fresh, true);
+
+        defer(function () use ($fresh, $formatted, $status, $remarks) {
+            $employee = $fresh->employee;
+            if ($employee && $employee->email) {
+                try {
+                    $employee->notify(new PrintConsentReviewed($fresh, $status, $remarks));
+                } catch (\Throwable) {
+                    // Silent — don't fail the review if mail is misconfigured
+                }
+            }
+
+            // The decision is already saved; a websocket server that's down
+            // must not turn it into an error (other tabs catch up on reload).
+            rescue(fn () => broadcast(new PrintConsentDecided(
+                $formatted,
+                $fresh->employee_id,
+                $fresh->employee?->campus?->code,
+            )));
+        });
+
+        return $formatted;
     }
 
     private function formatConsent(DtrPrintConsent $c, bool $includeEmployee): array

@@ -22,6 +22,12 @@ class ReportController extends Controller
 
     public function __construct(private WorkingHoursService $workingHours) {}
 
+    /**
+     * Most employees one Print All may hold — a whole campus at once, while
+     * keeping the browser's print preview responsive.
+     */
+    public const BULK_PRINT_LIMIT = 500;
+
     public function form48(Request $request, User $employee)
     {
         $this->authorizeView($request->user(), $employee);
@@ -40,6 +46,102 @@ class ReportController extends Controller
 
         return $this->form48Pdf([$page], "CSC Form 48 – {$employee->full_name} – {$period->label()}")
             ->download($filename);
+    }
+
+    /**
+     * "Print All" — one print-ready document holding a Form 48 sheet for
+     * every employee that matches the filters (or the hand-picked
+     * employee_ids), one A4 sheet each, so HR can print a whole campus or
+     * department in one go. A half-month period only covers COS / Job Order
+     * staff, since everyone else keeps one DTR per month.
+     *
+     * Served as HTML for the browser to print (or "Save as PDF"), from the
+     * same template as the single PDF download: DomPDF holds every page in
+     * memory — about 8 MB per sheet — so a campus-sized PDF would need more
+     * memory than the server has, while a browser prints hundreds of pages
+     * without trouble.
+     */
+    public function form48Bulk(Request $request)
+    {
+        if (! $this->isPrivileged($request)) {
+            abort(403);
+        }
+
+        $request->validate([
+            'month'             => 'required|integer|between:1,12',
+            'year'              => 'required|integer|between:2020,2099',
+            'period'            => ['nullable', Rule::in(DtrPeriod::KEYS)],
+            'department_id'     => 'nullable|integer',
+            'staff_type'        => 'nullable|string',
+            'employment_status' => 'nullable|string',
+            'employee_ids'      => 'nullable|array',
+            'employee_ids.*'    => 'integer',
+        ]);
+
+        $period    = new DtrPeriod((int) $request->year, (int) $request->month, $request->input('period') ?: DtrPeriod::FULL);
+        $employees = $this->bulkPrintEmployees($request, $period);
+
+        if ($employees->isEmpty()) {
+            throw ValidationException::withMessages([
+                'employee_ids' => [$period->isHalfMonth()
+                    ? 'No Contractual (COS) or Job Order employees match these filters — half-month DTRs only apply to them.'
+                    : 'No active employees match these filters.'],
+            ]);
+        }
+
+        if ($employees->count() > self::BULK_PRINT_LIMIT) {
+            throw ValidationException::withMessages([
+                'employee_ids' => ["That's {$employees->count()} employees — print at most " . self::BULK_PRINT_LIMIT . ' at a time. Narrow it down by department or staff type.'],
+            ]);
+        }
+
+        $from = $period->start()->toDateString();
+        $to   = $period->end()->toDateString();
+
+        $this->workingHours->backfillHolidays($employees->pluck('id')->all(), $from, $to);
+
+        // One query for everyone's records instead of one per employee.
+        $recordsByEmployee = DailyDtr::whereIn('employee_id', $employees->pluck('id'))
+            ->whereDate('work_date', '>=', $from)
+            ->whereDate('work_date', '<=', $to)
+            ->orderBy('work_date')
+            ->get()
+            ->groupBy('employee_id');
+
+        $holidays = Holiday::keyedBetween($from, $to);
+
+        $pages = $employees->map(fn (User $e) => $this->form48Page(
+            $e, $period, $recordsByEmployee->get($e->id, collect()), $holidays
+        ))->all();
+
+        return response()->view('reports.form48', [
+            'pages' => $pages,
+            'title' => "CSC Form 48 – {$employees->count()} employees – {$period->label()}",
+        ])->header('X-Sheet-Count', (string) $employees->count());
+    }
+
+    /**
+     * The employees a Print All covers: active, non–Super Admin accounts in
+     * the viewer's campus (a Super Admin may pick one with ?campus_id=),
+     * narrowed by the optional filters, sorted the way a printed stack is
+     * filed — by surname.
+     */
+    private function bulkPrintEmployees(Request $request, DtrPeriod $period)
+    {
+        $campusId = $this->resolvedCampusId($request);
+
+        return User::with('department', 'shift', 'campus')
+            ->where('role', '!=', 'super_admin')
+            ->where('is_active', true)
+            ->when($campusId, fn ($q) => $q->where('campus_id', $campusId))
+            ->when($request->filled('department_id'), fn ($q) => $q->where('department_id', $request->department_id))
+            ->when($request->filled('staff_type'), fn ($q) => $q->where('staff_type', $request->staff_type))
+            ->when($request->filled('employment_status'), fn ($q) => $q->where('employment_status', $request->employment_status))
+            ->when($request->filled('employee_ids'), fn ($q) => $q->whereIn('id', $request->employee_ids))
+            ->when($period->isHalfMonth(), fn ($q) => $q->whereIn('employment_status', User::SEMI_MONTHLY_DTR_STATUSES))
+            ->orderBy('last_name')
+            ->orderBy('first_name')
+            ->get();
     }
 
     /** Everything _form48_page.blade.php needs for one employee's sheet. */

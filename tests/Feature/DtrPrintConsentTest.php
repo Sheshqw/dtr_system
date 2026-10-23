@@ -156,3 +156,66 @@ test('the default queue view returns every pending request but caps reviewed his
     expect($approvedCount)->toBe(10); // capped, not all 15
     expect($res['summary']['approved'])->toBe(15); // the summary count is still accurate
 });
+
+test('an hr officer can approve many pending requests at once, skipping ones outside their campus', function () {
+    $hr = User::factory()->hrOfficer()->create(['campus_id' => $this->campusA->id]);
+
+    $mine = collect(range(1, 3))->map(fn () => DtrPrintConsent::create([
+        'employee_id' => User::factory()->create(['campus_id' => $this->campusA->id])->id,
+        'month'       => $this->month,
+        'year'        => $this->year,
+        'status'      => 'pending',
+    ]));
+    $otherCampus = DtrPrintConsent::create([
+        'employee_id' => User::factory()->create(['campus_id' => $this->campusB->id])->id,
+        'month'       => $this->month,
+        'year'        => $this->year,
+        'status'      => 'pending',
+    ]);
+    $ownRequest = DtrPrintConsent::create([
+        'employee_id' => $hr->id,
+        'month'       => $this->month,
+        'year'        => $this->year,
+        'status'      => 'pending',
+    ]);
+
+    $this->actingAs($hr, 'sanctum')
+        ->postJson('/api/dtr-print-consents/bulk-review', [
+            'ids'    => [...$mine->pluck('id'), $otherCampus->id, $ownRequest->id],
+            'status' => 'approved',
+        ])
+        ->assertOk()
+        ->assertJsonCount(3, 'consents')
+        ->assertJsonPath('skipped', 2);
+
+    expect(DtrPrintConsent::whereIn('id', $mine->pluck('id'))->pluck('status')->unique()->all())->toBe(['approved'])
+        ->and(DtrPrintConsent::whereIn('id', $mine->pluck('id'))->pluck('reviewed_by')->unique()->all())->toBe([$hr->id])
+        ->and($otherCampus->fresh()->status)->toBe('pending')
+        ->and($ownRequest->fresh()->status)->toBe('pending');
+});
+
+test('bulk review leaves already-reviewed requests alone', function () {
+    $hr = User::factory()->hrOfficer()->create(['campus_id' => $this->campusA->id]);
+
+    $denied = DtrPrintConsent::create([
+        'employee_id' => User::factory()->create(['campus_id' => $this->campusA->id])->id,
+        'month'       => $this->month,
+        'year'        => $this->year,
+        'status'      => 'denied',
+    ]);
+
+    $this->actingAs($hr, 'sanctum')
+        ->postJson('/api/dtr-print-consents/bulk-review', ['ids' => [$denied->id], 'status' => 'approved'])
+        ->assertOk()
+        ->assertJsonPath('skipped', 1);
+
+    expect($denied->fresh()->status)->toBe('denied');
+});
+
+test('an employee cannot bulk review print requests', function () {
+    $employee = User::factory()->create(['campus_id' => $this->campusA->id]);
+
+    $this->actingAs($employee, 'sanctum')
+        ->postJson('/api/dtr-print-consents/bulk-review', ['ids' => [1], 'status' => 'approved'])
+        ->assertForbidden();
+});

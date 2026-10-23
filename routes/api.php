@@ -132,6 +132,7 @@ Route::middleware('auth:sanctum')->group(function () {
     Route::get('/reports/export/{employee}',   [ReportController::class, 'exportCsv']);
     Route::middleware('feature:dtr_generation.export')->group(function () {
         Route::get('/reports/export-bulk', [ReportController::class, 'exportBulk']);
+        Route::post('/reports/form48-bulk', [ReportController::class, 'form48Bulk']);
         Route::get('/reports/deductions',  [ReportController::class, 'exportDeductions']);
     });
 
@@ -139,6 +140,7 @@ Route::middleware('auth:sanctum')->group(function () {
     // can download an official, printable copy of their own DTR
     Route::get('/dtr-print-consents',                [DtrPrintConsentController::class, 'index']);
     Route::post('/dtr-print-consents',               [DtrPrintConsentController::class, 'store']);
+    Route::post('/dtr-print-consents/bulk-review',   [DtrPrintConsentController::class, 'bulkReview']);
     Route::patch('/dtr-print-consents/{consent}',    [DtrPrintConsentController::class, 'review']);
 
     // Tracking & analytics — granted by role default (off for employees) and

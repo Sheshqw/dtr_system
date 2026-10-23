@@ -321,12 +321,67 @@
               All caught up — no pending print requests.
             </div>
 
+            <!-- Bulk review — approve or deny many requests at once -->
+            <div v-if="pendingConsents.length > 1" class="bulk-bar">
+              <label class="bulk-check">
+                <input
+                  type="checkbox"
+                  :checked="allPendingSelected"
+                  :indeterminate.prop="selectedPending.length > 0 && !allPendingSelected"
+                  @change="toggleAllPending"
+                />
+                <span v-if="selectedPending.length">{{ selectedPending.length }} of {{ pendingConsents.length }} selected</span>
+                <span v-else>Select all {{ pendingConsents.length }}</span>
+              </label>
+
+              <div v-if="selectedPending.length && !bulkDenying" class="flex items-center gap-2 flex-wrap">
+                <button
+                  @click="bulkReview('approved')"
+                  :disabled="bulkReviewing"
+                  class="inline-flex items-center gap-1.5 px-3 py-1.5 text-xs font-semibold rounded-lg transition-colors disabled:opacity-60"
+                  style="background:#ECFDF5;color:#065F46;border:1px solid #A7F3D0;"
+                >
+                  <Loader2Icon v-if="bulkReviewing" class="w-3.5 h-3.5 animate-spin" />
+                  <CheckCircle2Icon v-else class="w-3.5 h-3.5" />
+                  Approve {{ selectedPending.length }}
+                </button>
+                <button
+                  @click="bulkDenying = true; bulkDenyRemarks = ''"
+                  :disabled="bulkReviewing"
+                  class="inline-flex items-center gap-1.5 px-3 py-1.5 text-xs font-semibold rounded-lg transition-colors disabled:opacity-60"
+                  style="background:#FEF2F2;color:#991B1B;border:1px solid #FECACA;"
+                >
+                  <XCircleIcon class="w-3.5 h-3.5" />
+                  Deny {{ selectedPending.length }}
+                </button>
+              </div>
+
+              <div v-else-if="selectedPending.length" class="flex items-center gap-2 flex-wrap">
+                <input v-model="bulkDenyRemarks" maxlength="500" class="form-input !w-56" placeholder="Reason for denial (optional)" />
+                <button
+                  @click="bulkReview('denied')"
+                  :disabled="bulkReviewing"
+                  class="px-3 py-1.5 text-xs font-semibold rounded-lg transition-colors whitespace-nowrap disabled:opacity-60"
+                  style="background:#FEF2F2;color:#991B1B;border:1px solid #FECACA;"
+                >Confirm Deny {{ selectedPending.length }}</button>
+                <button @click="bulkDenying = false" class="text-xs text-[#6B7A94] hover:text-[#0F172A]">Cancel</button>
+              </div>
+            </div>
+
             <div
               v-for="c in pendingConsents" :key="c.id"
               class="pending-row flex items-start justify-between gap-3 px-4 py-3 rounded-lg border border-[#E2E8F0] flex-wrap"
               :class="{ 'pending-row--new': justArrivedIds.has(c.id) }"
             >
               <div class="flex items-start gap-3 min-w-0">
+                <input
+                  v-if="pendingConsents.length > 1"
+                  type="checkbox"
+                  class="pending-check"
+                  :checked="selectedPendingIds.has(c.id)"
+                  @change="togglePending(c.id)"
+                  :aria-label="`Select ${c.employee.name}'s request`"
+                />
                 <div class="w-9 h-9 rounded-full bg-gradient-to-br from-[#2E4A8C] to-[#3D5CA3] flex items-center justify-center flex-shrink-0">
                   <span class="text-white text-xs font-semibold">{{ initials(c.employee.name) }}</span>
                 </div>
@@ -420,6 +475,150 @@
         </div>
         </template>
 
+        <!-- ── Print All (HR / Super Admin) ──────────────────────────── -->
+        <template v-if="activeTab === 'printall' && canSelectEmployee">
+        <div class="rounded-xl shadow-[0_2px_8px_rgba(0,0,0,0.08)] overflow-hidden border border-[#E2E8F0]">
+
+          <div class="card-head" style="--accent:#1B2A5E; --tint:#F4F6FB;">
+            <div class="card-head-left">
+              <div class="card-head-icon">
+                <PrinterIcon class="w-5 h-5" />
+              </div>
+              <div>
+                <h2 class="card-head-title">Print All — CSC Form 48</h2>
+                <p class="card-head-sub">Print every selected employee's DTR at once, one A4 sheet each</p>
+              </div>
+            </div>
+            <div class="pa-count">
+              <UsersIcon class="w-3.5 h-3.5" />
+              {{ printSelected.length }} of {{ printCandidates.length }} selected
+            </div>
+          </div>
+
+          <div class="bg-white px-6 py-5 space-y-4">
+
+            <div class="grid grid-cols-2 sm:grid-cols-3 gap-3">
+              <div>
+                <label class="bulk-label">Month</label>
+                <select v-model="printMonth" class="form-input">
+                  <option v-for="m in months" :key="m.value" :value="m.value">{{ m.label }}</option>
+                </select>
+              </div>
+              <div>
+                <label class="bulk-label">Year</label>
+                <select v-model="printYear" class="form-input">
+                  <option v-for="y in years" :key="y" :value="y">{{ y }}</option>
+                </select>
+              </div>
+              <div>
+                <label class="bulk-label">Coverage</label>
+                <select v-model="printPeriod" class="form-input">
+                  <option value="full">Whole month</option>
+                  <option value="first">1st half (1–15)</option>
+                  <option value="second">2nd half (16–{{ printLastDay }})</option>
+                </select>
+              </div>
+              <div v-if="isSuperAdmin">
+                <label class="bulk-label">Campus</label>
+                <select v-model="printCampus" class="form-input">
+                  <option value="">All Campuses</option>
+                  <option v-for="c in campuses" :key="c.id" :value="c.id">{{ c.name }}</option>
+                </select>
+              </div>
+              <div>
+                <label class="bulk-label">Department</label>
+                <select v-model="printDepartment" class="form-input">
+                  <option value="">All Departments</option>
+                  <option v-for="d in departments" :key="d.id" :value="d.id">{{ d.name }}</option>
+                </select>
+              </div>
+              <div>
+                <label class="bulk-label">Staff Type</label>
+                <select v-model="printStaffType" class="form-input">
+                  <option value="">All Staff Types</option>
+                  <option v-for="t in STAFF_TYPES" :key="t.value" :value="t.value">{{ t.label }}</option>
+                </select>
+              </div>
+              <div>
+                <label class="bulk-label">Employment</label>
+                <select v-model="printEmployment" class="form-input">
+                  <option value="">All</option>
+                  <option v-for="t in EMPLOYMENT_TYPES" :key="t.value" :value="t.value">{{ t.label }}</option>
+                </select>
+              </div>
+            </div>
+
+            <p v-if="printPeriod !== 'full'" class="pa-note">
+              <AlertCircleIcon class="w-3.5 h-3.5 flex-shrink-0" />
+              Half-month DTRs only apply to Contractual (COS) and Job Order employees, so only they are listed.
+            </p>
+
+            <!-- Who gets printed -->
+            <div class="pa-list">
+              <div class="pa-list-head">
+                <label class="bulk-check">
+                  <input
+                    type="checkbox"
+                    :checked="allVisiblePrintSelected"
+                    :indeterminate.prop="someVisiblePrintSelected && !allVisiblePrintSelected"
+                    :disabled="!printVisible.length"
+                    @change="toggleAllVisiblePrint"
+                  />
+                  Select all{{ printSearch ? ' shown' : '' }}
+                </label>
+                <div class="relative flex-1 max-w-xs">
+                  <SearchIcon class="absolute left-2.5 top-1/2 -translate-y-1/2 w-3.5 h-3.5 text-[#6B7A94]" />
+                  <input v-model="printSearch" class="form-input !py-1.5 !pl-8 text-xs" placeholder="Find by name or ID…" />
+                </div>
+              </div>
+
+              <div class="pa-list-body">
+                <label v-for="emp in printVisible" :key="emp.id" class="pa-row">
+                  <input type="checkbox" :checked="printSelectedIds.has(emp.id)" @change="togglePrint(emp.id)" />
+                  <div class="w-7 h-7 rounded-full bg-gradient-to-br from-[#2E4A8C] to-[#3D5CA3] flex items-center justify-center flex-shrink-0">
+                    <span class="text-white text-[10px] font-semibold">{{ initials(emp.name) }}</span>
+                  </div>
+                  <div class="min-w-0 flex-1">
+                    <p class="text-sm font-medium text-[#0F172A] truncate">{{ emp.name }}</p>
+                    <p class="text-xs text-[#6B7A94] truncate">
+                      {{ emp.employee_id }}<span v-if="emp.position"> · {{ emp.position }}</span><span v-if="emp.department"> · {{ emp.department }}</span><span v-if="isSuperAdmin && !printCampus && emp.campus"> · {{ emp.campus }}</span>
+                    </p>
+                  </div>
+                  <span v-if="emp.semi_monthly_dtr" class="emp-status-pill flex-shrink-0">{{ employmentLabel(emp.employment_status) }}</span>
+                </label>
+
+                <p v-if="!printVisible.length" class="px-4 py-8 text-center text-sm text-[#6B7A94]">
+                  {{ printCandidates.length ? 'No employee matches your search.' : 'No active employees match these filters.' }}
+                </p>
+              </div>
+            </div>
+
+            <div class="flex items-center justify-between gap-4 pt-1 flex-wrap">
+              <p class="text-xs text-[#64748B] max-w-md">
+                <template v-if="printSelected.length">
+                  Prints <strong class="text-[#0F172A]">{{ printSelected.length }}</strong> DTR{{ printSelected.length !== 1 ? 's' : '' }}
+                  for <strong class="text-[#0F172A]">{{ printPeriodLabel }}</strong>.
+                  To keep a digital copy, choose <em>Save as PDF</em> in the print dialog.
+                </template>
+                <span v-else class="text-amber-600">Select at least one employee to print.</span>
+              </p>
+              <button
+                @click="printAll"
+                :disabled="printingAll || !printSelected.length || printSelected.length > BULK_PRINT_LIMIT"
+                class="btn-primary inline-flex items-center gap-2 flex-shrink-0"
+              >
+                <Loader2Icon v-if="printingAll" class="w-4 h-4 animate-spin" />
+                <PrinterIcon v-else class="w-4 h-4" />
+                {{ printingAll ? 'Preparing…' : `Print All (${printSelected.length})` }}
+              </button>
+            </div>
+            <p v-if="printSelected.length > BULK_PRINT_LIMIT" class="text-xs text-[#B91C1C] -mt-2 text-right">
+              Print at most {{ BULK_PRINT_LIMIT }} at a time — narrow it down by department or staff type.
+            </p>
+          </div>
+        </div>
+        </template>
+
         <!-- ── Bulk Export card ───────────────────────────────────────── -->
         <template v-if="activeTab === 'bulk' && canSelectEmployee">
         <div v-if="canSelectEmployee" class="rounded-xl shadow-[0_2px_8px_rgba(0,0,0,0.08)] overflow-hidden border border-[#E2E8F0]">
@@ -469,14 +668,7 @@
                 <label class="bulk-label">Staff Type <span class="text-[#6B7A94] font-normal">(optional)</span></label>
                 <select v-model="bulkStaffType" class="form-input">
                   <option value="">All Staff Types</option>
-                  <option value="faculty">Faculty / Instructor</option>
-                  <option value="administrative">Administrative Staff</option>
-                  <option value="security">Security Guard</option>
-                  <option value="custodial">Custodial / Utility</option>
-                  <option value="maintenance">Maintenance</option>
-                  <option value="laboratory">Lab Technician</option>
-                  <option value="driver">Driver</option>
-                  <option value="other">Other</option>
+                  <option v-for="t in STAFF_TYPES" :key="t.value" :value="t.value">{{ t.label }}</option>
                 </select>
               </div>
             </div>
@@ -948,7 +1140,26 @@ const bulkMonth      = ref(now.getMonth() + 1);
 const bulkYear       = ref(now.getFullYear());
 const bulkDepartment = ref('');
 const bulkStaffType  = ref('');
-const { departments } = storeToRefs(refData);
+const { departments, campuses } = storeToRefs(refData);
+
+const STAFF_TYPES = [
+  { value: 'faculty',        label: 'Faculty / Instructor' },
+  { value: 'administrative', label: 'Administrative Staff' },
+  { value: 'security',       label: 'Security Guard' },
+  { value: 'custodial',      label: 'Custodial / Utility' },
+  { value: 'maintenance',    label: 'Maintenance' },
+  { value: 'laboratory',     label: 'Lab Technician' },
+  { value: 'driver',         label: 'Driver' },
+  { value: 'other',          label: 'Other' },
+];
+const EMPLOYMENT_TYPES = [
+  { value: 'permanent', label: 'Permanent' },
+  { value: 'cos',       label: 'Contractual (COS)' },
+  { value: 'job_order', label: 'Job Order' },
+  { value: 'part-time', label: 'Part-time' },
+  { value: 'sa',        label: 'Student Assistant' },
+  { value: 'ojt',       label: 'OJT' },
+];
 
 // ── DTR Print Consent (employees need HR/Admin sign-off to download) ──
 const myConsents       = ref([]);   // employee's own requests, newest first
@@ -981,6 +1192,30 @@ const canDownloadOwn = computed(() =>
 );
 
 const pendingConsents = computed(() => consentQueue.value.filter(c => c.status === 'pending'));
+
+// ── Bulk review of print requests ──────────────────────────────────
+// Only ids still pending count as selected — a request someone else just
+// reviewed (live) quietly drops out of the selection.
+const selectedPendingIds = ref(new Set());
+const selectedPending    = computed(() => pendingConsents.value.filter(c => selectedPendingIds.value.has(c.id)));
+const allPendingSelected = computed(() =>
+  pendingConsents.value.length > 0 && selectedPending.value.length === pendingConsents.value.length
+);
+const bulkReviewing   = ref(false);
+const bulkDenying     = ref(false);
+const bulkDenyRemarks = ref('');
+
+function togglePending(id) {
+  const next = new Set(selectedPendingIds.value);
+  next.has(id) ? next.delete(id) : next.add(id);
+  selectedPendingIds.value = next;
+}
+
+function toggleAllPending() {
+  selectedPendingIds.value = allPendingSelected.value
+    ? new Set()
+    : new Set(pendingConsents.value.map(c => c.id));
+}
 const recentConsentDecisions = computed(() =>
   consentQueue.value.filter(c => c.status !== 'pending').slice(0, 5)
 );
@@ -999,10 +1234,79 @@ const reportTabs = computed(() => {
     },
   ];
   if (canSelectEmployee.value) {
+    tabs.push({ key: 'printall', label: 'Print All', icon: PrinterIcon });
     tabs.push({ key: 'bulk', label: 'Bulk Export', icon: FileDownIcon });
   }
   return tabs;
 });
+
+// ── Print All ─────────────────────────────────────────────────────
+// Mirrors ReportController::bulkPrintEmployees(), which re-checks the same
+// rules (and the viewer's campus) on the server.
+const BULK_PRINT_LIMIT = 500;
+
+const printMonth      = ref(now.getMonth() + 1);
+const printYear       = ref(now.getFullYear());
+const printPeriod     = ref('full');
+const printCampus     = ref('');
+const printDepartment = ref('');
+const printStaffType  = ref('');
+const printEmployment = ref('');
+const printSearch     = ref('');
+const printingAll     = ref(false);
+const printSelectedIds = ref(new Set());
+
+const printLastDay = computed(() => new Date(printYear.value, printMonth.value, 0).getDate());
+
+const printPeriodLabel = computed(() => {
+  const m = months.find(x => x.value === printMonth.value)?.label ?? '';
+  if (printPeriod.value === 'first')  return `${m} 1–15, ${printYear.value}`;
+  if (printPeriod.value === 'second') return `${m} 16–${printLastDay.value}, ${printYear.value}`;
+  return `${m} ${printYear.value}`;
+});
+
+const printCandidates = computed(() => employees.value.filter(e =>
+  e.is_active &&
+  e.role !== 'super_admin' &&
+  (!printCampus.value     || e.campus_id == printCampus.value) &&
+  (!printDepartment.value || e.department_id == printDepartment.value) &&
+  (!printStaffType.value  || e.staff_type === printStaffType.value) &&
+  (!printEmployment.value || e.employment_status === printEmployment.value) &&
+  (printPeriod.value === 'full' || e.semi_monthly_dtr)
+));
+
+const printVisible = computed(() => {
+  const q = printSearch.value.trim().toLowerCase();
+  if (!q) return printCandidates.value;
+  return printCandidates.value.filter(e =>
+    e.name.toLowerCase().includes(q) || String(e.employee_id).toLowerCase().includes(q)
+  );
+});
+
+const printSelected = computed(() => printCandidates.value.filter(e => printSelectedIds.value.has(e.id)));
+const someVisiblePrintSelected = computed(() => printVisible.value.some(e => printSelectedIds.value.has(e.id)));
+const allVisiblePrintSelected  = computed(() =>
+  printVisible.value.length > 0 && printVisible.value.every(e => printSelectedIds.value.has(e.id))
+);
+
+// Changing a filter starts from "everyone it matches" again.
+watch(printCandidates, (list) => {
+  printSelectedIds.value = new Set(list.map(e => e.id));
+}, { immediate: true });
+
+function togglePrint(id) {
+  const next = new Set(printSelectedIds.value);
+  next.has(id) ? next.delete(id) : next.add(id);
+  printSelectedIds.value = next;
+}
+
+function toggleAllVisiblePrint() {
+  const next = new Set(printSelectedIds.value);
+  const select = !allVisiblePrintSelected.value;
+  for (const e of printVisible.value) select ? next.add(e.id) : next.delete(e.id);
+  printSelectedIds.value = next;
+}
+
 
 const bulkEmployeeCount = computed(() => {
   let list = employees.value;
@@ -1405,6 +1709,27 @@ async function denyConsent(c) {
   }
 }
 
+async function bulkReview(status) {
+  const ids = selectedPending.value.map(c => c.id);
+  if (!ids.length) return;
+  bulkReviewing.value = true;
+  try {
+    const res = await axios.post('/api/dtr-print-consents/bulk-review', {
+      ids,
+      status,
+      reviewer_remarks: status === 'denied' ? (bulkDenyRemarks.value || null) : null,
+    });
+    for (const c of res.data?.consents ?? []) applyConsentUpdate(c);
+    toast(res.data?.message ?? 'Print requests updated.', 'success');
+    selectedPendingIds.value = new Set();
+    bulkDenying.value = false;
+  } catch (err) {
+    toast(await extractErrorMessage(err, 'Failed to review the selected requests.'), 'error');
+  } finally {
+    bulkReviewing.value = false;
+  }
+}
+
 // ── Print DTR ─────────────────────────────────────────────────────
 function printDtr() {
   if (!previewData.value || printing.value || !canSelectEmployee.value) return;
@@ -1645,10 +1970,10 @@ function printDtr() {
 
   <!-- Employee info -->
   <div class="emp-grid">
-    <div class="ef"><span class="el">Employee Name</span><span class="ev">${d.employee.name}</span></div>
-    <div class="ef"><span class="el">Employee ID</span><span class="ev">${d.employee.employee_id ?? '&mdash;'}</span></div>
-    <div class="ef"><span class="el">Position</span><span class="ev">${d.employee.position ?? '&mdash;'}</span></div>
-    <div class="ef"><span class="el">Department</span><span class="ev">${d.employee.department ?? '&mdash;'}</span></div>
+    <div class="ef"><span class="el">Employee Name</span><span class="ev">${escapeHtml(d.employee.name)}</span></div>
+    <div class="ef"><span class="el">Employee ID</span><span class="ev">${d.employee.employee_id ? escapeHtml(d.employee.employee_id) : '&mdash;'}</span></div>
+    <div class="ef"><span class="el">Position</span><span class="ev">${d.employee.position ? escapeHtml(d.employee.position) : '&mdash;'}</span></div>
+    <div class="ef"><span class="el">Department</span><span class="ev">${d.employee.department ? escapeHtml(d.employee.department) : '&mdash;'}</span></div>
   </div>
 
   <!-- Summary stats -->
@@ -1713,36 +2038,66 @@ function printDtr() {
 </body>
 </html>`;
 
-  // Inject a hidden iframe — no popup, no blocker
+  printDocument(html, () => { printing.value = false; });
+}
+
+// Opens the browser's print dialog for a standalone HTML document, through
+// a hidden iframe — no popup, so no popup blocker. srcdoc, not a Blob URL:
+// the app's CSP frame-src blocks blob: frames, but not srcdoc ones.
+function printDocument(html, onOpened) {
   const iframe = document.createElement('iframe');
   iframe.style.cssText = 'position:fixed;top:-9999px;left:-9999px;width:1px;height:1px;border:none;visibility:hidden;';
   document.body.appendChild(iframe);
+
+  let cleaned = false;
+  const cleanup = () => {
+    if (cleaned) return;
+    cleaned = true;
+    iframe.remove();
+  };
 
   iframe.addEventListener('load', () => {
     try {
       iframe.contentWindow.focus();
       iframe.contentWindow.print();
     } finally {
-      printing.value = false;
+      onOpened?.();
     }
-    // Clean up the iframe after the print dialog is dismissed
-    const cleanup = () => {
-      document.body.removeChild(iframe);
-      iframe.contentWindow?.removeEventListener('afterprint', cleanup);
-    };
     iframe.contentWindow.addEventListener('afterprint', cleanup);
     // Fallback removal if afterprint never fires (some browsers)
-    setTimeout(cleanup, 60_000);
+    setTimeout(cleanup, 120_000);
   });
 
   iframe.srcdoc = html;
+}
+
+async function printAll() {
+  if (!printSelected.value.length || printingAll.value) return;
+  printingAll.value = true;
+  try {
+    const res = await axios.post('/api/reports/form48-bulk', {
+      month:        printMonth.value,
+      year:         printYear.value,
+      period:       printPeriod.value,
+      campus_id:    printCampus.value || null,
+      employee_ids: printSelected.value.map(e => e.id),
+    }, { responseType: 'text' });
+    printDocument(res.data, () => { printingAll.value = false; });
+  } catch (err) {
+    toast(await extractErrorMessage(err, 'Failed to prepare the DTRs for printing.'), 'error');
+    printingAll.value = false;
+  }
 }
 
 onMounted(async () => {
   if (canSelectEmployee.value) {
     loadingEmployees.value = true;
     try {
-      await Promise.all([refData.fetchEmployees(), refData.fetchDepartments()]);
+      await Promise.all([
+        refData.fetchEmployees(),
+        refData.fetchDepartments(),
+        isSuperAdmin.value ? refData.fetchCampuses() : null,
+      ]);
 
       // Pre-select employee if navigated from Employees page (Quick Form 48)
       if (route.query.employee) {
@@ -1882,6 +2237,101 @@ onUnmounted(() => {
   box-shadow: 0 2px 10px -4px rgba(27,42,94,0.15);
   transform: translateY(-1px);
 }
+
+/* ── Bulk review bar + selection checkboxes ──────────────────────── */
+.bulk-bar {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  flex-wrap: wrap;
+  gap: 10px;
+  padding: 8px 12px;
+  border-radius: 10px;
+  background: #F4F6FB;
+  border: 1px solid #E2E8F0;
+}
+.bulk-check {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  font-size: 12.5px;
+  font-weight: 600;
+  color: #334155;
+  cursor: pointer;
+  user-select: none;
+}
+.bulk-check input,
+.pending-check,
+.pa-row input {
+  width: 16px; height: 16px; flex-shrink: 0;
+  accent-color: #1B2A5E;
+  cursor: pointer;
+}
+.pending-check { margin-top: 10px; }
+
+/* ── Print All: who gets printed ─────────────────────────────────── */
+.pa-count {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  font-size: 12px;
+  font-weight: 600;
+  color: #1B2A5E;
+  background: rgba(27, 42, 94, 0.07);
+  border: 1px solid rgba(27, 42, 94, 0.20);
+  border-radius: 8px;
+  padding: 6px 12px;
+}
+.pa-note {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  font-size: 12px;
+  color: #92400E;
+  background: #FFFBEB;
+  border: 1px solid #FDE68A;
+  border-radius: 8px;
+  padding: 7px 10px;
+}
+.pa-list {
+  border: 1px solid #E2E8F0;
+  border-radius: 10px;
+  overflow: hidden;
+}
+.pa-list-head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  padding: 8px 12px;
+  background: #F8FAFC;
+  border-bottom: 1px solid #E2E8F0;
+}
+.pa-list-body {
+  max-height: 340px;
+  overflow-y: auto;
+}
+.pa-row {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 8px 12px;
+  border-bottom: 1px solid #F1F5F9;
+  cursor: pointer;
+  transition: background-color 0.12s ease;
+}
+.pa-row:last-child { border-bottom: none; }
+.pa-row:hover { background: #F8FAFC; }
+
+[data-theme="dark"] .pa-count      { color: #BFD0FF; background: rgba(147,197,253,0.10); border-color: rgba(147,197,253,0.25); }
+[data-theme="dark"] .bulk-label    { color: #9AAAC9; }
+[data-theme="dark"] .bulk-bar      { background: #17223A; border-color: rgba(255,255,255,0.08); }
+[data-theme="dark"] .bulk-check    { color: #B7C3DE; }
+[data-theme="dark"] .pa-note       { color: #FCD34D; background: rgba(217,119,6,0.12); border-color: rgba(217,119,6,0.3); }
+[data-theme="dark"] .pa-list       { border-color: rgba(255,255,255,0.08); }
+[data-theme="dark"] .pa-list-head  { background: #17223A; border-color: rgba(255,255,255,0.08); }
+[data-theme="dark"] .pa-row        { border-color: rgba(255,255,255,0.05); }
+[data-theme="dark"] .pa-row:hover  { background: rgba(255,255,255,0.04); }
 
 /* ── Live indicator (card header) ────────────────────────────────── */
 .live-indicator {
