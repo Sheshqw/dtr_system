@@ -8,7 +8,7 @@ use Illuminate\Support\Facades\Storage;
 class SystemSetting extends Model
 {
     protected $fillable = [
-        'system_name', 'short_name', 'tagline', 'logo_path', 'updated_by',
+        'system_name', 'short_name', 'tagline', 'logo_path', 'login_background_path', 'updated_by',
         'session_timeout_minutes', 'password_min_length',
         'password_require_number', 'password_require_symbol',
         'max_login_attempts', 'lockout_duration_minutes',
@@ -54,5 +54,10 @@ class SystemSetting extends Model
     public function getLogoUrlAttribute(): ?string
     {
         return $this->logo_path ? Storage::disk('public')->url($this->logo_path) : null;
+    }
+
+    public function getLoginBackgroundUrlAttribute(): ?string
+    {
+        return $this->login_background_path ? Storage::disk('public')->url($this->login_background_path) : null;
     }
 }

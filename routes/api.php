@@ -176,6 +176,7 @@ Route::middleware('auth:sanctum')->group(function () {
     // System Settings (branding) — Super Admin & Admin can update
     Route::post('/system-settings',            [SystemSettingController::class, 'update']);
     Route::post('/system-settings/reset-logo', [SystemSettingController::class, 'resetLogo']);
+    Route::post('/system-settings/reset-login-background', [SystemSettingController::class, 'resetLoginBackground']);
 
     // System Health — Super Admin only
     Route::prefix('system-health')->middleware('feature:system_health')->group(function () {

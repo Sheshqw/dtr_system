@@ -11,6 +11,8 @@ export const useSettingsStore = defineStore('settings', () => {
     const shortName   = ref('UDTRMS');
     const tagline     = ref('University Daily Time Record Monitoring System');
     const logoUrl     = ref(DEFAULT_LOGO);
+    // null = the login page draws its bundled illustrated background.
+    const loginBackgroundUrl = ref(null);
     const turnstileEnabled = ref(false);
     const turnstileSiteKey = ref(null);
     const loaded      = ref(false);
@@ -22,6 +24,7 @@ export const useSettingsStore = defineStore('settings', () => {
             shortName.value  = res.data.short_name;
             tagline.value    = res.data.tagline;
             logoUrl.value    = res.data.logo_url || DEFAULT_LOGO;
+            loginBackgroundUrl.value = res.data.login_background_url || null;
             turnstileEnabled.value = !!res.data.turnstile?.enabled;
             turnstileSiteKey.value = res.data.turnstile?.site_key ?? null;
         } catch {
@@ -32,5 +35,5 @@ export const useSettingsStore = defineStore('settings', () => {
         }
     }
 
-    return { systemName, shortName, tagline, logoUrl, turnstileEnabled, turnstileSiteKey, loaded, fetch };
+    return { systemName, shortName, tagline, logoUrl, loginBackgroundUrl, turnstileEnabled, turnstileSiteKey, loaded, fetch };
 });

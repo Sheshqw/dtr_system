@@ -43,6 +43,8 @@ class SystemSettingController extends Controller
             'short_name'  => 'required|string|max:30',
             'tagline'     => 'required|string|max:150',
             'logo'        => 'nullable|image|mimes:jpeg,png,jpg,webp|max:2048',
+            // A wide campus photo for the login page — larger than the logo.
+            'login_background' => 'nullable|image|mimes:jpeg,png,jpg,webp|max:4096',
 
             // Security & session policy — 15 min .. 30 days for the session
             // timeout, generous bounds elsewhere just to keep the values sane.
@@ -72,8 +74,15 @@ class SystemSettingController extends Controller
             $data['logo_path'] = $request->file('logo')->store('branding', 'public');
         }
 
+        if ($request->hasFile('login_background')) {
+            if ($settings->login_background_path && Storage::disk('public')->exists($settings->login_background_path)) {
+                Storage::disk('public')->delete($settings->login_background_path);
+            }
+            $data['login_background_path'] = $request->file('login_background')->store('branding', 'public');
+        }
+
         $data['updated_by'] = $request->user()->id;
-        unset($data['logo']);
+        unset($data['logo'], $data['login_background']);
 
         $settings->update($data);
 
@@ -99,6 +108,24 @@ class SystemSettingController extends Controller
     }
 
     /**
+     * Revert the login page to its bundled illustrated background.
+     */
+    public function resetLoginBackground(Request $request)
+    {
+        $this->gate($request);
+
+        $settings = SystemSetting::current();
+
+        if ($settings->login_background_path && Storage::disk('public')->exists($settings->login_background_path)) {
+            Storage::disk('public')->delete($settings->login_background_path);
+        }
+
+        $settings->update(['login_background_path' => null, 'updated_by' => $request->user()->id]);
+
+        return response()->json($this->format($settings->fresh()));
+    }
+
+    /**
      * System settings apply to every campus (branding, security policy, the
      * Turnstile login check), so only the Super Admin may change them — a
      * campus Admin's authority stops at their own campus.
@@ -119,6 +146,7 @@ class SystemSettingController extends Controller
             'short_name'  => $s->short_name,
             'tagline'     => $s->tagline,
             'logo_url'    => $s->logo_url,
+            'login_background_url' => $s->login_background_url,
 
             // The login page needs these before anyone signs in. The site key
             // is public by design (it's embedded in the page); the secret key

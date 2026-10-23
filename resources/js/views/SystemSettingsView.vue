@@ -3,7 +3,7 @@
 
     <PageHeader
       title="System Settings"
-      subtitle="Customize your system's logo, name, and tagline"
+      subtitle="Customize your system's logo, login page, name, and tagline"
       :icon="SettingsIcon"
     />
 
@@ -55,6 +55,46 @@
                   </button>
                 </div>
                 <p class="settings-card-sub text-xs">JPG, PNG, or WEBP — up to 2MB. Square images look best.</p>
+              </div>
+            </div>
+          </div>
+
+          <!-- Login background card -->
+          <div class="settings-card rounded-xl overflow-hidden">
+            <div class="settings-card-head px-5 py-4 border-b">
+              <h2 class="settings-card-title text-sm font-semibold">Login Page Background</h2>
+              <p class="settings-card-sub text-xs mt-0.5">A campus photo shown behind the sign-in card, under the university's navy overlay.</p>
+            </div>
+            <div class="p-5 flex items-center gap-5 flex-wrap sm:flex-nowrap">
+              <div class="login-bg-preview flex-shrink-0">
+                <img v-if="bgPreview || form.login_background_url" :src="bgPreview || form.login_background_url" alt="" />
+                <div class="login-bg-overlay"></div>
+                <span v-if="!bgPreview && !form.login_background_url" class="login-bg-default">Default illustration</span>
+              </div>
+              <div class="flex-1 min-w-0 space-y-2">
+                <div class="flex flex-wrap items-center gap-2">
+                  <label class="settings-upload-btn">
+                    <UploadIcon class="w-3.5 h-3.5" />
+                    {{ bgFile ? 'Change Selected File' : 'Upload Campus Photo' }}
+                    <input type="file" accept="image/jpeg,image/png,image/jpg,image/webp" class="sr-only" @change="onBgChange" />
+                  </label>
+                  <button
+                    v-if="form.login_background_url && !bgFile"
+                    @click="resetBackground"
+                    :disabled="resettingBg"
+                    class="settings-danger-btn text-xs font-semibold px-3 py-1.5 rounded-lg transition-colors disabled:opacity-50"
+                  >
+                    {{ resettingBg ? 'Resetting…' : 'Use Default' }}
+                  </button>
+                  <button
+                    v-if="bgFile"
+                    @click="clearBgSelection"
+                    class="settings-link-muted text-xs font-medium px-3 py-1.5 rounded-lg transition-colors"
+                  >
+                    Cancel selection
+                  </button>
+                </div>
+                <p class="settings-card-sub text-xs">JPG, PNG, or WEBP — up to 4MB. A wide landscape shot (1920×1080 or larger) of the campus works best.</p>
               </div>
             </div>
           </div>
@@ -199,9 +239,14 @@ const error    = ref('');
 const logoFile    = ref(null);
 const logoPreview = ref(null);
 
+const bgFile      = ref(null);
+const bgPreview   = ref(null);
+const resettingBg = ref(false);
+
 const form = reactive({
   system_name: '', short_name: '', tagline: '',
   logo_url: '', hasCustomLogo: false,
+  login_background_url: null,
   updated_at: null, updated_by: null,
   session_timeout_minutes: 1440,
   password_min_length: 8,
@@ -219,6 +264,7 @@ function applyResponse(data) {
   form.tagline       = data.tagline;
   form.logo_url      = data.logo_url || '/nemsu.png';
   form.hasCustomLogo  = !!data.logo_url;
+  form.login_background_url = data.login_background_url || null;
   form.updated_at     = data.updated_at;
   form.updated_by     = data.updated_by;
   form.session_timeout_minutes  = data.session_timeout_minutes  ?? form.session_timeout_minutes;
@@ -257,6 +303,20 @@ function clearLogoSelection() {
   logoPreview.value = null;
 }
 
+function onBgChange(e) {
+  const file = e.target.files?.[0];
+  if (!file) return;
+  if (bgPreview.value) URL.revokeObjectURL(bgPreview.value);
+  bgFile.value = file;
+  bgPreview.value = URL.createObjectURL(file);
+}
+
+function clearBgSelection() {
+  if (bgPreview.value) URL.revokeObjectURL(bgPreview.value);
+  bgFile.value = null;
+  bgPreview.value = null;
+}
+
 async function save() {
   error.value = '';
   saving.value = true;
@@ -266,6 +326,7 @@ async function save() {
     fd.append('short_name', form.short_name);
     fd.append('tagline', form.tagline);
     if (logoFile.value) fd.append('logo', logoFile.value);
+    if (bgFile.value) fd.append('login_background', bgFile.value);
     fd.append('session_timeout_minutes', form.session_timeout_minutes);
     fd.append('password_min_length', form.password_min_length);
     fd.append('password_require_number', form.password_require_number ? '1' : '0');
@@ -277,6 +338,7 @@ async function save() {
     const res = await axios.post('/api/system-settings', fd);
     applyResponse(res.data);
     clearLogoSelection();
+    clearBgSelection();
     await settingsStore.fetch(); // refresh the sidebar/header/login immediately
     toast('System settings saved.', 'success');
   } catch (e) {
@@ -309,9 +371,31 @@ async function resetLogo() {
   }
 }
 
+async function resetBackground() {
+  const ok = await confirm({
+    title:       'Use the default login background?',
+    message:     'This removes the uploaded campus photo and brings back the bundled illustration.',
+    confirmText: 'Use Default',
+  });
+  if (!ok) return;
+
+  resettingBg.value = true;
+  try {
+    const res = await axios.post('/api/system-settings/reset-login-background');
+    applyResponse(res.data);
+    await settingsStore.fetch();
+    toast('Login background reset to default.', 'success');
+  } catch (e) {
+    toast(e.response?.data?.message ?? 'Failed to reset the login background.', 'error');
+  } finally {
+    resettingBg.value = false;
+  }
+}
+
 onMounted(load);
 onBeforeUnmount(() => {
   if (logoPreview.value) URL.revokeObjectURL(logoPreview.value);
+  if (bgPreview.value) URL.revokeObjectURL(bgPreview.value);
 });
 </script>
 
@@ -362,4 +446,20 @@ onBeforeUnmount(() => {
 .settings-danger-btn { background:#FEF2F2; color:#DC2626; }
 .settings-danger-btn:hover { background:#FEE2E2; }
 .settings-error { background:#FEF2F2; border:1px solid #FECACA; color:#991B1B; }
+
+/* A miniature of the login page's backdrop: photo + the same navy wash. */
+.login-bg-preview {
+  position: relative; width: 168px; height: 96px; border-radius: 10px; overflow: hidden;
+  background: linear-gradient(150deg, #1B2A5E 0%, #22305C 60%, #0E1A44 100%);
+  box-shadow: 0 0 0 1px rgba(15,23,42,0.08);
+}
+.login-bg-preview img { position: absolute; inset: 0; width: 100%; height: 100%; object-fit: cover; }
+.login-bg-overlay {
+  position: absolute; inset: 0;
+  background: linear-gradient(110deg, rgba(14,26,68,0.88) 0%, rgba(27,42,94,0.70) 50%, rgba(27,42,94,0.45) 100%);
+}
+.login-bg-default {
+  position: absolute; inset: auto 0 8px; text-align: center;
+  font-size: 10.5px; font-weight: 600; letter-spacing: 0.04em; color: rgba(232,192,64,0.85);
+}
 </style>
