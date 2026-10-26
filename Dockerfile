@@ -14,6 +14,7 @@ RUN apk add --no-cache \
     libzip-dev \
     oniguruma-dev \
     icu-dev \
+    linux-headers \
     mysql-client
 
 # PHP extensions — sockets is for the ZKTeco library (rats/zkteco), pcntl
