@@ -17,6 +17,14 @@ return Application::configure(basePath: dirname(__DIR__))
             'lan'     => \App\Http\Middleware\RequireLanAccess::class,
             'feature' => \App\Http\Middleware\CheckFeatureAccess::class,
         ]);
+        // Behind a hosting proxy (Railway) the request reaches PHP from the
+        // proxy's IP over plain HTTP. TRUSTED_PROXIES=* makes $request->ip()
+        // the real visitor (the 'lan' check depends on it) and keeps HTTPS
+        // URLs. Left unset where nginx faces the internet directly, so
+        // nobody can spoof their IP with an X-Forwarded-For header.
+        if ($proxies = env('TRUSTED_PROXIES')) {
+            $middleware->trustProxies(at: $proxies === '*' ? '*' : explode(',', $proxies));
+        }
         // All routes are API / SPA — never redirect to route('login'), return 401 JSON instead
         $middleware->redirectGuestsTo(fn() => null);
         // ZKTeco/GRANDING device POSTs have no CSRF token — exempt the ADMS endpoints
