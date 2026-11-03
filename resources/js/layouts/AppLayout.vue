@@ -1,5 +1,5 @@
 <template>
-  <div class="flex h-screen overflow-hidden" style="background: #F4F6FB;">
+  <div class="app-shell flex h-screen overflow-hidden" style="background: #F4F6FB;">
 
     <!-- ── Mobile top bar (hidden on desktop) ───────────────────── -->
     <header
@@ -235,7 +235,7 @@
   <Teleport to="body">
     <div v-if="pwdModal" class="fixed inset-0 z-50 flex items-center justify-center p-4">
       <div class="absolute inset-0 bg-black/50 backdrop-blur-sm" @click="closePwdModal" />
-      <div class="relative bg-white rounded-2xl shadow-2xl w-full max-w-sm">
+      <div class="modal-panel relative bg-white rounded-2xl shadow-2xl w-full max-w-sm">
         <div class="px-6 py-5 border-b border-[#E2E8F0] flex items-center gap-3">
           <div class="w-9 h-9 rounded-lg bg-[#EEF1FF] flex items-center justify-center flex-shrink-0">
             <KeyIcon class="w-5 h-5 text-[#2E4A8C]" />
@@ -288,7 +288,7 @@
   <Teleport to="body">
     <div v-if="sessionsModal" class="fixed inset-0 z-50 flex items-center justify-center p-4">
       <div class="absolute inset-0 bg-black/50 backdrop-blur-sm" @click="sessionsModal = false" />
-      <div class="relative bg-white rounded-2xl shadow-2xl w-full max-w-sm">
+      <div class="modal-panel relative bg-white rounded-2xl shadow-2xl w-full max-w-sm">
         <div class="px-6 py-5 border-b border-[#E2E8F0] flex items-center gap-3">
           <div class="w-9 h-9 rounded-lg bg-[#EEF1FF] flex items-center justify-center flex-shrink-0">
             <MonitorSmartphoneIcon class="w-5 h-5 text-[#2E4A8C]" />
@@ -414,6 +414,13 @@ const { campus, campusName } = useCampusIdentity();
 
 // ── Mobile sidebar state ──────────────────────────────────────────
 const sidebarOpen = ref(false);
+
+// Escape closes the slide-out menu, like any other overlay.
+function closeSidebarOnEscape(e) {
+  if (e.key === 'Escape' && sidebarOpen.value) sidebarOpen.value = false;
+}
+window.addEventListener('keydown', closeSidebarOnEscape);
+onBeforeUnmount(() => window.removeEventListener('keydown', closeSidebarOnEscape));
 
 // ── Change Password ───────────────────────────────────────────────
 const pwdModal  = ref(false);

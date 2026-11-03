@@ -44,12 +44,13 @@
 
     <!-- Filters -->
     <div class="px-6 py-3 bg-white border-b border-[#E2E8F0] flex items-center gap-3 flex-wrap">
-      <div class="relative">
+      <div class="relative w-full sm:w-auto">
         <SearchIcon class="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-[#6B7A94]" />
         <input
           v-model="filters.search"
+          type="search"
           placeholder="Search name, ID, position…"
-          class="pl-9 pr-3 py-1.5 text-sm border border-[#E2E8F0] rounded-md w-56 focus:outline-none focus:ring-2 focus:ring-[#2E4A8C] text-[#0F172A] placeholder:text-[#6B7A94]"
+          class="pl-9 pr-3 py-1.5 text-sm border border-[#E2E8F0] rounded-md w-full sm:w-56 focus:outline-none focus:ring-2 focus:ring-[#2E4A8C] text-[#0F172A] placeholder:text-[#6B7A94]"
         />
       </div>
       <select v-model="filters.department_id" class="select-sm">
@@ -102,7 +103,7 @@
     <!-- Table -->
     <div class="flex-1 overflow-auto bg-[#F4F6FB] p-6">
       <div class="bg-white border border-[#E4E9F2] rounded-xl shadow-[0_2px_12px_rgba(27, 42, 94,0.07),0_1px_3px_rgba(27, 42, 94,0.04)]">
-        <div class="overflow-x-auto rounded-xl">
+        <div class="emp-table-scroll overflow-x-auto rounded-xl">
         <table class="w-full text-sm emp-table">
           <thead class="sticky top-0 bg-white border-b border-[#E2E8F0] z-10">
             <tr>
@@ -1815,6 +1816,15 @@ tbody tr:hover { background: #F8FAFF; }
     max-height: 100dvh; border-radius: 0; margin: 0;
   }
 
+}
+/* Roster → cards whenever the table itself has too little room to show
+   every column — decided by the table's own width (container query), not
+   the screen's, so a tablet and a small laptop with the sidebar open both
+   get cards instead of a table whose Role/Status/Actions columns are
+   scrolled out of sight. Two cards per row once there's space for it. */
+.emp-table-scroll { container-type: inline-size; }
+
+@container (max-width: 899px) {
   /* Roster table → stacked cards, no horizontal scrolling needed ──────
      Same pattern as Attendance/Tracking: each row becomes its own
      bordered card, the Employee cell stays as the card's full-width
@@ -1824,40 +1834,71 @@ tbody tr:hover { background: #F8FAFF; }
   .emp-table tbody { display: block; }
   .emp-table thead { display: none; }
 
+  /* Each card: name header across the top, then the details in a
+     two-column grid (label above value), actions along the bottom. */
   .emp-table tbody tr {
-    display: block;
+    position: relative;
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    column-gap: 14px;
     margin-bottom: 10px;
     border: 1px solid #E2E8F0;
-    border-radius: 10px;
-    padding: 10px 12px;
+    border-radius: 12px;
+    padding: 12px 14px;
+    box-shadow: 0 1px 2px rgba(15,23,42,0.04);
   }
 
   .emp-table td {
     display: flex;
-    align-items: center;
-    justify-content: space-between;
-    gap: 10px;
+    flex-direction: column;
+    align-items: flex-start;
+    gap: 3px;
+    min-width: 0;
     text-align: left !important;
     padding: 6px 0 !important;
     border: none !important;
+    overflow-wrap: anywhere;
   }
 
   .emp-table td[data-label]::before {
     content: attr(data-label);
-    flex-shrink: 0;
     font-size: 10px;
     font-weight: 700;
     text-transform: uppercase;
-    letter-spacing: 0.03em;
+    letter-spacing: 0.05em;
     color: #94A3B8;
   }
 
+  /* The running row number means nothing on a card. */
+  .emp-table td[data-label="#"] { display: none; }
+
+  /* The select box sits in the card's top-right corner, unlabelled. */
+  .emp-table td[data-label="Select"] {
+    position: absolute; top: 12px; right: 14px;
+    padding: 4px !important;
+  }
+  .emp-table td[data-label="Select"]::before { content: none; }
+  .emp-table td[data-label="Select"] input { width: 18px; height: 18px; }
+
   .emp-table .emp-cell {
+    grid-column: 1 / -1;
     display: block;
-    padding: 0 0 8px !important;
-    margin-bottom: 6px;
+    padding: 0 32px 10px 0 !important;
+    margin-bottom: 4px;
     border-bottom: 1px solid #F1F5F9 !important;
   }
+
+  /* Actions span the card and line up on the right, with room to tap. */
+  .emp-table td[data-label="Actions"] {
+    grid-column: 1 / -1;
+    flex-direction: row;
+    justify-content: space-between;
+    align-items: center;
+    margin-top: 4px;
+    padding-top: 10px !important;
+    border-top: 1px solid #F1F5F9 !important;
+  }
+  .emp-table td[data-label="Actions"] .btn-icon { min-width: 36px; min-height: 36px; }
 
   /* Empty-state row still needs to read as a plain block, not a card */
   .emp-table tbody tr:has(td[colspan]) {
@@ -1872,5 +1913,17 @@ tbody tr:hover { background: #F8FAFF; }
 
   [data-theme="dark"] .emp-table tbody tr { border-color: rgba(255,255,255,0.08) !important; }
   [data-theme="dark"] .emp-table .emp-cell { border-bottom-color: rgba(255,255,255,0.08) !important; }
+  [data-theme="dark"] .emp-table td[data-label="Actions"] { border-top-color: rgba(255,255,255,0.08) !important; }
+}
+
+@container (min-width: 600px) and (max-width: 899px) {
+  .emp-table tbody {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 12px;
+    padding: 12px;
+  }
+  .emp-table tbody tr { margin-bottom: 0; }
+  .emp-table tbody tr:has(td[colspan]) { grid-column: 1 / -1; }
 }
 </style>

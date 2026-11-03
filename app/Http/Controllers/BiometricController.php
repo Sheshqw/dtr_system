@@ -66,7 +66,10 @@ class BiometricController extends Controller
         return response()->json([
             'ip'              => $this->zk->getIp(),
             'port'            => $this->zk->getPort(),
-            'reachable'       => $this->zk->isReachable(),
+            // The direct TCP probe only runs when asked (?probe=1, the
+            // Biometric page). The Dashboard only reads adms_online, and
+            // probing an unreachable device there cost every load seconds.
+            'reachable'       => $request->boolean('probe') ? $this->zk->isReachable() : null,
             'last_synced'     => cache('biometric_last_synced'),
             // The device reaches out to us (ADMS push) rather than us
             // reaching it — this is the connection method that actually

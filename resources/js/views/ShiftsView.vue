@@ -108,7 +108,7 @@
     <Teleport to="body">
       <div v-if="modal.open" class="fixed inset-0 z-50 flex items-center justify-center p-4">
         <div class="absolute inset-0 bg-black/40 backdrop-blur-sm" @click="closeModal"></div>
-        <div class="relative bg-white rounded-2xl shadow-2xl w-full max-w-lg">
+        <div class="modal-panel relative bg-white rounded-2xl shadow-2xl w-full max-w-lg">
           <div class="px-6 py-5 border-b border-[#E2E8F0] flex items-center justify-between">
             <h2 class="text-base font-semibold text-[#0F172A]">{{ modal.editing ? 'Edit Shift' : 'Add Shift' }}</h2>
             <button @click="closeModal" class="text-[#6B7A94] hover:text-[#0F172A]">
@@ -194,7 +194,7 @@
     <Teleport to="body">
       <div v-if="delTarget" class="fixed inset-0 z-50 flex items-center justify-center p-4">
         <div class="absolute inset-0 bg-black/40 backdrop-blur-sm" @click="delTarget = null"></div>
-        <div class="relative bg-white rounded-2xl shadow-2xl w-full max-w-sm p-6 text-center">
+        <div class="modal-panel relative bg-white rounded-2xl shadow-2xl w-full max-w-sm p-6 text-center">
           <div class="w-10 h-10 rounded-full bg-red-100 flex items-center justify-center mx-auto mb-3">
             <Trash2Icon class="w-5 h-5 text-red-600" />
           </div>

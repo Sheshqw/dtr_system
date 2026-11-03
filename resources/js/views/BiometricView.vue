@@ -405,7 +405,7 @@ onMounted(checkStatus);
 async function checkStatus() {
   statusLoading.value = true;
   try {
-    const { data } = await axios.get('/api/biometric/status');
+    const { data } = await axios.get('/api/biometric/status', { params: { probe: 1 } });
     status.value = data;
   } catch (e) {
     toast(e.response?.data?.message ?? 'Could not reach the server to check device status.', 'error');

@@ -64,7 +64,7 @@
               v-model="filters.search"
               type="text"
               placeholder="Search message, file…"
-              class="sh-filter-input w-full pl-9"
+              class="sh-filter-input w-full !pl-9"
             />
           </div>
           <select v-model="filters.severity" class="sh-filter-input">

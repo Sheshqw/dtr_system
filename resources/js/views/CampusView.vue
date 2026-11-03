@@ -119,7 +119,7 @@
   <Teleport to="body">
     <div v-if="modal.open" class="fixed inset-0 z-50 flex items-center justify-center p-4">
       <div class="absolute inset-0 bg-black/50 backdrop-blur-sm" @click="closeModal" />
-      <div class="relative bg-white rounded-2xl shadow-2xl w-full max-w-md">
+      <div class="modal-panel relative bg-white rounded-2xl shadow-2xl w-full max-w-md">
         <div class="px-6 py-5 border-b border-[#E2E8F0] flex items-center gap-3">
           <div class="w-9 h-9 rounded-lg bg-[#EEF2FF] flex items-center justify-center flex-shrink-0">
             <MapPinIcon class="w-5 h-5 text-[#2E4A8C]" />

@@ -459,7 +459,7 @@
                 <th class="th th-l th-sort" @click="sort('name')">
                   <span class="th-sort-inner">Employee <SortIcon :state="sortState('name')" /></span>
                 </th>
-                <th class="th th-l th-sort" @click="sort('department')">
+                <th class="th th-l th-sort th-dept" @click="sort('department')">
                   <span class="th-sort-inner">Department <SortIcon :state="sortState('department')" /></span>
                 </th>
                 <th class="th th-sort" @click="sort('time_in')">
@@ -485,7 +485,7 @@
                 :style="{ animationDelay: i * 22 + 'ms' }"
               >
                 <td class="td td-no">{{ i + 1 }}</td>
-                <td class="td">
+                <td class="td td-emp">
                   <div class="emp-wrap">
                     <div
                       class="emp-avatar"
@@ -494,14 +494,15 @@
                     <div>
                       <div class="emp-name">{{ row.name }}</div>
                       <div class="emp-id">{{ row.employee_id }}</div>
+                      <div class="emp-dept">{{ row.department }}</div>
                     </div>
                   </div>
                 </td>
-                <td class="td td-muted">{{ row.department }}</td>
-                <td class="td td-mono">{{ row.time_in ?? '—' }}</td>
-                <td class="td td-mono">{{ row.time_out ?? '—' }}</td>
-                <td class="td"><StatusBadge :status="row.status" :holiday-name="row.holiday_name" /></td>
-                <td class="td td-r">
+                <td class="td td-muted td-dept">{{ row.department }}</td>
+                <td class="td td-mono td-in">{{ row.time_in ?? '—' }}</td>
+                <td class="td td-mono td-out">{{ row.time_out ?? '—' }}</td>
+                <td class="td td-status"><StatusBadge :status="row.status" :holiday-name="row.holiday_name" /></td>
+                <td class="td td-r td-hours">
                   <span :class="row.hours_rendered > 0 ? 'hrs-val' : 'hrs-nil'">
                     {{ row.hours_rendered > 0 ? Number(row.hours_rendered).toFixed(1) + 'h' : '—' }}
                   </span>
@@ -2345,6 +2346,8 @@ onMounted(async () => {
 .td-muted { text-align: left; font-size: 12px; color: #64748B; white-space: nowrap; }
 .td-mono { font-family: 'Courier New', monospace; font-size: 12px; color: #475569; }
 .td-r    { text-align: right; }
+.td-emp  { text-align: left; }
+.emp-dept { display: none; font-size: 11px; color: #64748B; margin-top: 2px; }
 
 .emp-wrap {
   display: flex;
@@ -2762,11 +2765,82 @@ onMounted(async () => {
   .sc-group      { border-bottom: 1px solid #ECF0F8; }
 }
 
-/* ── Tablet (≤768px) ──────────────────────────────────────────── */
-@media (max-width: 768px) {
+/* ── Panels that adapt to their own width ─────────────────────────────
+   Media queries only know the screen size, but with the sidebar open a
+   1100px laptop leaves these panels about as narrow as a tablet. Container
+   queries key the layout to the space each panel actually has. */
+.summary-panel { container-type: inline-size; }
+.table-scroll  { container-type: inline-size; }
+
+@container (max-width: 900px) {
+  .summary-body { flex-direction: column; }
+  .summary-vdiv { width: 100%; height: 1px; margin: 0; }
+  .sc-group     { border-bottom: 1px solid #ECF0F8; }
+}
+
+/* Present / Late / Absent: too narrow for three columns, so each becomes
+   a full-width row — label left, number right, bar and percentage under. */
+@container (max-width: 600px) {
+  .sc-group   { flex-direction: column; }
+  .sc-divider { width: 100%; height: 1px; background: rgba(15,23,42,0.07); }
+  .sc-inner   {
+    display: grid; grid-template-columns: 1fr auto; align-items: center;
+    column-gap: 12px; row-gap: 8px; padding: 12px 14px;
+  }
+  .sc-bar-wrap, .sc-pct { grid-column: 1 / -1; }
+}
+
+/* Log table: drop the row number and fold the department under the name,
+   so Status and Hours stay in view instead of scrolling off the right. */
+@container (max-width: 899px) {
+  .th-no, .td-no, .th-dept, .td-dept { display: none; }
+  .emp-dept { display: block; }
+}
+
+/* Phones: each log row becomes a compact card — name and status on top,
+   In / Out / Hours underneath — so nothing needs sideways scrolling. */
+@container (max-width: 520px) {
+  .log-table, .log-table tbody { display: block; }
+  .log-table thead { display: none; }
+  .log-table .log-row {
+    display: grid;
+    grid-template-columns: 1fr 1fr 1fr auto;
+    align-items: center;
+    padding: 10px 14px;
+    row-gap: 8px;
+  }
+  .log-table .log-row .td { padding: 0; text-align: left; }
+  .log-table .td-emp    { grid-column: 1 / 4; }
+  .log-table .td-status { grid-column: 4; justify-self: end; }
+  .log-table .td-in, .log-table .td-out, .log-table .td-hours {
+    grid-row: 2; display: flex; flex-direction: column; gap: 1px;
+  }
+  .log-table .td-in    { grid-column: 1; }
+  .log-table .td-out   { grid-column: 2; }
+  .log-table .td-hours { grid-column: 3; }
+  .log-table .td-in::before, .log-table .td-out::before, .log-table .td-hours::before {
+    font-family: var(--font-sans);
+    font-size: 9.5px; font-weight: 700; letter-spacing: 0.06em;
+    text-transform: uppercase; color: #94A3B8;
+  }
+  .log-table .td-in::before    { content: 'In'; }
+  .log-table .td-out::before   { content: 'Out'; }
+  .log-table .td-hours::before { content: 'Hours'; }
+}
+
+/* ── Header: identity above the clock whenever the content area is narrow
+   (tablets, and small laptops where the sidebar takes 256px) — side by
+   side it squeezed the clock onto two lines and pushed the bell off. ── */
+.tb-center-clock, .tb-center-date { white-space: nowrap; }
+.tb-clock-zone { flex-wrap: wrap; }
+@media (max-width: 1279px) {
   .tb-split-row  { flex-wrap: wrap; }
   .tb-identity   { min-width: 100%; border-right: none; border-bottom: 1px solid rgba(255,255,255,0.07); }
   .tb-clock-zone { min-width: 100%; }
+}
+
+/* ── Tablet (≤768px) ──────────────────────────────────────────── */
+@media (max-width: 768px) {
   .tb-center-clock { font-size: 36px; letter-spacing: 4px; }
   .dash-body     { padding: 14px 16px; }
   .top-kpis      { grid-template-columns: repeat(2, 1fr); }
@@ -2797,9 +2871,14 @@ onMounted(async () => {
   .tk-icon       { width: 36px; height: 36px; border-radius: 10px; }
   .charts-row    { grid-template-columns: 1fr; padding: 10px 12px 14px; gap: 10px; }
 
+  /* The clock takes its own line so the device pill, Refresh and the bell
+     get the full width under it instead of being pushed off the edge. */
+  .tb-clock-zone   { flex-wrap: wrap; gap: 10px; }
+  .tb-clock-center { flex: 1 1 100%; }
+  .tb-center-clock { font-size: 28px; letter-spacing: 2px; }
+
   /* Summary panel */
   .summary-hero    { padding: 10px 14px; }
-  .sc-inner        { padding: 12px 14px; gap: 6px; }
   .rate-col        { padding: 12px 14px; gap: 8px; }
   .sc-num          { font-size: 28px; }
   .rate-donut-svg  { width: 80px; height: 80px; }
@@ -2809,9 +2888,14 @@ onMounted(async () => {
 
   /* Log table */
   .table-scroll     { overflow-x: auto; }
-  .log-table        { min-width: 560px; }
+  .log-table        { min-width: 0; }
+  .log-table .th, .log-table .td { padding-left: 8px; padding-right: 8px; }
+  .td-mono          { font-size: 11px; }
   .panel-head       { flex-direction: column; align-items: flex-start; gap: 8px; }
   .panel-filters    { width: 100%; }
+  /* Search and status each take a full row so they're easy to tap. */
+  .f-search-wrap, .panel-filters > select.f-ctrl { flex: 1 1 100%; }
+  .f-search         { width: 100%; }
   .panel-head-right { width: 100%; justify-content: flex-end; }
 
   /* Charts */
@@ -2870,14 +2954,17 @@ onMounted(async () => {
     rgba(255,255,255,0.05) 50%,
     transparent 70%
   );
-  background-size: 200% 100%;
+  /* Moved with transform, not background-position: a transform runs on
+     the GPU, while animating background-position repainted the whole
+     header every frame for as long as the page stayed open. */
+  transform: translateX(-100%);
   animation: heroSheen 7s ease-in-out infinite;
   pointer-events: none;
   z-index: 0;
 }
 @keyframes heroSheen {
-  0%   { background-position: 200% center; }
-  100% { background-position: -200% center; }
+  0%   { transform: translateX(-100%); }
+  100% { transform: translateX(100%); }
 }
 
 /* ── 4. Stat column colored inset glow on hover ───────────────── */

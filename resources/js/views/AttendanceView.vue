@@ -335,7 +335,7 @@
     <Teleport to="body">
       <div v-if="showAddModal" class="fixed inset-0 z-50 flex items-center justify-center p-4">
         <div class="absolute inset-0 bg-black/40 backdrop-blur-sm" @click="showAddModal = false"></div>
-        <div class="relative bg-white rounded-2xl shadow-2xl w-full max-w-md">
+        <div class="modal-panel relative bg-white rounded-2xl shadow-2xl w-full max-w-md">
           <div class="px-6 py-5 border-b border-[#E2E8F0] flex items-center gap-3">
             <div class="w-9 h-9 rounded-lg flex items-center justify-center" style="background:#EEF2FF;">
               <PlusCircleIcon class="w-5 h-5 text-[#2E4A8C]" />
@@ -393,7 +393,7 @@
     <Teleport to="body">
       <div v-if="deleteTarget" class="fixed inset-0 z-50 flex items-center justify-center p-4">
         <div class="absolute inset-0 bg-black/40 backdrop-blur-sm" @click="deleteTarget = null"></div>
-        <div class="relative bg-white rounded-2xl shadow-2xl w-full max-w-sm p-6">
+        <div class="modal-panel relative bg-white rounded-2xl shadow-2xl w-full max-w-sm p-6">
           <div class="flex flex-col items-center text-center gap-3">
             <div class="w-12 h-12 rounded-full bg-red-50 flex items-center justify-center">
               <Trash2Icon class="w-6 h-6 text-red-500" />

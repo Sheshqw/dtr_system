@@ -9,7 +9,15 @@
     <meta charset="utf-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1" />
     <title>{{ $__settings->short_name }} — {{ $__settings->tagline }}</title>
+    <meta name="description" content="{{ $__settings->tagline }}" />
+    {{-- Phones: the browser bar takes the navy of the app's top bar, and
+         "Add to Home Screen" gets a proper icon and name. --}}
+    <meta name="theme-color" content="#1B2A5E" />
+    <meta name="apple-mobile-web-app-title" content="{{ $__settings->short_name }}" />
+    <meta name="format-detection" content="telephone=no" />
     <link rel="icon" href="{{ $__favicon }}?v={{ $__settings->updated_at?->timestamp }}" />
+    <link rel="apple-touch-icon" href="/apple-touch-icon.png" />
+    <link rel="manifest" href="/manifest.webmanifest" />
     <link rel="preconnect" href="https://fonts.googleapis.com" />
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
     {{-- Every weight the UI actually uses (font-bold is 700) — a missing

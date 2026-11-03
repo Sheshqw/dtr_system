@@ -140,7 +140,7 @@
                   v-model="empSearch"
                   @focus="showEmpDrop = true"
                   @blur="hideEmpDrop"
-                  class="modal-input pl-9"
+                  class="modal-input !pl-9"
                   placeholder="Search employee name…"
                   autocomplete="off"
                 />
@@ -188,7 +188,7 @@
     <Teleport to="body">
       <div v-if="delTarget" class="fixed inset-0 z-50 flex items-center justify-center p-4">
         <div class="absolute inset-0 bg-black/40 backdrop-blur-sm" @click="delTarget = null"></div>
-        <div class="relative bg-white rounded-2xl shadow-2xl w-full max-w-sm p-6 text-center">
+        <div class="modal-panel relative bg-white rounded-2xl shadow-2xl w-full max-w-sm p-6 text-center">
           <div class="w-10 h-10 rounded-full bg-red-100 flex items-center justify-center mx-auto mb-3">
             <Trash2Icon class="w-5 h-5 text-red-600" />
           </div>

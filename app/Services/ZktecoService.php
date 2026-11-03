@@ -35,9 +35,14 @@ class ZktecoService
     public function getIp(): string { return $this->ip; }
     public function getPort(): int  { return $this->port; }
 
-    public function isReachable(): bool
+    /**
+     * A device on the same LAN answers a TCP connect in milliseconds, so a
+     * short timeout is plenty — and it keeps an unreachable device (always
+     * the case once the server is in the cloud) from tying up a PHP worker.
+     */
+    public function isReachable(float $timeout = 2.0): bool
     {
-        $sock = @fsockopen($this->ip, $this->port, $errno, $errstr, 5);
+        $sock = @fsockopen($this->ip, $this->port, $errno, $errstr, $timeout);
         if ($sock) { fclose($sock); return true; }
         return false;
     }

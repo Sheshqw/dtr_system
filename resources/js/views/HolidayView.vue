@@ -221,7 +221,7 @@
     <Teleport to="body">
       <div v-if="modal.open" class="fixed inset-0 z-50 flex items-center justify-center p-4">
         <div class="absolute inset-0 bg-black/40 backdrop-blur-sm" @click="requestClose"></div>
-        <div class="relative bg-white rounded-2xl shadow-2xl w-full max-w-md">
+        <div class="modal-panel relative bg-white rounded-2xl shadow-2xl w-full max-w-md">
           <!-- Modal header -->
           <div class="px-6 py-5 border-b border-[#E2E8F0] flex items-center justify-between">
             <h2 class="text-base font-semibold text-[#0F172A]">{{ modal.editing ? 'Edit Holiday' : 'Add Holiday' }}</h2>
@@ -296,7 +296,7 @@
     <Teleport to="body">
       <div v-if="dayPopover" class="fixed inset-0 z-50 flex items-center justify-center p-4">
         <div class="absolute inset-0 bg-black/40 backdrop-blur-sm" @click="dayPopover = null"></div>
-        <div class="relative bg-white rounded-2xl shadow-2xl w-full max-w-sm p-5">
+        <div class="modal-panel relative bg-white rounded-2xl shadow-2xl w-full max-w-sm p-5">
           <template v-if="dayPopover.holiday">
             <div class="flex items-center gap-3 mb-3">
               <span class="w-3 h-3 rounded-full flex-shrink-0" :class="dayPopover.holiday.type === 'regular' ? 'bg-red-500' : 'bg-amber-500'"></span>
@@ -340,7 +340,7 @@
     <Teleport to="body">
       <div v-if="delTarget" class="fixed inset-0 z-50 flex items-center justify-center p-4">
         <div class="absolute inset-0 bg-black/40 backdrop-blur-sm" @click="delTarget = null"></div>
-        <div class="relative bg-white rounded-2xl shadow-2xl w-full max-w-sm p-6">
+        <div class="modal-panel relative bg-white rounded-2xl shadow-2xl w-full max-w-sm p-6">
           <div class="w-10 h-10 rounded-full bg-red-100 flex items-center justify-center mx-auto mb-3">
             <Trash2Icon class="w-5 h-5 text-red-600" />
           </div>

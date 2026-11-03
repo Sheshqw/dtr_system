@@ -239,7 +239,7 @@ input, select, textarea {
 
 /* ── Summary body internals ─────────────────────────────────────────────── */
 [data-theme="dark"] .summary-body   { background: #1C2A44 !important; }
-[data-theme="dark"] .sc-group       { border-right-color: rgba(255,255,255,0.07) !important; }
+[data-theme="dark"] .sc-group       { border-right-color: rgba(255,255,255,0.07) !important; border-bottom-color: rgba(255,255,255,0.07) !important; }
 [data-theme="dark"] .sc-divider,
 [data-theme="dark"] .summary-vdiv   { background: rgba(255,255,255,0.07) !important; }
 [data-theme="dark"] .sc-bar-wrap,
@@ -287,6 +287,7 @@ input, select, textarea {
 [data-theme="dark"] .td-empty  { color: #9AAAC9 !important; }
 [data-theme="dark"] .emp-name  { color: #E2E8F0 !important; }
 [data-theme="dark"] .emp-id    { color: #9AAAC9 !important; }
+[data-theme="dark"] .emp-dept  { color: #9AAAC9 !important; }
 
 /* ── Filter / form controls ─────────────────────────────────────────────── */
 [data-theme="dark"] .f-ctrl,
@@ -1119,6 +1120,43 @@ input, select, textarea {
 [data-theme="dark"] .filter-label     { color: #9AAAC9 !important; }
 [data-theme="dark"] .tk-stat-value    { color: #E4EAF5 !important; }
 [data-theme="dark"] .tk-stat-label    { color: #B7C3DE !important; }
+
+/* ─── Phones, tablets and touch screens ───────────────────────────────────────
+   Small things that decide whether the app feels native on a phone. ────── */
+
+/* Mobile browsers' address bar slides in and out, so 100vh is taller than
+   what's actually visible — the bottom of the sidebar and page got hidden
+   under the browser's own toolbar. dvh tracks the real visible height. */
+.app-shell { height: 100vh; height: 100dvh; }
+
+/* Stop iOS enlarging text on its own when the phone turns sideways. */
+html { -webkit-text-size-adjust: 100%; text-size-adjust: 100%; }
+
+/* No grey flash on tap, and taps register immediately. */
+a, button, [role="button"], label, summary, select {
+  -webkit-tap-highlight-color: transparent;
+  touch-action: manipulation;
+}
+
+/* iPhones zoom the whole page in whenever a field under 16px is tapped,
+   and don't zoom back out — phones get 16px fields instead. */
+@media (max-width: 767px) {
+  input:not([type="checkbox"]):not([type="radio"]):not([type="range"]):not([type="file"]):not([type="color"]),
+  select,
+  textarea {
+    font-size: 16px !important;
+  }
+}
+
+/* Dialogs never grow past the screen: on a short phone (or one turned
+   sideways) the form scrolls inside the dialog instead of its Save button
+   ending up out of reach. */
+.modal-panel {
+  max-height: calc(100vh - 2rem);
+  max-height: calc(100dvh - 2rem);
+  overflow-y: auto;
+  overscroll-behavior: contain;
+}
 
 /* ─── Reduced motion ──────────────────────────────────────────────────────────
    Respect the OS "reduce motion" setting: page transitions, entrance

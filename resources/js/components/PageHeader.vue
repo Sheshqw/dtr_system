@@ -144,7 +144,11 @@ defineProps({
    doesn't push it to an edge, so the auto margin is what's actually
    doing the alignment work here. */
 .ph-actions {
-  flex-shrink: 0;
+  /* Allowed to shrink to the row's width so its own flex-wrap can break
+     the buttons onto a second line — with flex-shrink: 0 it stayed one
+     long line on phones and the last buttons were clipped off-screen. */
+  flex: 0 1 auto;
+  min-width: 0; max-width: 100%;
   display: flex; align-items: center; justify-content: flex-end; flex-wrap: wrap;
   gap: 8px;
   margin-left: auto;
