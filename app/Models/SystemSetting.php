@@ -45,8 +45,8 @@ class SystemSetting extends Model
             'password_min_length'      => 8,
             'password_require_number'  => true,
             'password_require_symbol'  => false,
-            'max_login_attempts'       => 5,
-            'lockout_duration_minutes' => 30,
+            'max_login_attempts'       => 3,
+            'lockout_duration_minutes' => 5,
             'turnstile_enabled'        => false,
         ]);
     }

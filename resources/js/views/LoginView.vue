@@ -198,7 +198,7 @@
                 <!-- Submit -->
                 <button
                   type="submit"
-                  :disabled="loading || !form.email || !form.password || awaitingTurnstile"
+                  :disabled="loading || !form.email || !form.password || awaitingTurnstile || lockSeconds > 0"
                   class="relative w-full py-3 text-sm font-bold rounded-xl overflow-hidden transition-all duration-200 disabled:opacity-70 disabled:cursor-not-allowed group mt-1"
                   :style="btnStyle"
                 >
@@ -212,6 +212,10 @@
                       <path class="opacity-80" fill="currentColor" d="M4 12a8 8 0 018-8v8H4z"/>
                     </svg>
                     Authenticating…
+                  </span>
+                  <span v-else-if="lockSeconds > 0" class="relative flex items-center justify-center gap-2 text-[#1A138F] tabular-nums">
+                    <LockIcon class="w-4 h-4" />
+                    Try again in {{ lockCountdown }}
                   </span>
                   <span v-else class="relative flex items-center justify-center gap-2 text-[#1A138F]">
                     Sign In
@@ -249,7 +253,7 @@
 </template>
 
 <script setup>
-import { ref, reactive, computed, onMounted, onBeforeUnmount } from 'vue';
+import { ref, reactive, computed, watch, onMounted, onBeforeUnmount } from 'vue';
 import { useRouter, useRoute } from 'vue-router';
 import { useAuthStore } from '@/stores/auth';
 import { useSettingsStore } from '@/stores/settings';
@@ -330,8 +334,10 @@ const slides = computed(() => [
 const dateFmt = new Intl.DateTimeFormat('en-PH', { timeZone: 'Asia/Manila', weekday: 'long', month: 'long', day: 'numeric', year: 'numeric' });
 const timeFmt = new Intl.DateTimeFormat('en-PH', { timeZone: 'Asia/Manila', hour: 'numeric', minute: '2-digit', second: '2-digit', hour12: true });
 const clock = reactive({ date: '', time: '' });
+const nowMs = ref(Date.now());
 function tick() {
   const now = new Date();
+  nowMs.value = now.getTime();
   clock.date = dateFmt.format(now);
   clock.time = timeFmt.format(now);
 }
@@ -347,6 +353,22 @@ onMounted(() => {
   }
 });
 onBeforeUnmount(() => clearInterval(clockTimer));
+
+// ── Sign-in lockout countdown — the server enforces it; this only shows it.
+// Tied to the email that got locked, so someone else can still sign in here.
+const lock = reactive({ email: '', until: 0 });
+const lockSeconds = computed(() =>
+  form.email.trim().toLowerCase() === lock.email
+    ? Math.max(0, Math.ceil((lock.until - nowMs.value) / 1000))
+    : 0
+);
+const lockCountdown = computed(() => {
+  const minutes = Math.floor(lockSeconds.value / 60);
+  return `${minutes}:${String(lockSeconds.value % 60).padStart(2, '0')}`;
+});
+watch(lockSeconds, (seconds, previous) => {
+  if (previous > 0 && seconds === 0) error.value = '';
+});
 
 function inputStyle(field) {
   const active = focused.value === field;
@@ -376,6 +398,14 @@ async function handleLogin() {
     error.value = e.response?.data?.message
       ?? Object.values(e.response?.data?.errors ?? {})[0]?.[0]
       ?? 'Login failed. Please try again.';
+    // retry_after is the account lockout; Retry-After is the per-network
+    // rate limit, which answers with a 429 instead.
+    const retryAfter = Number(e.response?.data?.retry_after ?? e.response?.headers?.['retry-after'] ?? 0);
+    if (retryAfter > 0) {
+      nowMs.value = Date.now();
+      lock.email  = form.email.toLowerCase();
+      lock.until  = nowMs.value + retryAfter * 1000;
+    }
     // A Turnstile token is single-use — the server already spent this one,
     // so get a fresh one before the next attempt.
     turnstileToken.value = '';

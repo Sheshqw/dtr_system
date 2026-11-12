@@ -48,20 +48,75 @@ test('login fails for an unknown email without revealing whether the account exi
     $response->assertStatus(422)->assertJsonValidationErrors('email');
 });
 
-test('an account locks for 30 minutes after 5 failed login attempts', function () {
-    $user = User::factory()->create(['password' => bcrypt('correct-password')]);
-
-    foreach (range(1, 5) as $attempt) {
-        $this->postJson('/api/auth/login', [
-            'email'    => $user->email,
-            'password' => 'wrong-password',
-        ]);
+function failLogin($test, string $email, int $times)
+{
+    foreach (range(1, $times) as $attempt) {
+        $response = $test->postJson('/api/auth/login', ['email' => $email, 'password' => 'wrong-password']);
     }
 
-    $user->refresh();
-    expect($user->failed_login_attempts)->toBe(5);
-    expect($user->locked_until)->not->toBeNull();
-    expect($user->locked_until->isFuture())->toBeTrue();
+    return $response;
+}
+
+test('an account locks for 5 minutes after 3 failed login attempts', function () {
+    $user = User::factory()->create(['password' => bcrypt('correct-password')]);
+
+    failLogin($this, $user->email, 2)
+        ->assertStatus(422)
+        ->assertJsonMissingPath('retry_after')
+        ->assertJsonPath('errors.email.0', 'Invalid email or password. 1 attempt left.');
+
+    failLogin($this, $user->email, 1)
+        ->assertStatus(422)
+        ->assertJsonPath('retry_after', 300);
+
+    expect($user->fresh()->locked_until->isFuture())->toBeTrue();
+});
+
+test('a locked login reports how long is left on the timer', function () {
+    $user = User::factory()->create([
+        'password'     => bcrypt('correct-password'),
+        'locked_until' => now()->addSeconds(120),
+    ]);
+
+    $seconds = $this->postJson('/api/auth/login', ['email' => $user->email, 'password' => 'correct-password'])
+        ->assertStatus(422)
+        ->json('retry_after');
+
+    expect($seconds)->toBeGreaterThan(110)->toBeLessThanOrEqual(120);
+});
+
+test('every 3 wrong passwords starts a new timer once the last one ends', function () {
+    $user = User::factory()->create(['password' => bcrypt('correct-password')]);
+
+    failLogin($this, $user->email, 3)->assertJsonPath('retry_after', 300);
+
+    $this->travel(6)->minutes();
+
+    failLogin($this, $user->email, 1)->assertJsonMissingPath('retry_after');
+    failLogin($this, $user->email, 1)->assertJsonMissingPath('retry_after');
+    failLogin($this, $user->email, 1)->assertJsonPath('retry_after', 300);
+});
+
+test('a login works again once the timer ends', function () {
+    $user = User::factory()->create(['password' => bcrypt('correct-password')]);
+
+    failLogin($this, $user->email, 3);
+    $this->travel(6)->minutes();
+
+    $this->postJson('/api/auth/login', ['email' => $user->email, 'password' => 'correct-password'])
+        ->assertStatus(200);
+
+    expect($user->fresh()->locked_until)->toBeNull();
+});
+
+test('unknown emails get the same timer, so it cannot reveal which accounts exist', function () {
+    failLogin($this, 'nobody@nemsu.edu.ph', 2)
+        ->assertJsonPath('errors.email.0', 'Invalid email or password. 1 attempt left.');
+
+    failLogin($this, 'nobody@nemsu.edu.ph', 1)->assertJsonPath('retry_after', 300);
+
+    $seconds = failLogin($this, 'nobody@nemsu.edu.ph', 1)->json('retry_after');
+    expect($seconds)->toBeGreaterThan(290)->toBeLessThanOrEqual(300);
 });
 
 test('a locked account is rejected even with the correct password', function () {

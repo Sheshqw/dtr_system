@@ -9,6 +9,7 @@ use App\Services\FeaturePermissionService;
 use App\Services\TurnstileService;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
+use Illuminate\Support\Facades\Cache;
 use Illuminate\Support\Facades\Hash;
 use Illuminate\Validation\Rules\Password;
 use Illuminate\Validation\ValidationException;
@@ -25,6 +26,7 @@ class AuthController extends Controller
     // is inactive, or the password is wrong — telling those apart lets an
     // attacker enumerate valid staff emails one probe at a time.
     private const INVALID_CREDENTIALS = 'Invalid email or password.';
+    private const TOO_MANY_ATTEMPTS   = 'Too many failed attempts. Please wait before trying again.';
 
     public function login(Request $request)
     {
@@ -40,48 +42,38 @@ class AuthController extends Controller
         $this->ensureHuman($request);
 
         $employee = User::where('email', $request->email)->first();
+        $policy   = SystemSetting::current();
 
         if (! $employee || ! $employee->is_active) {
-            // No employee row to attach this to — logged with a null
-            // record/user so probing unknown emails still shows up for review.
-            AuditLog::record('LOGIN_FAILED', 'employees', null, null, null, 'Unknown or inactive email: ' . $request->email);
-
-            throw ValidationException::withMessages([
-                'email' => [self::INVALID_CREDENTIALS],
-            ]);
+            return $this->failUnknownAccount($request->email, $policy);
         }
 
         if ($employee->locked_until && $employee->locked_until->isFuture()) {
             AuditLog::record('LOGIN_BLOCKED', 'employees', $employee->id, null, null, 'Attempted login while locked out.', $employee->id);
 
-            throw ValidationException::withMessages([
-                'email' => ['Account is temporarily locked. Try again later.'],
-            ]);
+            return $this->lockedResponse(max(1, $employee->locked_until->getTimestamp() - now()->timestamp));
         }
 
         if (! Hash::check($request->password, $employee->password)) {
-            $policy       = SystemSetting::current();
             $maxAttempts  = $policy->max_login_attempts;
             $lockoutMins  = $policy->lockout_duration_minutes;
 
-            $attempts = $employee->failed_login_attempts + 1;
-            $employee->failed_login_attempts = $attempts;
+            // A lockout that has run its course starts a fresh round.
+            $attempts = ($employee->locked_until ? 0 : $employee->failed_login_attempts) + 1;
 
             $justLocked = $attempts >= $maxAttempts;
-            if ($justLocked) {
-                $employee->locked_until = now()->addMinutes($lockoutMins);
-            }
-
+            $employee->failed_login_attempts = $justLocked ? 0 : $attempts;
+            $employee->locked_until = $justLocked ? now()->addMinutes($lockoutMins) : null;
             $employee->save();
 
             AuditLog::record('LOGIN_FAILED', 'employees', $employee->id, null, null, "Wrong password (attempt {$attempts}/{$maxAttempts}).", $employee->id);
             if ($justLocked) {
                 AuditLog::record('ACCOUNT_LOCKED', 'employees', $employee->id, null, null, "Locked for {$lockoutMins} minutes after {$maxAttempts} failed attempts.", $employee->id);
+
+                return $this->lockedResponse($lockoutMins * 60);
             }
 
-            throw ValidationException::withMessages([
-                'email' => [self::INVALID_CREDENTIALS],
-            ]);
+            $this->throwInvalidCredentials($maxAttempts - $attempts);
         }
 
         $employee->update(['failed_login_attempts' => 0, 'locked_until' => null]);
@@ -109,6 +101,58 @@ class AuthController extends Controller
                 'feature_permissions' => $this->permissions->effectiveFor($employee),
             ],
         ]);
+    }
+
+    /**
+     * Unknown and inactive emails get the same attempt count and timer as a
+     * real account — if only real accounts could lock, the timer would tell
+     * an attacker which staff emails exist. There's no employee row to hold
+     * the count, so it lives in the cache.
+     */
+    private function failUnknownAccount(string $email, SystemSetting $policy)
+    {
+        // No employee row to attach this to — logged with a null
+        // record/user so probing unknown emails still shows up for review.
+        AuditLog::record('LOGIN_FAILED', 'employees', null, null, null, 'Unknown or inactive email: ' . $email);
+
+        $key   = 'login-failures:' . sha1(strtolower($email));
+        $state = Cache::get($key, ['attempts' => 0, 'locked_until' => 0]);
+
+        if ($state['locked_until'] > now()->timestamp) {
+            return $this->lockedResponse($state['locked_until'] - now()->timestamp);
+        }
+
+        $attempts = ($state['locked_until'] ? 0 : $state['attempts']) + 1;
+
+        if ($attempts >= $policy->max_login_attempts) {
+            $seconds = $policy->lockout_duration_minutes * 60;
+            Cache::put($key, ['attempts' => 0, 'locked_until' => now()->timestamp + $seconds], now()->addDay());
+
+            return $this->lockedResponse($seconds);
+        }
+
+        Cache::put($key, ['attempts' => $attempts, 'locked_until' => 0], now()->addDay());
+
+        $this->throwInvalidCredentials($policy->max_login_attempts - $attempts);
+    }
+
+    private function throwInvalidCredentials(int $attemptsLeft): never
+    {
+        $suffix = $attemptsLeft === 1 ? '1 attempt left.' : "{$attemptsLeft} attempts left.";
+
+        throw ValidationException::withMessages([
+            'email' => [self::INVALID_CREDENTIALS . ' ' . $suffix],
+        ]);
+    }
+
+    /** retry_after drives the countdown on the login page. */
+    private function lockedResponse(int $seconds)
+    {
+        return response()->json([
+            'message'     => self::TOO_MANY_ATTEMPTS,
+            'errors'      => ['email' => [self::TOO_MANY_ATTEMPTS]],
+            'retry_after' => $seconds,
+        ], 422);
     }
 
     public function logout(Request $request)

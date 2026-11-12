@@ -158,12 +158,12 @@
                 <div>
                   <label class="settings-label">Max Failed Login Attempts</label>
                   <input v-model.number="form.max_login_attempts" type="number" min="3" max="20" class="settings-input" />
-                  <p class="settings-hint">Account locks temporarily after this many wrong passwords in a row.</p>
+                  <p class="settings-hint">Sign-in pauses after this many wrong passwords in a row, then the count starts over.</p>
                 </div>
                 <div>
                   <label class="settings-label">Lockout Duration (minutes)</label>
                   <input v-model.number="form.lockout_duration_minutes" type="number" min="1" max="1440" class="settings-input" />
-                  <p class="settings-hint">How long the account stays locked before another attempt is allowed.</p>
+                  <p class="settings-hint">How long the login page counts down before another attempt is allowed.</p>
                 </div>
               </div>
 
@@ -254,8 +254,8 @@ const form = reactive({
   password_min_length: 8,
   password_require_number: true,
   password_require_symbol: false,
-  max_login_attempts: 5,
-  lockout_duration_minutes: 30,
+  max_login_attempts: 3,
+  lockout_duration_minutes: 5,
   turnstile_enabled: false,
   turnstile_configured: false,
 });
