@@ -133,12 +133,14 @@ test('--per-campus tops every active campus up to the target with a varied roste
     $tan = Campus::factory()->create(['code' => 'TAN']);
     Campus::factory()->create(['code' => 'OLD', 'is_active' => false]);
     User::factory()->count(2)->create(['campus_id' => $this->campus->id, 'shift_id' => $this->shift->id]);
+    User::factory()->hrOfficer()->create(['campus_id' => $this->campus->id, 'shift_id' => $this->shift->id]);
 
     $this->artisan('defense:seed-demo', ['--per-campus' => 20])->assertSuccessful();
 
-    $active = fn (Campus $c) => User::where('campus_id', $c->id)->where('is_active', true)->count();
+    $active = fn (Campus $c) => User::where('campus_id', $c->id)->where('role', 'employee')->where('is_active', true)->count();
 
-    // CAN already had 3 real employees, so it only needed 17.
+    // CAN already had 3 real employees, so it only needed 17 — its HR
+    // Officer isn't an employee record and doesn't count toward the 20.
     expect($active($this->campus))->toBe(20)
         ->and($active($tan))->toBe(20)
         ->and(User::where('employee_id', 'like', 'DEF-DEMO-CAN-%')->count())->toBe(17)

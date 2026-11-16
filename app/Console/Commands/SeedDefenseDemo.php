@@ -50,7 +50,7 @@ class SeedDefenseDemo extends Command
         {--year= : Defaults to the last full month}
         {--month= : Defaults to the last full month}
         {--demo-count=0 : Extra DEF-DEMO- employees to create in the showcase/campus}
-        {--per-campus=0 : Top every active campus up to at least this many active employees with DEF-DEMO- test records}
+        {--per-campus=0 : Top every active campus up to at least this many active employees (HR Officers not counted) with DEF-DEMO- test records}
         {--no-print-request : Skip the pending print request for the showcase account(s)}
         {--dry-run : Show what would be filled, then roll everything back}
         {--cleanup : Remove every seeded punch and DEF-DEMO- employee, then exit}';
@@ -498,8 +498,10 @@ class SeedDefenseDemo extends Command
         foreach (Campus::where('is_active', true)->orderBy('id')->get() as $campus) {
             $prefix = self::DEMO_PREFIX . $campus->code . '-';
 
+            // Employees only: the HR Officer accounts a campus also has
+            // aren't employee records, so they don't count toward the target.
             $real = User::where('campus_id', $campus->id)
-                ->where('role', '!=', 'super_admin')
+                ->where('role', 'employee')
                 ->where('is_active', true)
                 ->where('employee_id', 'not like', $prefix . '%')
                 ->count();
