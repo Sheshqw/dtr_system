@@ -4,6 +4,7 @@ namespace App\Http\Middleware;
 
 use Closure;
 use Illuminate\Http\Request;
+use Illuminate\Support\Facades\Vite;
 use Symfony\Component\HttpFoundation\Response;
 
 /**
@@ -33,13 +34,19 @@ class SecurityHeaders
         // challenges.cloudflare.com is the one external script/frame host:
         // the Cloudflare Turnstile login widget loads its script from there
         // and renders inside an iframe from the same origin.
+        // While `npm run dev` is running, the page's scripts and styles come
+        // from the Vite dev server on another port; without allowing it the
+        // whole app renders blank. Only true when public/hot exists, which
+        // never ships to production.
+        $vite = Vite::isRunningHot() ? ' ' . trim(file_get_contents(Vite::hotFile())) : '';
+
         $response->headers->set('Content-Security-Policy', implode('; ', [
             "default-src 'self'",
-            "script-src 'self' https://challenges.cloudflare.com",
+            "script-src 'self' https://challenges.cloudflare.com{$vite}",
             "frame-src https://challenges.cloudflare.com",
-            "style-src 'self' 'unsafe-inline' https://fonts.googleapis.com",
-            "font-src 'self' https://fonts.gstatic.com",
-            "img-src 'self' data: blob:",
+            "style-src 'self' 'unsafe-inline' https://fonts.googleapis.com{$vite}",
+            "font-src 'self' https://fonts.gstatic.com{$vite}",
+            "img-src 'self' data: blob:{$vite}",
             "connect-src 'self' ws: wss:",
             "object-src 'none'",
             "base-uri 'self'",

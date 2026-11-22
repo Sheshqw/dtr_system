@@ -119,7 +119,17 @@ class AttendanceController extends Controller
         // a chance to fix their row.
         $this->workingHours->backfillHolidays((clone $baseQuery)->pluck('id')->all(), $date, $date);
 
-        $query = (clone $baseQuery)->with(['department', 'dailyDtr' => fn($q) => $q->whereDate('work_date', $date)]);
+        // The dashboard's "vs previous day" figures only need the three
+        // counts — answer those with two aggregate queries instead of
+        // loading and serializing every employee's row.
+        if ($request->boolean('summary_only')) {
+            return response()->json([
+                'summary' => $this->summaryCounts($baseQuery, $date),
+                'date'    => $date,
+            ]);
+        }
+
+        $query =(clone $baseQuery)->with(['department', 'dailyDtr' => fn($q) => $q->whereDate('work_date', $date)]);
 
         if ($request->filled('status')) {
             $query->whereHas('dailyDtr', fn($q) => $q->whereDate('work_date', $date)->where('status', $request->status));
@@ -162,6 +172,32 @@ class AttendanceController extends Controller
         ];
 
         return response()->json(compact('rows', 'summary', 'date'));
+    }
+
+    /**
+     * The same present/late/absent figures today() derives from its rows,
+     * counted in the database. An employee with no daily_dtr row for the
+     * date counts as absent on a weekday (today()'s fallback), and as
+     * neither on a weekend.
+     */
+    private function summaryCounts($employeeQuery, string $date): array
+    {
+        $employeeIds = (clone $employeeQuery)->select('id');
+
+        $byStatus = DailyDtr::whereIn('employee_id', $employeeIds)
+            ->whereDate('work_date', $date)
+            ->selectRaw('status, COUNT(*) as total')
+            ->groupBy('status')
+            ->pluck('total', 'status');
+
+        $withoutRecord = (clone $employeeQuery)->count() - $byStatus->sum();
+        $fallbackAbsent = Carbon::parse($date)->isWeekend() ? 0 : max(0, $withoutRecord);
+
+        return [
+            'present' => (int) ($byStatus['present'] ?? 0) + (int) ($byStatus['late'] ?? 0),
+            'late'    => (int) ($byStatus['late'] ?? 0),
+            'absent'  => (int) ($byStatus['absent'] ?? 0) + $fallbackAbsent,
+        ];
     }
 
     /**

@@ -256,4 +256,9 @@ onBeforeUnmount(() => {
   .ss-credit   { font-size: 9px; margin-top: 1px; }
   .ss-controls { top: 10px; right: 10px; }
 }
+/* Less motion when the visitor's OS asks for it: captions fade without
+   sliding (the photo crossfade itself is a plain fade and stays). */
+@media (prefers-reduced-motion: reduce) {
+  .ss-cap-enter-from, .ss-cap-leave-to { transform: none; }
+}
 </style>

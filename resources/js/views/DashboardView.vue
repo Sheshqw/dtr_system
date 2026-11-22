@@ -840,6 +840,7 @@ import StatusBadge             from '@/components/StatusBadge.vue';
 import NotificationBell        from '@/components/NotificationBell.vue';
 import MyAttendanceDashboard   from '@/components/MyAttendanceDashboard.vue';
 import axios from 'axios';
+import { getEcho } from '@/echo';
 import {
   RefreshCw    as RefreshCwIcon,
   Search       as SearchIcon,
@@ -1081,7 +1082,7 @@ const previousDaySummary = ref({ present: 0, late: 0, absent: 0 });
 async function loadPreviousDaySummary() {
   const prevDate = addDays(filters.date, -1);
   try {
-    const res = await axios.get('/api/attendance/today', { params: { date: prevDate } });
+    const res = await axios.get('/api/attendance/today', { params: { date: prevDate, summary_only: 1 } });
     previousDaySummary.value = res.data.summary;
   } catch {
     previousDaySummary.value = { present: 0, late: 0, absent: 0 };
@@ -1611,7 +1612,10 @@ function handleLivePunch() {
   if (filters.date === todayStr) debouncedLiveRefresh();
 }
 
+let dashboardUnmounted = false;
+
 onBeforeUnmount(() => {
+  dashboardUnmounted = true;
   clearInterval(clockTimer);
   trendChart?.destroy();
   deptChart?.destroy();
@@ -1635,11 +1639,12 @@ onMounted(async () => {
   checkDeviceStatus();
   fetchPendingPrintRequests();
 
-  if (window.Echo) {
-    echoChannel = window.Echo.channel('attendance');
+  const echo = await getEcho();
+  if (echo && !dashboardUnmounted) {
+    echoChannel = echo.channel('attendance');
     echoChannel.listen('.punched', handleLivePunch);
 
-    const pusher = window.Echo.connector?.pusher;
+    const pusher = echo.connector?.pusher;
     if (pusher?.connection) {
       liveUpdatesActive.value = pusher.connection.state === 'connected';
       const onStateChange = (states) => { liveUpdatesActive.value = states.current === 'connected'; };

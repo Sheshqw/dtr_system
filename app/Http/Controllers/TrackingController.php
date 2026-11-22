@@ -5,6 +5,7 @@ namespace App\Http\Controllers;
 use App\Http\Traits\ScopesByCampus;
 use App\Models\DailyDtr;
 use App\Models\User;
+use Carbon\Carbon;
 use Illuminate\Http\Request;
 
 class TrackingController extends Controller
@@ -20,9 +21,16 @@ class TrackingController extends Controller
         $year  = (int) $request->get('year',  now()->year);
         $user  = $request->user();
 
+        // A plain range on work_date, not whereYear()/whereMonth(): wrapping
+        // the column in YEAR()/MONTH() stops the database from using its
+        // work_date indexes, so every request scanned the whole table.
+        // "< first of next month" (not "<= last day") also holds on SQLite,
+        // where the stored value carries a 00:00:00 time.
+        $monthStart = Carbon::create($year, $month, 1);
+
         $query = DailyDtr::with(['employee.department'])
-            ->whereYear('work_date', $year)
-            ->whereMonth('work_date', $month)
+            ->where('work_date', '>=', $monthStart->toDateString())
+            ->where('work_date', '<', $monthStart->copy()->addMonth()->toDateString())
             ->where('tardiness_minutes', '>', 0);
 
         if ($user->role === 'employee') {
@@ -83,11 +91,14 @@ class TrackingController extends Controller
     {
         $days = max(7, min(365, (int) $request->get('days', 90)));
         $from = now()->subDays($days - 1)->toDateString();
-        $to   = now()->toDateString();
         $user = $request->user();
 
+        // "< tomorrow" rather than BETWEEN from AND today: on SQLite the
+        // stored '…-22 00:00:00' sorts after a plain '…-22' bound, which
+        // left today's absences out.
         $query = DailyDtr::with(['employee.department'])
-            ->whereBetween('work_date', [$from, $to])
+            ->where('work_date', '>=', $from)
+            ->where('work_date', '<', now()->addDay()->toDateString())
             ->where('status', 'absent');
 
         if ($user->role === 'employee') {

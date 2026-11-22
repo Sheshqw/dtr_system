@@ -50,6 +50,12 @@
               Biometric attendance, daily time records and the official CSC Form 48 for every
               {{ settings.systemName }} campus.
             </p>
+            <!-- What an employee can do once signed in, at a glance. -->
+            <ul class="login-features hidden lg:flex mt-5" aria-label="What you can do here">
+              <li><FingerprintIcon class="login-feature-icon" aria-hidden="true" />Biometric time-in</li>
+              <li><FileTextIcon class="login-feature-icon" aria-hidden="true" />CSC Form 48</li>
+              <li><ActivityIcon class="login-feature-icon" aria-hidden="true" />Live attendance</li>
+            </ul>
           </section>
 
           <!-- ── Glass card ────────────────────────────────────────────── -->
@@ -108,6 +114,7 @@
                     />
                     <input
                       id="login-password"
+                      ref="passwordInput"
                       v-model="form.password"
                       :type="showPwd ? 'text' : 'password'"
                       required
@@ -118,13 +125,15 @@
                       :aria-invalid="!!error"
                       @focus="focused = 'pwd'"
                       @blur="focused = null"
-                      @keyup="capsLockOn = $event.getModifierState && $event.getModifierState('CapsLock')"
+                      @keydown="checkCapsLock"
+                      @keyup="checkCapsLock"
                     />
+                    <!-- Reachable by keyboard (Tab) — it used to be skipped,
+                         leaving keyboard users no way to check what they typed. -->
                     <button
                       type="button"
                       @click="showPwd = !showPwd"
-                      tabindex="-1"
-                      class="absolute right-3.5 top-1/2 -translate-y-1/2 p-1 rounded-md transition-all duration-150"
+                      class="login-focus absolute right-3.5 top-1/2 -translate-y-1/2 p-1 rounded-md transition-all duration-150"
                       :style="{ color: showPwd ? '#F7A51A' : 'rgba(214, 220, 255, 0.55)' }"
                       :aria-label="showPwd ? 'Hide password' : 'Show password'"
                       :aria-pressed="showPwd"
@@ -135,33 +144,28 @@
                   </div>
                   <!-- Caps Lock warning — the single most common cause of a
                        silently-wrong password on a login form. -->
-                  <p v-if="capsLockOn" class="flex items-center gap-1.5 mt-1.5 text-[11px] font-medium" style="color: #FCD34D;">
+                  <p v-if="capsLockOn" role="status" class="flex items-center gap-1.5 mt-1.5 text-[11px] font-medium" style="color: #FCD34D;">
                     <TriangleAlertIcon class="w-3 h-3 flex-shrink-0" />
                     Caps Lock is on
                   </p>
                 </div>
 
                 <!-- Remember me -->
-                <div class="flex items-center gap-2.5 pt-0.5">
-                  <button
-                    type="button"
-                    role="checkbox"
-                    :aria-checked="rememberMe"
-                    aria-label="Keep me signed in on this device"
-                    @click="rememberMe = !rememberMe"
+                <!-- A real checkbox inside its label: the whole line is one
+                     click/tap target and Space toggles it, as people expect. -->
+                <label class="remember-row flex items-center gap-2.5 pt-0.5 cursor-pointer select-none">
+                  <input v-model="rememberMe" type="checkbox" class="remember-input" />
+                  <span
                     class="remember-toggle flex-shrink-0"
                     :class="rememberMe ? 'remember-on' : 'remember-off'"
+                    aria-hidden="true"
                   >
                     <CheckIcon v-if="rememberMe" class="w-3 h-3" />
-                  </button>
-                  <span
-                    class="text-[12px] font-medium select-none cursor-pointer"
-                    style="color: rgba(214, 220, 255, 0.78);"
-                    @click="rememberMe = !rememberMe"
-                  >
+                  </span>
+                  <span class="text-[12px] font-medium" style="color: rgba(214, 220, 255, 0.78);">
                     Keep me signed in on this device
                   </span>
-                </div>
+                </label>
 
                 <!-- Cloudflare Turnstile bot check (only when enabled in System Settings) -->
                 <div v-if="settings.turnstileEnabled && settings.turnstileSiteKey">
@@ -199,7 +203,7 @@
                 <button
                   type="submit"
                   :disabled="loading || !form.email || !form.password || awaitingTurnstile || lockSeconds > 0"
-                  class="relative w-full py-3 text-sm font-bold rounded-xl overflow-hidden transition-all duration-200 disabled:opacity-70 disabled:cursor-not-allowed group mt-1"
+                  class="login-focus relative w-full py-3 text-sm font-bold rounded-xl overflow-hidden transition-all duration-200 disabled:opacity-70 disabled:cursor-not-allowed group mt-1"
                   :style="btnStyle"
                 >
                   <div
@@ -219,7 +223,7 @@
                   </span>
                   <span v-else class="relative flex items-center justify-center gap-2 text-[#1A138F]">
                     Sign In
-                    <ArrowRightIcon class="w-4 h-4 transition-transform duration-200 group-hover:translate-x-1" />
+                    <ArrowRightIcon class="w-4 h-4 transition-transform duration-200 motion-safe:group-hover:translate-x-1" />
                   </span>
                 </button>
 
@@ -253,7 +257,7 @@
 </template>
 
 <script setup>
-import { ref, reactive, computed, watch, onMounted, onBeforeUnmount } from 'vue';
+import { ref, reactive, computed, watch, onMounted, onBeforeUnmount, nextTick } from 'vue';
 import { useRouter, useRoute } from 'vue-router';
 import { useAuthStore } from '@/stores/auth';
 import { useSettingsStore } from '@/stores/settings';
@@ -268,6 +272,9 @@ import {
   ArrowRight    as ArrowRightIcon,
   Check         as CheckIcon,
   TriangleAlert as TriangleAlertIcon,
+  Fingerprint   as FingerprintIcon,
+  FileText      as FileTextIcon,
+  Activity      as ActivityIcon,
 } from 'lucide-vue-next';
 
 const auth     = useAuthStore();
@@ -284,6 +291,11 @@ const rememberMe = ref(true);
 const capsLockOn = ref(false);
 
 const emailInput      = ref(null);
+const passwordInput   = ref(null);
+
+function checkCapsLock(e) {
+  capsLockOn.value = !!e.getModifierState?.('CapsLock');
+}
 const turnstileRef    = ref(null);
 const turnstileToken  = ref('');
 const turnstileFailed = ref(false);
@@ -412,6 +424,14 @@ async function handleLogin() {
     turnstileRef.value?.reset();
   } finally {
     loading.value = false;
+  }
+  // After a failed attempt, put the cursor back in the password with its
+  // text selected, so the next try is just retyping — no reaching for the
+  // mouse. Skipped while locked out, when there's nothing to retry yet.
+  if (error.value && lockSeconds.value === 0) {
+    await nextTick();
+    passwordInput.value?.focus();
+    passwordInput.value?.select();
   }
 }
 </script>
@@ -565,10 +585,12 @@ async function handleLogin() {
 }
 
 /* ── Glass card ───────────────────────────────────────────────────────────── */
+/* No backdrop-filter: behind the card is only the panel's gradient and the
+   faint seal, so a 32px live blur looked the same as a slightly more opaque
+   fill while costing a full-card GPU blur on every repaint (the clock ticks
+   every second) — noticeably janky on low-end phones. */
 .card-glass {
-  background: rgba(14, 9, 86, 0.55);
-  backdrop-filter: blur(32px);
-  -webkit-backdrop-filter: blur(32px);
+  background: rgba(14, 9, 86, 0.62);
   border: 1px solid rgba(255, 255, 255, 0.09);
   box-shadow:
     0 48px 110px rgba(0, 0, 0, 0.60),
@@ -607,10 +629,6 @@ async function handleLogin() {
   background: rgba(255,255,255,0.06);
   border: 1.5px solid rgba(255,255,255,0.18);
 }
-.remember-off:hover {
-  border-color: rgba(247, 165, 26,0.50);
-  background: rgba(247, 165, 26,0.08);
-}
 .remember-on {
   background: #F7A51A;
   border: 1.5px solid #F7A51A;
@@ -620,7 +638,65 @@ async function handleLogin() {
 
 /* ── Input ────────────────────────────────────────────────────────────────── */
 .input-field::placeholder {
-  color: rgba(168, 184, 232, 0.26);
+  /* Was 0.26 alpha — too faint to read on the dark card. */
+  color: rgba(168, 184, 232, 0.50);
+}
+
+/* ── Keyboard focus ───────────────────────────────────────────────────────────
+   A visible gold ring for keyboard users only (:focus-visible), so mouse
+   clicks don't leave an outline behind. */
+.login-focus:focus-visible {
+  outline: 2px solid #FFBE45;
+  outline-offset: 2px;
+}
+
+/* ── Remember me: native checkbox, custom box ─────────────────────────────── */
+.remember-row { position: relative; }
+.remember-input {
+  position: absolute;
+  left: 0; top: 50%;
+  width: 1px; height: 1px;
+  opacity: 0;
+  pointer-events: none;
+}
+.remember-input:focus-visible + .remember-toggle {
+  outline: 2px solid #FFBE45;
+  outline-offset: 2px;
+}
+.remember-row:hover .remember-off {
+  border-color: rgba(247, 165, 26,0.50);
+  background: rgba(247, 165, 26,0.08);
+}
+
+/* ── Feature highlights ───────────────────────────────────────────────────── */
+.login-features {
+  list-style: none;
+  flex-wrap: wrap;
+  gap: 8px;
+  padding: 0;
+}
+.login-features li {
+  display: inline-flex; align-items: center; gap: 6px;
+  padding: 5px 11px;
+  border-radius: 999px;
+  font-size: 12px; font-weight: 600;
+  color: rgba(234, 237, 255, 0.92);
+  background: rgba(255, 255, 255, 0.07);
+  border: 1px solid rgba(255, 255, 255, 0.12);
+}
+.login-feature-icon { width: 14px; height: 14px; color: #FFBE45; flex-shrink: 0; }
+/* Shares the blurb's fate on shorter screens, keeping the card in view. */
+@media (max-height: 900px) {
+  .login-features { display: none !important; }
+}
+
+/* ── Reduced motion ───────────────────────────────────────────────────────────
+   Visitors who asked their OS for less motion get the page without the
+   entrance slide-ins, the pulsing clock dot and the arrow nudge. */
+@media (prefers-reduced-motion: reduce) {
+  .hero-enter, .card-enter { animation: none; }
+  .login-clock-dot { animation: none; }
+  .err-enter-active, .err-leave-active { animation-duration: 0.01ms; }
 }
 
 /* Chrome/Edge force a light autofill background that can't be overridden

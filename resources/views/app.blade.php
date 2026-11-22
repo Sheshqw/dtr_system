@@ -18,6 +18,13 @@
     <link rel="icon" href="{{ $__favicon }}?v={{ $__settings->updated_at?->timestamp }}" />
     <link rel="apple-touch-icon" href="/apple-touch-icon.png" />
     <link rel="manifest" href="/manifest.webmanifest" />
+    {{-- The sign-in page's photo is its largest element. Left alone, the
+         browser only finds it after the JS bundle and the login chunk have
+         loaded and run; preloading starts that download straight away.
+         Only on /login, so signed-in pages don't fetch it for nothing. --}}
+    @if (request()->is('login'))
+        <link rel="preload" as="image" href="{{ $__settings->login_background_url ?? '/images/nemsu-campus.jpg' }}" fetchpriority="high" />
+    @endif
     <link rel="preconnect" href="https://fonts.googleapis.com" />
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
     {{-- Every weight the UI actually uses (font-bold is 700) — a missing

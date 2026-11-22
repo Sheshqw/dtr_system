@@ -1029,6 +1029,7 @@ import { ref, computed, watch, onMounted, onUnmounted } from 'vue';
 import { storeToRefs } from 'pinia';
 import { useRoute } from 'vue-router';
 import axios from 'axios';
+import { getEcho } from '@/echo';
 import { useAuthStore } from '@/stores/auth';
 import { useReferenceDataStore } from '@/stores/referenceData';
 import { useToast } from '@/composables/useToast';
@@ -1674,9 +1675,12 @@ function onPrintDecidedLive(e) {
   }
 }
 
-function listenForPrintConsents() {
-  if (!window.Echo) return;
-  printConsentChannel = window.Echo.channel('print-consents')
+let reportsUnmounted = false;
+
+async function listenForPrintConsents() {
+  const echo = await getEcho();
+  if (!echo || reportsUnmounted) return;
+  printConsentChannel = echo.channel('print-consents')
     .listen('.requested', onPrintRequestedLive)
     .listen('.decided', onPrintDecidedLive);
 }
@@ -2117,6 +2121,7 @@ onMounted(async () => {
 });
 
 onUnmounted(() => {
+  reportsUnmounted = true;
   printConsentChannel?.stopListening('.requested', onPrintRequestedLive);
   printConsentChannel?.stopListening('.decided', onPrintDecidedLive);
 });

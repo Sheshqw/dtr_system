@@ -393,6 +393,7 @@ import ToastContainer from '@/components/ToastContainer.vue';
 import CommandPalette from '@/components/CommandPalette.vue';
 import ConfirmDialog from '@/components/ConfirmDialog.vue';
 import { useCommandPalette } from '@/composables/useCommandPalette';
+import { getEcho } from '@/echo';
 
 const auth     = useAuthStore();
 const perms    = usePermissionsStore();
@@ -569,10 +570,14 @@ async function fetchPendingPrintRequests() {
 
 // ── Real-time punch toast ─────────────────────────────────────────
 let echoChannel = null;
+// Echo loads asynchronously; if the layout is gone by the time it arrives
+// (signed out right away), don't attach listeners nobody will remove.
+let layoutUnmounted = false;
 
-function listenForPunches() {
-  if (!window.Echo) return;
-  echoChannel = window.Echo.channel('attendance')
+async function listenForPunches() {
+  const echo = await getEcho();
+  if (!echo || layoutUnmounted) return;
+  echoChannel = echo.channel('attendance')
     .listen('.punched', (e) => {
       const verb = e.punch_type === 'IN' ? 'clocked in' : 'clocked out';
       toast(`${e.name} just ${verb} — ${e.time}`, 'info', 6000);
@@ -592,9 +597,11 @@ const onPrintRequested = (e) => {
 };
 const onPrintDecided = () => fetchPendingPrintRequests();
 
-function listenForPrintConsents() {
-  if (!window.Echo || !isAdminOrHr.value) return;
-  printConsentChannel = window.Echo.channel('print-consents')
+async function listenForPrintConsents() {
+  if (!isAdminOrHr.value) return;
+  const echo = await getEcho();
+  if (!echo || layoutUnmounted) return;
+  printConsentChannel = echo.channel('print-consents')
     .listen('.requested', onPrintRequested)
     .listen('.decided', onPrintDecided);
 }
@@ -619,6 +626,7 @@ async function refreshFeatureAccess() {
 }
 
 onBeforeUnmount(() => {
+  layoutUnmounted = true;
   clearInterval(badgePollTimer);
   echoChannel?.stopListening('.punched');
   window.Echo?.leave('attendance');
