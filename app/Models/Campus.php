@@ -13,19 +13,20 @@ class Campus extends Model
     protected $fillable = ['name', 'code', 'address', 'director_name', 'photo_path', 'is_active'];
 
     /**
-     * Where each bundled photo in public/images/campuses came from. The two
-     * Wikimedia Commons photos are CC BY-SA, which requires crediting the
-     * photographer and licence wherever they're shown; the rest are NEMSU's
-     * own, from the Campuses section of nemsu.edu.ph.
+     * Where each bundled photo in public/images/campuses came from: NEMSU's
+     * own campus photos (several of them drone shots), from each campus's
+     * page on nemsu.edu.ph — Tagbina's from the campus's own site. Cropped
+     * to remove the seal and place labels stamped on them, since the
+     * slideshow captions each campus itself.
      */
     public const BUNDLED_PHOTO_CREDITS = [
-        'TAN' => ['Photo: Rektz, CC BY-SA 4.0', 'https://commons.wikimedia.org/wiki/File:NEMSU_Field.jpg'],
-        'CAN' => ['Photo: Surigaotourist, CC BY-SA 3.0', 'https://commons.wikimedia.org/wiki/File:Cantilan_Uni_3.JPG'],
-        'SMC' => ['Photo: NEMSU', null],
-        'CAG' => ['Photo: NEMSU', null],
-        'LIA' => ['Photo: NEMSU', null],
-        'TAG' => ['Photo: NEMSU', null],
-        'BIS' => ['Photo: NEMSU', null],
+        'TAN' => ['Photo: NEMSU', 'https://nemsu.edu.ph/campuses/tandag'],
+        'CAN' => ['Photo: NEMSU', 'https://nemsu.edu.ph/campuses/cantilan'],
+        'SMC' => ['Photo: NEMSU', 'https://nemsu.edu.ph/campuses/san-miguel'],
+        'CAG' => ['Photo: NEMSU', 'https://nemsu.edu.ph/campuses/cagwait'],
+        'LIA' => ['Photo: NEMSU', 'https://nemsu.edu.ph/campuses/lianga'],
+        'TAG' => ['Photo: NEMSU Tagbina', 'https://nemsu-tagbina.edu.ph/'],
+        'BIS' => ['Photo: NEMSU', 'https://nemsu.edu.ph/campuses/bislig'],
     ];
 
     protected function casts(): array
@@ -61,7 +62,11 @@ class Campus extends Model
 
         $bundled = "images/campuses/{$code}.jpg";
 
-        return is_file(public_path($bundled)) ? '/' . $bundled : null;
+        // ?v= changes whenever the file does, so a replaced photo shows at
+        // once instead of after the browser's week-long cached copy expires.
+        $file = public_path($bundled);
+
+        return is_file($file) ? '/' . $bundled . '?v=' . filemtime($file) : null;
     }
 
     /**
