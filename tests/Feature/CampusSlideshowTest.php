@@ -12,18 +12,20 @@ beforeEach(function () {
 test('a campus uses its bundled photo until one is uploaded', function () {
     // Every NEMSU campus code ships with a photo; a new campus has none.
     foreach (['TAN', 'CAN', 'LIA', 'CAG', 'SMC', 'TAG', 'BIS'] as $code) {
-        expect(Campus::factory()->create(['code' => $code])->photo_url)->toBe("/images/campuses/{$code}.jpg");
+        // ?v= is the file's modification time, so a replaced photo busts the browser cache.
+        $mtime = filemtime(public_path("images/campuses/{$code}.jpg"));
+        expect(Campus::factory()->create(['code' => $code])->photo_url)->toBe("/images/campuses/{$code}.jpg?v={$mtime}");
     }
     expect(Campus::factory()->create(['code' => 'HIN'])->photo_url)->toBeNull();
 });
 
-test('every bundled photo is credited, and the Commons ones name photographer and licence', function () {
+test('every bundled photo is credited and links to its campus page', function () {
     foreach (glob(public_path('images/campuses/*.jpg')) as $file) {
         expect(Campus::BUNDLED_PHOTO_CREDITS)->toHaveKey(pathinfo($file, PATHINFO_FILENAME));
     }
 
     expect(Campus::factory()->create(['code' => 'TAN'])->photoCredit())
-        ->toBe(['Photo: Rektz, CC BY-SA 4.0', 'https://commons.wikimedia.org/wiki/File:NEMSU_Field.jpg']);
+        ->toBe(['Photo: NEMSU', 'https://nemsu.edu.ph/campuses/tandag']);
 });
 
 test('the login page gets every active campus with a photo, and nothing else', function () {
@@ -36,9 +38,9 @@ test('the login page gets every active campus with a photo, and nothing else', f
         ->assertJsonPath('campus_slides', [[
             'name'       => 'Cantilan Campus',
             'address'    => 'Cantilan, Surigao del Sur',
-            'photo_url'  => '/images/campuses/CAN.jpg',
-            'credit'     => 'Photo: Surigaotourist, CC BY-SA 3.0',
-            'credit_url' => 'https://commons.wikimedia.org/wiki/File:Cantilan_Uni_3.JPG',
+            'photo_url'  => '/images/campuses/CAN.jpg?v=' . filemtime(public_path('images/campuses/CAN.jpg')),
+            'credit'     => 'Photo: NEMSU',
+            'credit_url' => 'https://nemsu.edu.ph/campuses/cantilan',
         ]]);
 });
 
